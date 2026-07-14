@@ -1,0 +1,9 @@
+Final Rank,Strategy,Stocks,Median_Expectancy,Median_PF,Median_RR,Avg_Trades,Edge Score,Reliability Score,Robustness Score,Breadth Score,Final Score,Grade,Recommendation
+1,Output_backtest_WF_Str_FT_Report,24,0.12,-0.65,-1.35,393.42,93.12,71.25,40.0,5.0,75.97,★★★ Good,BUY
+2,Output_backtest_F_ATR_FT_Report,24,-0.06,-0.66,-1.33,335.62,80.0,41.25,50.62,2.5,64.78,★★ Average,PAPER TRADE
+3,Output_backtest_F_Str_FT_Report,24,-0.08,-0.68,-1.41,335.62,59.69,41.25,51.25,5.0,57.33,★ Watch,WATCH
+4,Output_backtest_WF_ATR_FT_Report,24,-0.35,-0.64,-1.37,393.42,55.62,71.25,33.12,5.0,56.31,★ Watch,WATCH
+5,Output_backtest_F_ATR_Tr_Report,24,-0.08,-1.01,-1.48,335.62,41.56,41.25,36.88,5.0,41.33,Reject,REJECT
+6,Output_backtest_WF_Str_Tr_Report,24,-0.1,-1.0,-1.95,393.42,35.0,71.25,42.5,5.0,40.69,Reject,REJECT
+7,Output_backtest_F_Str_Tr_Report,24,-0.01,-1.02,-2.09,335.62,46.25,41.25,70.0,6.25,39.81,Reject,REJECT
+8,Output_backtest_WF_ATR_Tr_Report,24,-0.17,-0.98,-1.42,393.42,38.75,71.25,25.62,6.25,38.28,Reject,REJECT

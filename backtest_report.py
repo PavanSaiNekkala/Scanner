@@ -1,41 +1,41 @@
 """
-===============================================================
-Institutional Stock Analytics Engine
-Part 1 : Configuration & Data Preparation
-===============================================================
+=====================================================================
+Institutional Stock Analytics Engine v3.0
+=====================================================================
 
-Input  : Backtest.csv
+Input  : Backtest CSV
 Output : Institutional_Stock_Report.csv
 
-Author : Pavan Sai
-Version: 2.0
+Author  : Pavan Sai
+Version : 3.0
 """
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
 import logging
 import warnings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 warnings.filterwarnings("ignore")
 
-# ===============================================================
+# ============================================================
 # CONFIGURATION
-# ===============================================================
+# ============================================================
 
 CONFIG = {
 
-    "INPUT_FILE": "Backtest_WF_Str_Tr.csv",
+    "INPUT_FILE": "Input_backtest_WF_ATR_Tr.csv",
 
-    "OUTPUT_FILE": "Backtest_WF_Str_Tr_Report.csv",
+    "OUTPUT_FILE": "Output_backtest_WF_ATR_Tr_Report.csv",
 
-    "ROUND_DECIMALS": 2
+    "ROUND": 2
 
 }
 
-# ===============================================================
+# ============================================================
 # LOGGING
-# ===============================================================
+# ============================================================
 
 logging.basicConfig(
 
@@ -47,9 +47,9 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# ===============================================================
-# REQUIRED COLUMNS
-# ===============================================================
+# ============================================================
+# REQUIRED INPUT COLUMNS
+# ============================================================
 
 REQUIRED_COLUMNS = [
 
@@ -105,9 +105,9 @@ REQUIRED_COLUMNS = [
 
 ]
 
-# ===============================================================
+# ============================================================
 # NUMERIC COLUMNS
-# ===============================================================
+# ============================================================
 
 NUMERIC_COLUMNS = [
 
@@ -155,13 +155,13 @@ NUMERIC_COLUMNS = [
 
 ]
 
-# ===============================================================
+# ============================================================
 # LOAD CSV
-# ===============================================================
+# ============================================================
 
 def load_data():
 
-    logger.info("Loading CSV...")
+    logger.info("Loading Input CSV...")
 
     file = Path(CONFIG["INPUT_FILE"])
 
@@ -183,9 +183,9 @@ def load_data():
 
     return df
 
-# ===============================================================
+# ============================================================
 # VALIDATE COLUMNS
-# ===============================================================
+# ============================================================
 
 def validate_columns(df):
 
@@ -201,7 +201,7 @@ def validate_columns(df):
 
     if missing:
 
-        raise Exception(
+        raise ValueError(
 
             f"Missing Columns : {missing}"
 
@@ -209,19 +209,19 @@ def validate_columns(df):
 
     logger.info(
 
-        "Column Validation Passed"
+        "Column Validation Successful."
 
     )
 
-# ===============================================================
+# ============================================================
 # CONVERT DATATYPES
-# ===============================================================
+# ============================================================
 
 def convert_datatypes(df):
 
     logger.info(
 
-        "Converting Datatypes..."
+        "Converting Data Types..."
 
     )
 
@@ -253,25 +253,27 @@ def convert_datatypes(df):
 
     return df
 
-# ===============================================================
+# ============================================================
 # CLEAN DATA
-# ===============================================================
+# ============================================================
 
 def clean_data(df):
 
     logger.info(
 
-        "Cleaning Data..."
+        "Cleaning Dataset..."
 
     )
 
-    rows_before = len(df)
+    before = len(df)
 
     df = df.drop_duplicates()
 
+    removed = before - len(df)
+
     logger.info(
 
-        f"Duplicates Removed : {rows_before-len(df)}"
+        f"Duplicates Removed : {removed}"
 
     )
 
@@ -283,9 +285,9 @@ def clean_data(df):
 
             "Trades",
 
-            "Win%",
+            "Expectancy%",
 
-            "Expectancy%"
+            "Win%"
 
         ]
 
@@ -301,15 +303,15 @@ def clean_data(df):
 
     return df
 
-# ===============================================================
-# BASIC VALIDATION
-# ===============================================================
+# ============================================================
+# VALIDATE VALUES
+# ============================================================
 
-def validate_ranges(df):
+def validate_values(df):
 
     logger.info(
 
-        "Validating Data..."
+        "Performing Data Validation..."
 
     )
 
@@ -335,9 +337,7 @@ def validate_ranges(df):
 
     for col in percentage_columns:
 
-        invalid = df[col] < 0
-
-        if invalid.any():
+        if (df[col] < 0).any():
 
             logger.warning(
 
@@ -349,45 +349,434 @@ def validate_ranges(df):
 
         logger.warning(
 
-            "Some stocks have zero trades."
+            "Stocks with zero trades detected."
 
         )
 
     return df
 
-# ===============================================================
-# DATA QUALITY SUMMARY
-# ===============================================================
+# ============================================================
+# DATA SUMMARY
+# ============================================================
 
-def data_summary(df):
+def print_data_summary(df):
 
     print()
 
-    print("="*70)
+    print("=" * 65)
 
-    print("DATA QUALITY SUMMARY")
+    print("INPUT DATA SUMMARY")
 
-    print("="*70)
+    print("=" * 65)
 
-    print(f"Stocks                 : {len(df)}")
+    print(f"Stocks              : {len(df)}")
 
-    print(f"Backtest From          : {df['BT from'].min().date()}")
+    bt_from = df["BT from"].min()
+    bt_to = df["BT to"].max()
 
-    print(f"Backtest To            : {df['BT to'].max().date()}")
+    print(
+        f"Backtest From       : {bt_from.date() if pd.notna(bt_from) else 'N/A'}"
+    )
 
-    print(f"Average Trades         : {df['Trades'].mean():.2f}")
+    print(
+        f"Backtest To         : {bt_to.date() if pd.notna(bt_to) else 'N/A'}"
+    )
+    print(f"Average Trades      : {df['Trades'].mean():.2f}")
 
-    print(f"Average Win %          : {df['Win%'].mean():.2f}")
+    print(f"Average Win %       : {df['Win%'].mean():.2f}")
 
-    print(f"Average Expectancy %   : {df['Expectancy%'].mean():.2f}")
+    print(f"Average Expectancy  : {df['Expectancy%'].mean():.2f}")
 
-    print(f"Average Holding Days   : {df['Avg days'].mean():.2f}")
+    print(f"Average Holding     : {df['Avg days'].mean():.2f}")
 
-    print("="*70)
+    print("=" * 65)
 
-# ===============================================================
+# ============================================================
+# ABSOLUTE SCORING ENGINE
+# ============================================================
+
+def score_metric(series, metric):
+
+    x = series.astype(float)
+
+    score = pd.Series(
+        np.nan,
+        index=x.index,
+        dtype=float
+    )
+
+    # --------------------------------------------------------
+    # PROFIT FACTOR
+    # --------------------------------------------------------
+
+    if metric == "PF":
+
+        score = np.select(
+
+            [
+
+                x < 1.00,
+
+                x < 1.20,
+
+                x < 1.50,
+
+                x < 2.00,
+
+                x >= 2.00
+
+            ],
+
+            [
+
+                0,
+
+                40,
+
+                70,
+
+                90,
+
+                100
+
+            ]
+
+        )
+
+    # --------------------------------------------------------
+    # EXPECTANCY
+    # --------------------------------------------------------
+
+    elif metric == "EXPECTANCY":
+
+        score = np.select(
+
+            [
+
+                x < 0,
+
+                x < 0.50,
+
+                x < 1.00,
+
+                x < 2.00,
+
+                x >= 2.00
+
+            ],
+
+            [
+
+                0,
+
+                40,
+
+                70,
+
+                90,
+
+                100
+
+            ]
+
+        )
+
+    # --------------------------------------------------------
+    # REWARD RISK
+    # --------------------------------------------------------
+
+    elif metric == "RR":
+
+        score = np.select(
+
+            [
+
+                x < 1,
+
+                x < 1.5,
+
+                x < 2,
+
+                x < 3,
+
+                x >= 3
+
+            ],
+
+            [
+
+                0,
+
+                40,
+
+                70,
+
+                90,
+
+                100
+
+            ]
+
+        )
+
+    # --------------------------------------------------------
+    # WIN RATE
+    # --------------------------------------------------------
+
+    elif metric == "WIN":
+
+        score = np.select(
+
+            [
+
+                x < 35,
+
+                x < 45,
+
+                x < 55,
+
+                x < 65,
+
+                x >= 65
+
+            ],
+
+            [
+
+                0,
+
+                40,
+
+                70,
+
+                90,
+
+                100
+
+            ]
+
+        )
+
+    # --------------------------------------------------------
+    # TRADES
+    # --------------------------------------------------------
+
+    elif metric == "TRADES":
+
+        score = np.select(
+
+            [
+
+                x < 100,
+
+                x < 300,
+
+                x < 600,
+
+                x < 1000,
+
+                x >= 1000
+
+            ],
+
+            [
+
+                20,
+
+                50,
+
+                75,
+
+                90,
+
+                100
+
+            ]
+
+        )
+
+    # --------------------------------------------------------
+    # YEARS
+    # --------------------------------------------------------
+
+    elif metric == "YEARS":
+
+        score = np.select(
+
+            [
+
+                x < 2,
+
+                x < 4,
+
+                x < 6,
+
+                x < 10,
+
+                x >= 10
+
+            ],
+
+            [
+
+                30,
+
+                50,
+
+                70,
+
+                90,
+
+                100
+
+            ]
+
+        )
+
+    # --------------------------------------------------------
+    # PROFIT VELOCITY
+    # --------------------------------------------------------
+
+    elif metric == "PROFIT_VELOCITY":
+
+        score = np.select(
+
+            [
+
+                x < 10,
+
+                x < 50,
+
+                x < 100,
+
+                x < 200,
+
+                x >= 200
+
+            ],
+
+            [
+
+                20,
+
+                40,
+
+                70,
+
+                90,
+
+                100
+
+            ]
+
+        )
+
+    # --------------------------------------------------------
+    # HOLDING EFFICIENCY
+    # --------------------------------------------------------
+
+    elif metric == "HOLDING_EFFICIENCY":
+
+        score = np.select(
+
+            [
+
+                x < 0.10,
+
+                x < 0.30,
+
+                x < 0.50,
+
+                x < 1.00,
+
+                x >= 1.00
+
+            ],
+
+            [
+
+                20,
+
+                40,
+
+                70,
+
+                90,
+
+                100
+
+            ]
+
+        )
+
+    # --------------------------------------------------------
+    # EXIT EDGE
+    # --------------------------------------------------------
+
+    elif metric == "EXIT_EDGE":
+
+        score = np.select(
+
+            [
+
+                x < 0,
+
+                x < 20,
+
+                x < 40,
+
+                x < 60,
+
+                x >= 60
+
+            ],
+
+            [
+
+                20,
+
+                40,
+
+                70,
+
+                90,
+
+                100
+
+            ]
+
+        )
+
+    return pd.Series(
+        score,
+        index=series.index
+    )
+
+# ============================================================
+# SAFE DIVISION
+# ============================================================
+
+def safe_divide(a, b):
+
+    return pd.Series(
+
+        np.where(
+
+            b != 0,
+
+            a / b,
+
+            np.nan
+
+        ),
+
+        index=a.index
+
+    )
+
+# ============================================================
 # PREPARE DATA
-# ===============================================================
+# ============================================================
 
 def prepare_data():
 
@@ -399,470 +788,333 @@ def prepare_data():
 
     df = clean_data(df)
 
-    df = validate_ranges(df)
+    df = validate_values(df)
 
-    data_summary(df)
+    print_data_summary(df)
 
     logger.info(
 
-        "Data Preparation Completed"
+        "Data Preparation Completed."
 
     )
 
     return df
 
-
-# ===============================================================
+# ============================================================
 # PART 2 : DERIVED METRICS ENGINE
-# ===============================================================
+# ============================================================
+
+logger.info("Loading Derived Metrics Engine...")
+
+# ============================================================
+# CALCULATE DERIVED METRICS
+# ============================================================
 
 def calculate_metrics(df):
 
     logger.info("Calculating Derived Metrics...")
 
-    # -----------------------------------------------------------
-    # 1. LOSS RATE
-    # -----------------------------------------------------------
+    # --------------------------------------------------------
+    # 1. LOSS %
+    # --------------------------------------------------------
 
-    df["Loss %"] = (100 - df["Win%"]).round(2)
+    df["Loss %"] = (
 
-    # -----------------------------------------------------------
+        100 -
+
+        df["Win%"]
+
+    ).round(CONFIG["ROUND"])
+
+    # --------------------------------------------------------
     # 2. REWARD : RISK
-    # -----------------------------------------------------------
+    # --------------------------------------------------------
 
-    df["Reward Risk"] = np.where(
+    df["Reward Risk"] = safe_divide(
 
-        df["Avg loss%"] > 0,
+        df["Avg win%"],
 
-        df["Avg win%"] / df["Avg loss%"],
+        df["Avg loss%"]
 
-        np.nan
+    ).round(CONFIG["ROUND"])
 
-    ).round(2)
+    # --------------------------------------------------------
+    # PROFIT FACTOR (Institutional Approximation)
+    # --------------------------------------------------------
 
-    # -----------------------------------------------------------
-    # 3. PROFIT FACTOR
-    # Approximation from summary statistics
-    # -----------------------------------------------------------
+    gross_profit = (
+        (df["Win%"] / 100)
+        * df["Avg win%"]
+    )
 
-    gross_profit = df["Avg win%"] * df["Win%"]
+    gross_loss = (
+        ((100 - df["Win%"]) / 100)
+        * df["Avg loss%"]
+    )
 
-    gross_loss = df["Avg loss%"] * df["Loss %"]
+    df["Profit Factor"] = safe_divide(
+        gross_profit,
+        gross_loss
+    ).round(CONFIG["ROUND"])
 
-    df["Profit Factor"] = np.where(
-
-        gross_loss > 0,
-
-        gross_profit / gross_loss,
-
-        np.nan
-
-    ).round(2)
-
-    # -----------------------------------------------------------
+    # --------------------------------------------------------
     # 4. TRADES PER YEAR
-    # -----------------------------------------------------------
+    # --------------------------------------------------------
 
-    df["Trades / Year"] = np.where(
-
-        df["Years"] > 0,
-
-        df["Trades"] / df["Years"],
-
-        np.nan
-
-    ).round(2)
-
-    # -----------------------------------------------------------
-    # 5. ANNUAL EXPECTANCY
-    # -----------------------------------------------------------
-
-    df["Annual Expectancy"] = (
-
-        df["Expectancy%"] *
-
-        df["Trades / Year"]
-
-    ).round(2)
-
-    # -----------------------------------------------------------
-    # 6. WINNING EXIT %
-    # -----------------------------------------------------------
-
-    df["Winning Exit %"] = (
-
-        df["Target %"] +
-
-        df["Trail %"] +
-
-        df["Time-win"]
-
-    ).round(2)
-
-    # -----------------------------------------------------------
-    # 7. LOSING EXIT %
-    # -----------------------------------------------------------
-
-    df["Losing Exit %"] = (
-
-        df["Stop %"] +
-
-        df["Time-loss"]
-
-    ).round(2)
-
-    # -----------------------------------------------------------
-    # 8. TARGET EFFICIENCY
-    # -----------------------------------------------------------
-
-    df["Target Efficiency"] = np.where(
-
-        df["Trades"] > 0,
-
-        df["Target #"] /
-
-        df["Trades"] * 100,
-
-        np.nan
-
-    ).round(2)
-
-    # -----------------------------------------------------------
-    # 9. TRAIL EFFICIENCY
-    # -----------------------------------------------------------
-
-    df["Trail Efficiency"] = np.where(
-
-        df["Trades"] > 0,
-
-        df["Trail #"] /
-
-        df["Trades"] * 100,
-
-        np.nan
-
-    ).round(2)
-
-    # -----------------------------------------------------------
-    # 10. STOP EFFICIENCY
-    # -----------------------------------------------------------
-
-    df["Stop Efficiency"] = np.where(
-
-        df["Trades"] > 0,
-
-        df["Stop #"] /
-
-        df["Trades"] * 100,
-
-        np.nan
-
-    ).round(2)
-
-    # -----------------------------------------------------------
-    # 11. TIME EXIT EFFICIENCY
-    # -----------------------------------------------------------
-
-    df["Time Efficiency"] = np.where(
-
-        df["Trades"] > 0,
-
-        df["Time #"] /
-
-        df["Trades"] * 100,
-
-        np.nan
-
-    ).round(2)
-
-    # -----------------------------------------------------------
-    # 12. HOLDING EFFICIENCY
-    # Expectancy generated per holding day
-    # -----------------------------------------------------------
-
-    df["Holding Efficiency"] = np.where(
-
-        df["Avg days"] > 0,
-
-        df["Expectancy%"] /
-
-        df["Avg days"],
-
-        np.nan
-
-    ).round(3)
-
-    # -----------------------------------------------------------
-    # 13. PROFIT VELOCITY
-    # Annual expectancy generated
-    # -----------------------------------------------------------
-
-    df["Profit Velocity"] = (
-
-        df["Exp/DAY%"] *
-
-        df["Trades"]
-
-    ).round(2)
-
-    # -----------------------------------------------------------
-    # 14. SIGNAL DENSITY
-    # -----------------------------------------------------------
-
-    df["Signal Density"] = np.where(
-
-        df["Trades"] > 0,
-
-        df["Signals today"] /
+    df["Trades / Year"] = safe_divide(
 
         df["Trades"],
 
-        np.nan
+        df["Years"]
 
-    ).round(3)
+    ).round(CONFIG["ROUND"])
 
-    # -----------------------------------------------------------
-    # 15. TRADE FREQUENCY
-    # -----------------------------------------------------------
+    # --------------------------------------------------------
+    # 5. PROFIT VELOCITY
+    # --------------------------------------------------------
 
-    df["Trade Frequency"] = np.where(
+    df["Profit Velocity"] = (
 
-        df["Years"] > 0,
+        df["Exp/DAY%"]
 
-        df["Trades"] /
+        *
 
-        (df["Years"] * 252),
+        df["Trades"]
 
-        np.nan
+    ).round(CONFIG["ROUND"])
 
-    ).round(3)
+    # --------------------------------------------------------
+    # 6. HOLDING EFFICIENCY
+    # --------------------------------------------------------
 
-    # -----------------------------------------------------------
-    # 16. EXIT QUALITY
-    # -----------------------------------------------------------
+    df["Holding Efficiency"] = safe_divide(
 
-    df["Exit Quality"] = np.where(
+        df["Expectancy%"],
 
-        df["Winning Exit %"] >
+        df["Avg days"]
 
-        df["Losing Exit %"],
+    ).round(CONFIG["ROUND"])
 
-        "Positive",
+    # --------------------------------------------------------
+    # 7. WINNING EXIT %
+    # --------------------------------------------------------
 
-        "Negative"
+    df["Winning Exit %"] = (
 
-    )
+        df["Target %"]
 
-    # -----------------------------------------------------------
-    # 17. HOLDING STYLE
-    # -----------------------------------------------------------
+        +
 
-    conditions = [
+        df["Trail %"]
 
-        df["Avg days"] <= 1,
+        +
 
-        (df["Avg days"] > 1) & (df["Avg days"] <= 7),
+        df["Time-win"]
 
-        (df["Avg days"] > 7) & (df["Avg days"] <= 30),
+    ).round(CONFIG["ROUND"])
 
-        (df["Avg days"] > 30)
+    # --------------------------------------------------------
+    # 8. LOSING EXIT %
+    # --------------------------------------------------------
 
-    ]
+    df["Losing Exit %"] = (
 
-    choices = [
+        df["Stop %"]
 
-        "Intraday",
+        +
 
-        "Swing",
+        df["Time-loss"]
 
-        "Position",
+    ).round(CONFIG["ROUND"])
 
-        "Long Term"
+    # --------------------------------------------------------
+    # 9. EXIT EDGE
+    # --------------------------------------------------------
 
-    ]
+    df["Exit Edge"] = (
 
-    df["Trading Style"] = np.select(
+        df["Winning Exit %"]
 
-        conditions,
+        -
 
-        choices,
+        df["Losing Exit %"]
 
-        default="Unknown"
+    ).round(CONFIG["ROUND"])
 
-    )
+    # --------------------------------------------------------
+    # 10. SIGNAL QUALITY
+    # --------------------------------------------------------
+
+    df["Signal Quality"] = (
+        score_metric(df["Expectancy%"], "EXPECTANCY") * 0.50 +
+
+        score_metric(df["Reward Risk"], "RR") * 0.30 +
+
+        score_metric(df["Win%"], "WIN") * 0.20
+
+    ).round(CONFIG["ROUND"])
 
     logger.info("Derived Metrics Completed.")
 
     return df
 
-# ===============================================================
+# ============================================================
+# DATA PREVIEW
+# ============================================================
+
+def metrics_preview(df):
+
+    print()
+
+    print("=" * 75)
+
+    print("DERIVED METRICS PREVIEW")
+
+    print("=" * 75)
+
+    print(
+
+        df[
+
+            [
+
+                "Stock",
+
+                "Expectancy%",
+
+                "Profit Factor",
+
+                "Reward Risk",
+
+                "Trades / Year",
+
+                "Profit Velocity"
+
+            ]
+
+        ].head(10)
+
+    )
+
+    print("=" * 75)
+
+# ============================================================
 # PART 3 : INSTITUTIONAL SCORING ENGINE
-# ===============================================================
+# ============================================================
 
-logger.info("Loading Scoring Engine...")
+logger.info("Loading Institutional Scoring Engine...")
 
-# ===============================================================
-# WEIGHTAGE
-# ===============================================================
+# ============================================================
+# EDGE SCORE
+# ============================================================
 
-WEIGHTS = {
+def edge_score(df):
 
-    "Expectancy":20,
-
-    "ProfitFactor":20,
-
-    "RewardRisk":15,
-
-    "WinRate":15,
-
-    "Trades":10,
-
-    "ExpDay":10,
-
-    "RS":5,
-
-    "Holding":5
-
-}
-
-# ===============================================================
-# NORMALIZE FUNCTION
-# ===============================================================
-
-def normalize(series, reverse=False):
-
-    minimum = series.min()
-    maximum = series.max()
-
-    if maximum == minimum:
-        return pd.Series([50]*len(series), index=series.index)
-
-    score = (series-minimum)/(maximum-minimum)*100
-
-    if reverse:
-        score = 100-score
-
-    return score.round(2)
-
-# ===============================================================
-# CONFIDENCE SCORE
-# ===============================================================
-
-def confidence_score(df):
-
-    logger.info("Calculating Confidence Score...")
-
-    trades = normalize(df["Trades"])
-
-    years = normalize(df["Years"])
-
-    expectancy = normalize(df["Expectancy%"])
-
-    confidence = (
-
-        trades*0.50 +
-
-        years*0.30 +
-
-        expectancy*0.20
-
-    )
-
-    return confidence.round(2)
-
-# ===============================================================
-# RISK SCORE
-# ===============================================================
-
-def risk_score(df):
-
-    logger.info("Calculating Risk Score...")
-
-    stop = normalize(df["Stop %"], reverse=True)
-
-    avg_loss = normalize(df["Avg loss%"], reverse=True)
-
-    holding = normalize(df["Avg days"], reverse=True)
-
-    risk = (
-
-        stop*0.40 +
-
-        avg_loss*0.40 +
-
-        holding*0.20
-
-    )
-
-    return risk.round(2)
-
-# ===============================================================
-# OPPORTUNITY SCORE
-# ===============================================================
-
-def opportunity_score(df):
-
-    logger.info("Calculating Opportunity Score...")
-
-    expectancy = normalize(df["Expectancy%"])
-
-    exp_day = normalize(df["Exp/DAY%"])
-
-    rs = normalize(df["RS%"])
-
-    pf = normalize(df["Profit Factor"])
+    logger.info("Calculating Edge Score...")
 
     score = (
 
-        expectancy*0.40 +
+        score_metric(
 
-        exp_day*0.30 +
+            df["Expectancy%"],
 
-        rs*0.10 +
+            "EXPECTANCY"
 
-        pf*0.20
+        ) * 0.40 +
+
+        score_metric(
+
+            df["Profit Factor"],
+
+            "PF"
+
+        ) * 0.35 +
+
+        score_metric(
+
+            df["Reward Risk"],
+
+            "RR"
+    
+        ) * 0.25
 
     )
 
-    return score.round(2)
+    return score.round(CONFIG["ROUND"])
 
-# ===============================================================
-# CONSISTENCY SCORE
-# ===============================================================
+# ============================================================
+# RELIABILITY SCORE
+# ============================================================
 
-def consistency_score(df):
+def reliability_score(df):
 
-    logger.info("Calculating Consistency Score...")
-
-    win = normalize(df["Win%"])
-
-    rr = normalize(df["Reward Risk"])
-
-    pf = normalize(df["Profit Factor"])
+    logger.info("Calculating Reliability Score...")
 
     score = (
 
-        win*0.40 +
+        score_metric(
 
-        rr*0.30 +
+            df["Trades"],
 
-        pf*0.30
+            "TRADES"
+
+        ) * 0.70 +
+
+        score_metric(
+
+            df["Years"],
+
+            "YEARS"
+
+        ) * 0.30
+
+    )
+    
+    return score.round(CONFIG["ROUND"])
+
+# ============================================================
+# EFFICIENCY SCORE
+# ============================================================
+
+def efficiency_score(df):
+
+    logger.info("Calculating Efficiency Score...")
+
+    score = (
+
+        score_metric(
+
+            df["Profit Velocity"],
+
+            "PROFIT_VELOCITY"
+
+        ) * 0.30 +
+
+        score_metric(
+
+            df["Holding Efficiency"],
+
+            "HOLDING_EFFICIENCY"
+
+        ) * 0.25 +
+
+        score_metric(
+
+            df["Exit Edge"],
+
+            "EXIT_EDGE"
+
+        ) * 0.20 +
+
+        df["Signal Quality"] * 0.25
 
     )
 
-    return score.round(2)
+    return score.round(CONFIG["ROUND"])
 
-# ===============================================================
-# HOLDING SCORE
-# ===============================================================
-
-def holding_score(df):
-
-    return normalize(df["Avg days"], reverse=True)
-
-# ===============================================================
+# ============================================================
 # COMPOSITE SCORE
-# ===============================================================
+# ============================================================
 
 def composite_score(df):
 
@@ -870,262 +1122,67 @@ def composite_score(df):
 
     score = (
 
-        normalize(df["Expectancy%"]) * WEIGHTS["Expectancy"]
+        df["Edge Score"] * 0.45 +
 
-        +
+        df["Reliability Score"] * 0.35 +
 
-        normalize(df["Profit Factor"]) * WEIGHTS["ProfitFactor"]
+        df["Efficiency Score"] * 0.20
 
-        +
+    )    
 
-        normalize(df["Reward Risk"]) * WEIGHTS["RewardRisk"]
+    return score.round(CONFIG["ROUND"])
 
-        +
+# ============================================================
+# RECOMMENDATION
+# ============================================================
 
-        normalize(df["Win%"]) * WEIGHTS["WinRate"]
-
-        +
-
-        normalize(df["Trades"]) * WEIGHTS["Trades"]
-
-        +
-
-        normalize(df["Exp/DAY%"]) * WEIGHTS["ExpDay"]
-
-        +
-
-        normalize(df["RS%"]) * WEIGHTS["RS"]
-
-        +
-
-        holding_score(df) * WEIGHTS["Holding"]
-
-    ) / 100
-
-    return score.round(2)
-
-# ===============================================================
-# OVERALL RATING
-# ===============================================================
-
-def overall_rating(score):
+def recommendation(score):
 
     if score >= 90:
-        return "★★★★★ Elite"
+        return "★★★★★ DEPLOY"
 
     elif score >= 80:
-        return "★★★★ Excellent"
+        return "★★★★ STRONG BUY"
 
     elif score >= 70:
-        return "★★★ Good"
+        return "★★★ BUY"
 
     elif score >= 60:
-        return "★★ Average"
+        return "★★ WATCH"
 
-    elif score >= 50:
-        return "★ Weak"
+    return "★ REJECT"
 
-    return "Poor"
-
-# ===============================================================
-# RECOMMENDATION
-# ===============================================================
-
-def recommendation(row):
-
-    if row["Trades"] < 100:
-        return "INSUFFICIENT DATA"
-
-    if row["Profit Factor"] < 1:
-        return "REJECT"
-
-    if row["Expectancy%"] <= 0:
-        return "REJECT"
-
-    if row["Composite Score"] >= 90:
-        return "⭐⭐⭐⭐⭐ INSTITUTIONAL BUY"
-
-    elif row["Composite Score"] >= 80:
-        return "STRONG BUY"
-
-    elif row["Composite Score"] >= 70:
-        return "BUY"
-
-    elif row["Composite Score"] >= 60:
-        return "WATCH"
-
-    elif row["Composite Score"] >= 50:
-        return "AVOID"
-
-    return "REJECT"
-
-# ===============================================================
+# ============================================================
 # BUILD SCORECARD
-# ===============================================================
+# ============================================================
 
 def build_scorecard(df):
 
     logger.info("Building Institutional Scorecard...")
 
-    df["Confidence Score"] = confidence_score(df)
+    df["Edge Score"] = edge_score(df)
 
-    df["Risk Score"] = risk_score(df)
+    df["Reliability Score"] = reliability_score(df)
 
-    df["Opportunity Score"] = opportunity_score(df)
-
-    df["Consistency Score"] = consistency_score(df)
+    df["Efficiency Score"] = efficiency_score(df)
 
     df["Composite Score"] = composite_score(df)
 
-    df["Overall Rating"] = df["Composite Score"].apply(overall_rating)
-
-    df["Recommendation"] = df.apply(
-        recommendation,
-        axis=1
-    )
-
     df = df.sort_values(
 
         by=[
 
             "Composite Score",
 
-            "Opportunity Score",
+            "Edge Score",
 
-            "Confidence Score",
+            "Reliability Score",
 
-            "Profit Factor",
-
-            "Expectancy%"
-
-        ],
-
-        ascending=False
-
-    )
-
-    df["Institution Rank"] = range(
-
-        1,
-
-        len(df)+1
-
-    )
-
-    logger.info("Scoring Completed.")
-
-    return df
-
-# ===============================================================
-# PART 4 : REPORT GENERATOR
-# ===============================================================
-
-logger.info("Loading Report Generator...")
-
-# ===============================================================
-# QUALITY FLAG
-# ===============================================================
-
-def quality_flag(row):
-
-    flags = []
-
-    if row["Trades"] < 100:
-        flags.append("Low Sample")
-
-    if row["Profit Factor"] < 1.50:
-        flags.append("Low PF")
-
-    if row["Reward Risk"] < 1.50:
-        flags.append("Low RR")
-
-    if row["Expectancy%"] < 1:
-        flags.append("Low Edge")
-
-    if row["Stop %"] > 50:
-        flags.append("High Stop Rate")
-
-    if len(flags) == 0:
-        return "PASS"
-
-    return ", ".join(flags)
-
-# ===============================================================
-# EXIT DOMINANCE
-# ===============================================================
-
-def exit_dominance(row):
-
-    exits = {
-
-        "Target": row["Target %"],
-
-        "Trail": row["Trail %"],
-
-        "Stop": row["Stop %"],
-
-        "Time": row["Time %"]
-
-    }
-
-    return max(exits, key=exits.get)
-
-# ===============================================================
-# RISK CATEGORY
-# ===============================================================
-
-def risk_category(score):
-
-    if score >= 80:
-        return "Low Risk"
-
-    elif score >= 60:
-        return "Medium Risk"
-
-    elif score >= 40:
-        return "High Risk"
-
-    return "Very High Risk"
-
-# ===============================================================
-# FINALIZE REPORT
-# ===============================================================
-
-def finalize_report(df):
-
-    logger.info("Finalizing Report...")
-
-    df["Quality Flag"] = df.apply(
-        quality_flag,
-        axis=1
-    )
-
-    df["Exit Dominance"] = df.apply(
-        exit_dominance,
-        axis=1
-    )
-
-    df["Risk Category"] = df["Risk Score"].apply(
-        risk_category
-    )
-
-    # Final sort
-
-    df = df.sort_values(
-
-        by=[
-
-            "Composite Score",
-
-            "Confidence Score",
-
-            "Opportunity Score",
-
-            "Profit Factor",
+            "Efficiency Score",
 
             "Expectancy%",
 
-            "Win%"
+            "Profit Factor"
 
         ],
 
@@ -1133,46 +1190,179 @@ def finalize_report(df):
 
     )
 
-    df["Institution Rank"] = range(
+    df["Institution Rank"] = np.arange(
+
         1,
+
         len(df)+1
+
     )
+
+    df["Recommendation"] = (
+
+        df["Composite Score"]
+
+        .apply(recommendation)
+
+    )
+
+    logger.info("Institutional Ranking Completed.")
 
     return df
 
-# ===============================================================
-# SUMMARY
-# ===============================================================
+# ============================================================
+# SCORE PREVIEW
+# ============================================================
+
+def score_preview(df):
+
+    print()
+
+    print("=" * 80)
+
+    print("INSTITUTIONAL SCORECARD")
+
+    print("=" * 80)
+
+    print(
+
+        df[
+
+            [
+
+                "Institution Rank",
+
+                "Stock",
+
+                "Edge Score",
+
+                "Reliability Score",
+
+                "Efficiency Score",
+
+                "Composite Score",
+
+                "Recommendation"
+
+            ]
+
+        ].head(10)
+
+    )
+
+    print("=" * 80)
+
+# ============================================================
+# PART 4 : REPORT GENERATOR
+# ============================================================
+
+logger.info("Loading Report Generator...")
+
+# ============================================================
+# EXPORT REPORT
+# ============================================================
+
+def export_report(df):
+
+    logger.info("Preparing Institutional Report...")
+
+    report = df[
+
+        [
+
+            "Institution Rank",
+
+            "Stock",
+
+            "Expectancy%",
+
+            "Profit Factor",
+
+            "Reward Risk",
+
+            "Trades / Year",
+
+            "Profit Velocity",
+
+            "Signal Quality",
+
+            "Holding Efficiency",
+
+            "Winning Exit %",
+
+            "Losing Exit %",
+
+            "Edge Score",
+
+            "Reliability Score",
+
+            "Efficiency Score",
+
+            "Composite Score",
+
+            "Recommendation"
+
+        ]
+
+    ].copy()
+
+    report = report.round(CONFIG["ROUND"])
+
+    report.to_csv(
+
+        CONFIG["OUTPUT_FILE"],
+
+        index=False
+
+    )
+
+    logger.info(
+
+        f"Report Saved : {CONFIG['OUTPUT_FILE']}"
+
+    )
+
+    return report
+
+# ============================================================
+# PRINT SUMMARY
+# ============================================================
 
 def print_summary(df):
 
     print()
 
-    print("="*70)
+    print("="*80)
 
-    print("INSTITUTIONAL ANALYTICS SUMMARY")
+    print("INSTITUTIONAL STOCK ANALYTICS SUMMARY")
 
-    print("="*70)
+    print("="*80)
 
-    print(f"Stocks Analysed          : {len(df)}")
+    print(f"Stocks Analysed      : {len(df)}")
 
-    print(f"Average Composite Score  : {df['Composite Score'].mean():.2f}")
+    print(f"Average Edge Score   : {df['Edge Score'].mean():.2f}")
 
-    print(f"Average Confidence       : {df['Confidence Score'].mean():.2f}")
+    print(f"Average Reliability  : {df['Reliability Score'].mean():.2f}")
 
-    print(f"Average Risk Score       : {df['Risk Score'].mean():.2f}")
+    print(f"Average Efficiency   : {df['Efficiency Score'].mean():.2f}")
 
-    print(f"Average Opportunity      : {df['Opportunity Score'].mean():.2f}")
+    print(f"Average Composite    : {df['Composite Score'].mean():.2f}")
 
     print()
 
     print("Recommendation Distribution")
 
-    print(df["Recommendation"].value_counts())
+    print(
+
+        df["Recommendation"]
+
+        .value_counts()
+
+    )
 
     print()
 
-    print("Top 10 Stocks")
+    print("TOP 10 STOCKS")
 
     print(
 
@@ -1194,71 +1384,67 @@ def print_summary(df):
 
     )
 
-    print("="*70)
+    print("="*80)
 
-# ===============================================================
-# EXPORT
-# ===============================================================
-
-def export_report(df):
-
-    logger.info("Exporting Report...")
-
-    df.to_csv(
-
-        CONFIG["OUTPUT_FILE"],
-
-        index=False
-
-    )
-
-    logger.info(
-
-        f"Saved : {CONFIG['OUTPUT_FILE']}"
-
-    )
-
-# ===============================================================
+# ============================================================
 # MAIN
-# ===============================================================
+# ============================================================
 
 def main():
 
-    logger.info("="*60)
+    logger.info("="*80)
 
-    logger.info("Institutional Stock Analytics Engine")
+    logger.info(
 
-    logger.info("="*60)
+        "Institutional Stock Analytics Engine v3.0"
 
-    # Part 1
+    )
+
+    logger.info("="*80)
+
+    # -------------------------------------------------------
+    # PART 1
+    # -------------------------------------------------------
 
     df = prepare_data()
 
-    # Part 2
+    # -------------------------------------------------------
+    # PART 2
+    # -------------------------------------------------------
 
     df = calculate_metrics(df)
 
-    # Part 3
+    metrics_preview(df)
+
+    # -------------------------------------------------------
+    # PART 3
+    # -------------------------------------------------------
 
     df = build_scorecard(df)
 
-    # Part 4
+    score_preview(df)
 
-    df = finalize_report(df)
-
-    print_summary(df)
+    # -------------------------------------------------------
+    # PART 4
+    # -------------------------------------------------------
 
     export_report(df)
 
-    logger.info("="*60)
+    print_summary(df)
 
-    logger.info("PROCESS COMPLETED SUCCESSFULLY")
+    logger.info("="*80)
 
-    logger.info("="*60)
+    logger.info(
 
-# ===============================================================
+        "PROCESS COMPLETED SUCCESSFULLY"
+
+    )
+
+    logger.info("="*80)
+
+# ============================================================
 # START
-# ===============================================================
+# ============================================================
 
 if __name__ == "__main__":
 

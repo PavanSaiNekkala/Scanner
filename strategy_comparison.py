@@ -1,30 +1,33 @@
 """
 ====================================================================
-Institutional Strategy Comparison Engine
-Part 1 : Configuration, Loader & Validation
+Institutional Strategy Universe Evaluation Engine (ISUE) v3.0
 ====================================================================
 
-Input  : Multiple Strategy CSV Files
-Output : Strategy_Comparison_Report.csv
+Purpose
+-------
+Identify the strategy that produces the BEST STOCK UNIVERSE.
 
-Author : Pavan Sai
-Version: 2.0
+Author  : Pavan Sai
+Version : 3.0
 """
 
-import os
+# ================================================================
+# IMPORTS
+# ================================================================
+
+from pathlib import Path
 import glob
 import logging
 import warnings
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 warnings.filterwarnings("ignore")
 
-# ============================================================
+# ================================================================
 # CONFIGURATION
-# ============================================================
+# ================================================================
 
 CONFIG = {
 
@@ -32,21 +35,21 @@ CONFIG = {
 
     "FILE_PATTERN": "Output*.csv",
 
-    "OUTPUT_FILE": "Strategy_Comparison_Report.csv",
+    "OUTPUT_FILE": "Strategy_Universe_Report.xlsx",
 
     "ROUND": 2,
 
-    "MIN_TRADES": 100,
+    "TOP_N": [10, 20, 50],
 
-    "MIN_EXPECTANCY": 0.50,
+    "MIN_DEPLOY_SCORE": 80,
 
-    "MIN_PROFIT_FACTOR": 1.20
+    "MIN_BUY_SCORE": 70
 
 }
 
-# ============================================================
+# ================================================================
 # LOGGING
-# ============================================================
+# ================================================================
 
 logging.basicConfig(
 
@@ -56,131 +59,138 @@ logging.basicConfig(
 
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("ISUE_V3")
 
-# ============================================================
-# REQUIRED COLUMNS
-# ============================================================
+# ================================================================
+# INPUT SCHEMA
+# ================================================================
 
 REQUIRED_COLUMNS = [
 
+    "Institution Rank",
+
     "Stock",
-
-    "Signals today",
-
-    "Rank",
-
-    "Exp/DAY%",
-
-    "RS%",
-
-    "Trades",
-
-    "Win%",
-
-    "Target #",
-
-    "Target %",
-
-    "Trail #",
-
-    "Trail %",
-
-    "Stop #",
-
-    "Stop %",
-
-    "Time #",
-
-    "Time %",
-
-    "Time-win",
-
-    "Time-loss",
 
     "Expectancy%",
 
-    "Avg win%",
+    "Profit Factor",
 
-    "Avg loss%",
+    "Reward Risk",
 
-    "Avg days",
+    "Trades / Year",
 
-    "BT from",
+    "Profit Velocity",
 
-    "BT to",
+    "Signal Quality",
 
-    "Years",
+    "Holding Efficiency",
 
-    "Remark"
+    "Winning Exit %",
+
+    "Losing Exit %",
+
+    "Edge Score",
+
+    "Reliability Score",
+
+    "Efficiency Score",
+
+    "Composite Score",
+
+    "Recommendation"
 
 ]
-
-# ============================================================
-# NUMERIC COLUMNS
-# ============================================================
 
 NUMERIC_COLUMNS = [
 
-    "Signals today",
-
-    "Rank",
-
-    "Exp/DAY%",
-
-    "RS%",
-
-    "Trades",
-
-    "Win%",
-
-    "Target #",
-
-    "Target %",
-
-    "Trail #",
-
-    "Trail %",
-
-    "Stop #",
-
-    "Stop %",
-
-    "Time #",
-
-    "Time %",
-
-    "Time-win",
-
-    "Time-loss",
+    "Institution Rank",
 
     "Expectancy%",
 
-    "Avg win%",
+    "Profit Factor",
 
-    "Avg loss%",
+    "Reward Risk",
 
-    "Avg days",
+    "Trades / Year",
 
-    "Years"
+    "Profit Velocity",
+
+    "Signal Quality",
+
+    "Holding Efficiency",
+
+    "Winning Exit %",
+
+    "Losing Exit %",
+
+    "Edge Score",
+
+    "Reliability Score",
+
+    "Efficiency Score",
+
+    "Composite Score"
 
 ]
 
-# ============================================================
-# FIND CSV FILES
-# ============================================================
+# ================================================================
+# UTILITY FUNCTIONS
+# ================================================================
+
+def safe_divide(a, b):
+
+    result = a.div(b)
+
+    result = result.replace(
+
+        [np.inf, -np.inf],
+
+        np.nan
+
+    )
+
+    return result
+
+
+def percentage(series):
+
+    return (
+
+        series.mean()
+
+        * 100
+
+    ).round(CONFIG["ROUND"])
+
+# ================================================================
+# FILE DISCOVERY
+# ================================================================
 
 def find_strategy_files():
 
-    logger.info("Searching strategy files...")
+    logger.info(
 
-    files = glob.glob(
+        "Searching strategy files..."
 
-        os.path.join(
+    )
 
-            CONFIG["INPUT_FOLDER"],
+    files = sorted(
 
-            CONFIG["FILE_PATTERN"]
+        glob.glob(
+
+            str(
+
+                Path(
+
+                    CONFIG["INPUT_FOLDER"]
+
+                )
+
+                /
+
+                CONFIG["FILE_PATTERN"]
+
+            )
 
         )
 
@@ -188,53 +198,43 @@ def find_strategy_files():
 
     files = [
 
-        f for f in files
+        file
 
-        if Path(f).name != CONFIG["OUTPUT_FILE"]
+        for file in files
+
+        if Path(file).name != CONFIG["OUTPUT_FILE"]
 
     ]
 
-    if len(files) == 0:
+    if not files:
 
         raise FileNotFoundError(
 
-            "No strategy CSV files found."
+            "No strategy files found."
 
         )
 
-    logger.info(f"Strategies Found : {len(files)}")
+    logger.info(
 
-    return sorted(files)
+        f"Strategies Found : {len(files)}"
 
-# ============================================================
-# LOAD ONE STRATEGY
-# ============================================================
+    )
 
-def load_strategy(file):
+    return files
 
-    logger.info(f"Loading : {Path(file).name}")
+# ================================================================
+# VALIDATION
+# ================================================================
 
-    df = pd.read_csv(file)
-
-    strategy = Path(file).stem
-
-    df["Strategy"] = strategy
-
-    return df
-
-# ============================================================
-# VALIDATE
-# ============================================================
-
-def validate_columns(df, filename):
+def validate_dataframe(df, filename):
 
     missing = [
 
-        col
+        column
 
-        for col in REQUIRED_COLUMNS
+        for column in REQUIRED_COLUMNS
 
-        if col not in df.columns
+        if column not in df.columns
 
     ]
 
@@ -242,55 +242,69 @@ def validate_columns(df, filename):
 
         raise ValueError(
 
-            f"{filename}\nMissing Columns:\n{missing}"
+            f"\n{filename}\n"
+
+            f"Missing Columns:\n"
+
+            f"{missing}"
 
         )
 
-# ============================================================
-# CLEAN DATA
-# ============================================================
+    for column in NUMERIC_COLUMNS:
 
-def clean_dataframe(df):
+        df[column] = pd.to_numeric(
 
-    for col in NUMERIC_COLUMNS:
-
-        df[col] = pd.to_numeric(
-
-            df[col],
+            df[column],
 
             errors="coerce"
 
         )
 
-    df["BT from"] = pd.to_datetime(
+    if df["Stock"].duplicated().any():
 
-        df["BT from"],
+        logger.warning(
 
-        errors="coerce"
+            f"{filename} contains duplicate stocks."
+
+        )
+
+    if df["Composite Score"].isna().any():
+
+        logger.warning(
+
+            f"{filename} contains missing Composite Scores."
+
+        )
+
+    return df
+
+# ================================================================
+# LOAD STRATEGY
+# ================================================================
+
+def load_strategy(file):
+
+    logger.info(
+
+        f"Loading : {Path(file).name}"
 
     )
 
-    df["BT to"] = pd.to_datetime(
+    df = pd.read_csv(file)
 
-        df["BT to"],
+    df = validate_dataframe(
 
-        errors="coerce"
+        df,
+
+        Path(file).name
 
     )
 
     df = df.drop_duplicates()
 
-    df = df.dropna(
+    df = df.sort_values(
 
-        subset=[
-
-            "Stock",
-
-            "Trades",
-
-            "Expectancy%"
-
-        ]
+        "Institution Rank"
 
     )
 
@@ -302,13 +316,15 @@ def clean_dataframe(df):
 
     )
 
+    df["Strategy"] = Path(file).stem
+
     return df
 
-# ============================================================
+# ================================================================
 # LOAD ALL STRATEGIES
-# ============================================================
+# ================================================================
 
-def load_all_strategies():
+def load_universe():
 
     files = find_strategy_files()
 
@@ -316,15 +332,13 @@ def load_all_strategies():
 
     for file in files:
 
-        df = load_strategy(file)
+        frames.append(
 
-        validate_columns(df, file)
+            load_strategy(file)
 
-        df = clean_dataframe(df)
+        )
 
-        frames.append(df)
-
-    combined = pd.concat(
+    universe = pd.concat(
 
         frames,
 
@@ -332,1081 +346,391 @@ def load_all_strategies():
 
     )
 
-    logger.info("=" * 60)
+    logger.info("=" * 70)
 
     logger.info(
 
-        f"Total Strategies : {combined['Strategy'].nunique()}"
+        f"Strategies : {universe['Strategy'].nunique()}"
 
     )
 
     logger.info(
 
-        f"Total Stocks : {len(combined)}"
+        f"Stocks : {len(universe)}"
 
     )
 
-    logger.info("=" * 60)
+    logger.info("=" * 70)
 
-    return combined
+    return universe
 
-# ============================================================
-# PERCENTILE NORMALIZATION
-# ============================================================
+# ================================================================
+# DATA SUMMARY
+# ================================================================
 
-def normalize(series, reverse=False):
+def print_input_summary(df):
 
-    score = series.rank(
+    print()
 
-        method="average",
+    print("=" * 80)
 
-        pct=True
+    print("INPUT DATA SUMMARY")
 
-    ) * 100
+    print("=" * 80)
 
-    if reverse:
+    print(
 
-        score = 100 - score
+        f"Strategies Loaded : "
 
-    return score.round(CONFIG["ROUND"])
-
-# ============================================================
-# SAFE DIVISION
-# ============================================================
-
-def safe_divide(a, b):
-
-    return pd.Series(
-
-        np.where(
-
-            b != 0,
-
-            a / b,
-
-            np.nan
-
-        ),
-
-        index=a.index
+        f"{df['Strategy'].nunique()}"
 
     )
 
-# ============================================================
-# PART 2 : CORE METRICS ENGINE
-# ============================================================
+    print(
 
-logger.info("Loading Core Metrics Engine...")
+        f"Total Stocks : "
 
-# ============================================================
-# CALCULATE METRICS
-# ============================================================
+        f"{len(df)}"
 
-def calculate_metrics(df):
+    )
 
-    logger.info("Calculating Strategy Metrics...")
+    print()
 
-    # --------------------------------------------------------
-    # Basic Performance
-    # --------------------------------------------------------
+    print(
 
-    df["Loss %"] = (
-        100 - df["Win%"]
-    ).round(CONFIG["ROUND"])
+        df.groupby(
 
-    df["Reward Risk"] = safe_divide(
+            "Strategy"
 
-        df["Avg win%"],
+        )
 
-        df["Avg loss%"]
+        .size()
 
-    ).round(CONFIG["ROUND"])
+        .rename(
 
-    # --------------------------------------------------------
-    # Profit Factor (Best Possible Approximation)
-    # --------------------------------------------------------
+            "Stocks"
 
-    gross_profit = (
+        )
 
-        df["Avg win%"]
+        .sort_values(
 
-        *
-
-        (
-
-            df["Target #"]
-
-            +
-
-            df["Trail #"]
+            ascending=False
 
         )
 
     )
 
-    gross_loss = (
+    print("=" * 80)
 
-        df["Avg loss%"]
+# ================================================================
+# PART 2 : UNIVERSE ANALYTICS ENGINE
+# ================================================================
 
-        *
+logger.info("Loading Universe Analytics Engine...")
 
-        df["Stop #"]
+# ================================================================
+# ANALYZE ONE STRATEGY
+# ================================================================
+
+def analyze_universe(strategy_df):
+
+    composite = strategy_df["Composite Score"]
+
+    signal = strategy_df["Signal Quality"]
+
+    analytics = {
+
+        # =====================================================
+        # GENERAL
+        # =====================================================
+
+        "Strategy":
+
+            strategy_df["Strategy"].iloc[0],
+
+        "Total Stocks":
+
+            len(strategy_df),
+
+        # =====================================================
+        # UNIVERSE QUALITY
+        # =====================================================
+
+        "Mean Composite":
+
+            composite.mean(),
+
+        "Median Composite":
+
+            composite.median(),
+
+        "Top10 Composite":
+
+            composite.nlargest(
+                CONFIG["TOP_N"][0]
+            ).mean(),
+
+        "Top20 Composite":
+
+            composite.nlargest(
+                CONFIG["TOP_N"][1]
+            ).mean(),
+
+        "Top50 Composite":
+
+            composite.nlargest(
+                CONFIG["TOP_N"][2]
+            ).mean(),
+
+        "Average Signal":
+
+            signal.mean(),
+
+        # =====================================================
+        # INVESTABILITY
+        # =====================================================
+
+        "Deploy %":
+
+            percentage(
+
+                strategy_df["Recommendation"]
+
+                ==
+
+                "DEPLOY"
+
+            ),
+
+        "Strong Buy %":
+
+            percentage(
+
+                strategy_df["Recommendation"]
+
+                ==
+
+                "STRONG BUY"
+
+            ),
+
+        "Buy %":
+
+            percentage(
+
+                strategy_df["Recommendation"]
+
+                ==
+
+                "BUY"
+
+            ),
+
+        "Watch %":
+
+            percentage(
+
+                strategy_df["Recommendation"]
+
+                ==
+
+                "WATCH"
+
+            ),
+
+        "Reject %":
+
+            percentage(
+
+                strategy_df["Recommendation"]
+
+                ==
+
+                "REJECT"
+
+            ),
+
+        # =====================================================
+        # CONSISTENCY
+        # =====================================================
+
+        "Std Composite":
+
+            composite.std(),
+
+        "IQR":
+
+            composite.quantile(0.75)
+
+            -
+
+            composite.quantile(0.25),
+
+        "CV":
+
+            composite.std()
+
+            /
+
+            composite.mean()
+
+            if composite.mean() != 0
+
+            else np.nan,
+
+        "MAD":
+
+            (
+
+                composite
+
+                -
+
+                composite.median()
+
+            ).abs().median(),
+
+        # =====================================================
+        # CONCENTRATION
+        # =====================================================
+
+        "Top10 Contribution":
+
+            composite.nlargest(
+                CONFIG["TOP_N"][0]
+            ).sum()
+
+            /
+
+            composite.sum(),
+
+        "Top20 Contribution":
+
+            composite.nlargest(
+                CONFIG["TOP_N"][1]
+            ).sum()
+
+            /
+
+            composite.sum(),
+
+        # =====================================================
+        # COVERAGE
+        # =====================================================
+
+        "Investable Stocks":
+
+            strategy_df[
+
+                strategy_df["Recommendation"]
+
+                .isin(
+
+                    [
+
+                        "DEPLOY",
+
+                        "STRONG BUY",
+
+                        "BUY"
+
+                    ]
+
+                )
+
+            ].shape[0],
+
+        "Average Trades":
+
+            strategy_df["Trades / Year"]
+
+            .mean()
+
+    }
+
+    return analytics
+
+# ================================================================
+# BUILD UNIVERSE ANALYTICS
+# ================================================================
+
+def build_universe_analytics(universe):
+
+    logger.info(
+
+        "Building Universe Analytics..."
 
     )
 
-    df["Profit Factor"] = safe_divide(
+    analytics = []
 
-        gross_profit,
+    for _, strategy_df in universe.groupby(
 
-        gross_loss
+        "Strategy"
 
-    ).round(CONFIG["ROUND"])
+    ):
 
-    # --------------------------------------------------------
-    # Reliability
-    # --------------------------------------------------------
+        analytics.append(
 
-    df["Trades / Year"] = safe_divide(
+            analyze_universe(
 
-        df["Trades"],
-
-        df["Years"]
-
-    ).round(CONFIG["ROUND"])
-
-    # --------------------------------------------------------
-    # Efficiency
-    # --------------------------------------------------------
-
-    df["Holding Efficiency"] = safe_divide(
-
-        df["Expectancy%"],
-
-        df["Avg days"]
-
-    ).round(CONFIG["ROUND"])
-
-    df["Profit Velocity"] = (
-
-        df["Exp/DAY%"]
-
-        *
-
-        df["Trades"]
-
-    ).round(CONFIG["ROUND"])
-
-    # --------------------------------------------------------
-    # Exit Statistics
-    # --------------------------------------------------------
-
-    df["Winning Exit %"] = (
-
-        df["Target %"]
-
-        +
-
-        df["Trail %"]
-
-        +
-
-        df["Time-win"]
-
-    ).round(CONFIG["ROUND"])
-
-    df["Losing Exit %"] = (
-
-        df["Stop %"]
-
-        +
-
-        df["Time-loss"]
-
-    ).round(CONFIG["ROUND"])
-
-    # --------------------------------------------------------
-    # Exit Quality
-    # --------------------------------------------------------
-
-    difference = (
-
-        df["Winning Exit %"]
-
-        -
-
-        df["Losing Exit %"]
-
-    )
-
-    df["Exit Quality"] = np.select(
-
-        [
-
-            difference >= 20,
-
-            difference >= 10,
-
-            difference >= 0
-
-        ],
-
-        [
-
-            "Excellent",
-
-            "Good",
-
-            "Average"
-
-        ],
-
-        default="Poor"
-
-    )
-
-    logger.info("Metrics Completed.")
-
-    return df
-
-# ============================================================
-# STRATEGY SUMMARY
-# ============================================================
-
-def build_strategy_summary(df):
-
-    logger.info("Building Strategy Summary...")
-
-    summary = (
-
-        df.groupby("Strategy")
-
-        .agg(
-
-            Stocks=(
-
-                "Stock",
-
-                "count"
-
-            ),
-
-            Median_Expectancy=(
-
-                "Expectancy%",
-
-                "median"
-
-            ),
-
-            Median_PF=(
-
-                "Profit Factor",
-
-                "median"
-
-            ),
-
-            Median_RR=(
-
-                "Reward Risk",
-
-                "median"
-
-            ),
-
-            Avg_Trades=(
-
-                "Trades",
-
-                "mean"
-
-            ),
-
-            Avg_Years=(
-
-                "Years",
-
-                "mean"
-
-            ),
-
-            Avg_Exp_Day=(
-
-                "Exp/DAY%",
-
-                "mean"
-
-            ),
-
-            Avg_Holding_Eff=(
-
-                "Holding Efficiency",
-
-                "mean"
-
-            ),
-
-            Avg_Stop=(
-
-                "Stop %",
-
-                "mean"
-
-            ),
-
-            Avg_Losing_Exit=(
-
-                "Losing Exit %",
-
-                "mean"
-
-            ),
-
-            Avg_Target=(
-
-                "Target %",
-
-                "mean"
-
-            ),
-
-            Avg_Winning_Exit=(
-
-                "Winning Exit %",
-
-                "mean"
+                strategy_df
 
             )
 
         )
 
-        .reset_index()
+    analytics = pd.DataFrame(
+
+        analytics
 
     )
 
-    summary = summary.round(CONFIG["ROUND"])
+    analytics = analytics.round(
 
-    logger.info("Strategy Summary Completed.")
-
-    return summary
-
-# ============================================================
-# QUICK SUMMARY
-# ============================================================
-
-def print_summary(summary):
-
-    print()
-
-    print("=" * 70)
-
-    print("STRATEGY SUMMARY")
-
-    print("=" * 70)
-
-    print(
-
-        summary[
-
-            [
-
-                "Strategy",
-
-                "Stocks",
-
-                "Median_Expectancy",
-
-                "Median_PF",
-
-                "Median_RR"
-
-            ]
-
-        ]
-
-    )
-
-    print("=" * 70)
-
-# ============================================================
-# PART 3 : STRATEGY SCORING ENGINE
-# ============================================================
-
-logger.info("Loading Strategy Scoring Engine...")
-
-# ============================================================
-# EDGE SCORE
-# ============================================================
-
-def calculate_edge_score(summary):
-
-    logger.info("Calculating Edge Score...")
-
-    score = (
-
-        normalize(summary["Median_Expectancy"]) * 0.45 +
-
-        normalize(summary["Median_PF"]) * 0.35 +
-
-        normalize(summary["Median_RR"]) * 0.20
-
-    )
-
-    return score.round(CONFIG["ROUND"])
-
-# ============================================================
-# RELIABILITY SCORE
-# ============================================================
-
-def calculate_reliability_score(summary):
-
-    logger.info("Calculating Reliability Score...")
-
-    score = (
-
-        normalize(summary["Avg_Trades"]) * 0.60 +
-
-        normalize(summary["Avg_Years"]) * 0.40
-
-    )
-
-    return score.round(CONFIG["ROUND"])
-
-# ============================================================
-# EFFICIENCY SCORE
-# ============================================================
-
-def calculate_efficiency_score(summary):
-
-    logger.info("Calculating Efficiency Score...")
-
-    score = (
-
-        normalize(summary["Avg_Exp_Day"]) * 0.60 +
-
-        normalize(summary["Avg_Holding_Eff"]) * 0.40
-
-    )
-
-    return score.round(CONFIG["ROUND"])
-
-# ============================================================
-# RISK SCORE
-# ============================================================
-
-def calculate_risk_score(summary):
-
-    logger.info("Calculating Risk Score...")
-
-    score = (
-
-        normalize(
-
-            summary["Avg_Stop"],
-
-            reverse=True
-
-        ) * 0.60 +
-
-        normalize(
-
-            summary["Avg_Losing_Exit"],
-
-            reverse=True
-
-        ) * 0.40
-
-    )
-
-    return score.round(CONFIG["ROUND"])
-
-# ============================================================
-# EXECUTION SCORE
-# ============================================================
-
-def calculate_execution_score(summary):
-
-    logger.info("Calculating Execution Score...")
-
-    score = (
-
-        normalize(summary["Avg_Target"]) * 0.50 +
-
-        normalize(summary["Avg_Winning_Exit"]) * 0.50
-
-    )
-
-    return score.round(CONFIG["ROUND"])
-
-# ============================================================
-# BUILD SCORES
-# ============================================================
-
-def score_strategies(summary):
-
-    logger.info("Generating Institutional Scores...")
-
-    summary["Edge Score"] = calculate_edge_score(summary)
-
-    summary["Reliability Score"] = calculate_reliability_score(summary)
-
-    summary["Efficiency Score"] = calculate_efficiency_score(summary)
-
-    summary["Risk Score"] = calculate_risk_score(summary)
-
-    summary["Execution Score"] = calculate_execution_score(summary)
-
-    # -------------------------------------------------------
-    # PRIMARY STRATEGY SCORE
-    # -------------------------------------------------------
-
-    summary["Strategy Score"] = (
-
-        summary["Edge Score"] * 0.40 +
-
-        summary["Reliability Score"] * 0.25 +
-
-        summary["Efficiency Score"] * 0.15 +
-
-        summary["Risk Score"] * 0.10 +
-
-        summary["Execution Score"] * 0.10
-
-    ).round(CONFIG["ROUND"])
-
-    logger.info("Scoring Completed.")
-
-    return summary
-
-
-# ============================================================
-# PREVIEW
-# ============================================================
-
-def preview_scores(summary):
-
-    print()
-
-    print("="*80)
-
-    print("INSTITUTIONAL STRATEGY SCORES")
-
-    print("="*80)
-
-    print(
-
-        summary[
-
-            [
-
-                "Strategy",
-
-                "Strategy Score",
-
-                "Edge Score",
-
-                "Reliability Score",
-
-                "Efficiency Score",
-
-                "Risk Score",
-
-                "Execution Score"
-
-            ]
-
-        ]
-
-    )
-
-    print("="*80)
-
-
-# ============================================================
-# PART 4 : FINAL STRATEGY RANKING
-# ============================================================
-
-logger.info("Loading Final Ranking Engine...")
-
-# ============================================================
-# ROBUSTNESS SCORE
-# ============================================================
-
-def robustness_analysis(df, summary):
-
-    logger.info("Calculating Robustness...")
-
-    robust = (
-
-        df.groupby("Strategy")
-
-        .agg(
-
-            Exp_STD=("Expectancy%", "std"),
-
-            PF_STD=("Profit Factor", "std"),
-
-            RR_STD=("Reward Risk", "std")
-
-        )
-
-        .reset_index()
-
-    )
-
-    robust = robust.merge(
-
-        summary[
-
-            [
-
-                "Strategy",
-
-                "Median_Expectancy",
-
-                "Median_PF",
-
-                "Median_RR"
-
-            ]
-
-        ],
-
-        on="Strategy",
-
-        how="left"
-
-    )
-
-    robust["Exp_CV"] = np.where(
-
-        robust["Median_Expectancy"] != 0,
-
-        robust["Exp_STD"] /
-
-        robust["Median_Expectancy"],
-
-        np.nan
-
-    )
-
-    robust["PF_CV"] = np.where(
-
-        robust["Median_PF"] != 0,
-
-        robust["PF_STD"] /
-
-        robust["Median_PF"],
-
-        np.nan
-
-    )
-
-    robust["RR_CV"] = np.where(
-
-        robust["Median_RR"] != 0,
-
-        robust["RR_STD"] /
-
-        robust["Median_RR"],
-
-        np.nan
-
-    )
-
-    robust["Robustness Score"] = (
-
-        normalize(
-
-            robust["Exp_CV"],
-
-            reverse=True
-
-        ) * 0.40 +
-
-        normalize(
-
-            robust["PF_CV"],
-
-            reverse=True
-
-        ) * 0.35 +
-
-        normalize(
-
-            robust["RR_CV"],
-
-            reverse=True
-
-        ) * 0.25
-
-    ).round(CONFIG["ROUND"])
-
-    summary = summary.merge(
-
-        robust[
-
-            [
-
-                "Strategy",
-
-                "Robustness Score"
-
-            ]
-
-        ],
-
-        on="Strategy",
-
-        how="left"
-
-    )
-
-    return summary
-
-# ============================================================
-# BREADTH SCORE
-# ============================================================
-
-def quality_statistics(df, summary):
-
-    logger.info("Calculating Breadth Score...")
-
-    quality = df.copy()
-
-    quality["PF_OK"] = (
-        quality["Profit Factor"] >= 1.50
-    )
-
-    quality["RR_OK"] = (
-        quality["Reward Risk"] >= 2.00
-    )
-
-    quality["EXP_OK"] = (
-        quality["Expectancy%"] >= 1.00
-    )
-
-    breadth = (
-
-        quality.groupby("Strategy")
-
-        .agg(
-
-            Stocks=("Stock","count"),
-
-            PF_OK=("PF_OK","sum"),
-
-            RR_OK=("RR_OK","sum"),
-
-            EXP_OK=("EXP_OK","sum")
-
-        )
-
-        .reset_index()
-
-    )
-
-    breadth["PF >1.5 %"] = (
-
-        breadth["PF_OK"]
-
-        /
-
-        breadth["Stocks"]
-
-        *100
-
-    ).round(CONFIG["ROUND"])
-
-    breadth["RR >2 %"] = (
-
-        breadth["RR_OK"]
-
-        /
-
-        breadth["Stocks"]
-
-        *100
-
-    ).round(CONFIG["ROUND"])
-
-    breadth["EXP >1 %"] = (
-
-        breadth["EXP_OK"]
-
-        /
-
-        breadth["Stocks"]
-
-        *100
-
-    ).round(CONFIG["ROUND"])
-
-    breadth["Breadth Score"] = (
-
-        breadth["PF >1.5 %"] * 0.40 +
-
-        breadth["RR >2 %"] * 0.30 +
-
-        breadth["EXP >1 %"] * 0.30
-
-    ).round(CONFIG["ROUND"])
-
-    summary = summary.merge(
-
-        breadth[
-
-            [
-
-                "Strategy",
-
-                "Breadth Score"
-
-            ]
-
-        ],
-
-        on="Strategy",
-
-        how="left"
-
-    )
-
-    return summary
-
-# ============================================================
-# FINAL SCORE
-# ============================================================
-
-def final_score(summary):
-
-    logger.info("Calculating Final Score...")
-
-    summary["Final Score"] = (
-
-        summary["Edge Score"] * 0.35 +
-
-        summary["Reliability Score"] * 0.20 +
-
-        summary["Efficiency Score"] * 0.15 +
-
-        summary["Risk Score"] * 0.10 +
-
-        summary["Execution Score"] * 0.10 +
-
-        summary["Robustness Score"] * 0.05 +
- 
-        summary["Breadth Score"] * 0.05
-
-    ).round(CONFIG["ROUND"])
-
-    return summary
-
-# ============================================================
-# GRADE
-# ============================================================
-
-def strategy_grade(score):
-
-    if score >= 90:
-        return "★★★★★ Elite"
-
-    elif score >= 80:
-        return "★★★★ Excellent"
-
-    elif score >= 70:
-        return "★★★ Good"
-
-    elif score >= 60:
-        return "★★ Average"
-
-    elif score >= 50:
-        return "★ Watch"
-
-    return "Reject"
-
-# ============================================================
-# RECOMMENDATION
-# ============================================================
-
-def recommendation(row):
-
-    score = row["Final Score"]
-
-    if score >= 90:
-        return "DEPLOY"
-
-    elif score >= 80:
-        return "STRONG BUY"
-
-    elif score >= 70:
-        return "BUY"
-
-    elif score >= 60:
-        return "PAPER TRADE"
-
-    elif score >= 50:
-        return "WATCH"
-
-    return "REJECT"
-
-# ============================================================
-# FINAL RANK
-# ============================================================
-
-def rank_strategies(summary):
-
-    summary["Grade"] = summary["Final Score"].apply(
-
-        strategy_grade
-
-    )
-
-    summary["Recommendation"] = summary.apply(
-
-        recommendation,
-
-        axis=1
-
-    )
-
-    summary = summary.sort_values(
-
-        by=[
-
-            "Final Score",
-
-            "Edge Score",
-
-            "Robustness Score",
-
-            "Reliability Score"
-
-        ],
-
-        ascending=False
-
-    )
-
-    summary["Final Rank"] = np.arange(
-
-        1,
-
-        len(summary)+1
-
-    )
-
-    return summary
-
-# ============================================================
-# EXPORT
-# ============================================================
-
-def export_report(summary):
-
-    logger.info("Exporting Report...")
-
-    report = summary[
-
-        [
-
-            "Final Rank",
-
-            "Strategy",
-
-            "Stocks",
-
-            "Median_Expectancy",
-
-            "Median_PF",
-
-            "Median_RR",
-
-            "Avg_Trades",
-
-            "Edge Score",
-
-            "Reliability Score",
-
-            "Robustness Score",
-
-            "Breadth Score",
-
-            "Final Score",
-
-            "Grade",
-
-            "Recommendation"
-
-        ]
-
-    ]
-
-    report.to_csv(
-
-        CONFIG["OUTPUT_FILE"],
-
-        index=False
+        CONFIG["ROUND"]
 
     )
 
     logger.info(
 
-        f"Saved : {CONFIG['OUTPUT_FILE']}"
+        "Universe Analytics Completed."
 
     )
 
-# ============================================================
-# MAIN
-# ============================================================
+    return analytics
 
-def main():
+# ================================================================
+# ANALYTICS PREVIEW
+# ================================================================
 
-    logger.info("="*60)
-
-    logger.info("Institutional Strategy Comparison Engine")
-
-    logger.info("="*60)
-
-    df = load_all_strategies()
-
-    df = calculate_metrics(df)
-
-    summary = build_strategy_summary(df)
-
-    summary = score_strategies(summary)
-
-    summary = robustness_analysis(df, summary)
-
-    summary = quality_statistics(df, summary)
-
-    summary = final_score(summary)
-
-    summary = rank_strategies(summary)
-
-    export_report(summary)
+def preview_universe(analytics):
 
     print()
 
-    print("="*60)
+    print("=" * 100)
 
-    print("TOP STRATEGIES")
+    print("UNIVERSE ANALYTICS")
 
-    print("="*60)
+    print("=" * 100)
 
     print(
 
-        summary[
+        analytics[
 
             [
 
-                "Final Rank",
-
                 "Strategy",
 
-                "Final Score",
+                "Mean Composite",
 
-                "Recommendation"
+                "Median Composite",
+
+                "Deploy %",
+
+                "Investable Stocks",
+
+                "Average Signal"
 
             ]
 
@@ -1414,11 +738,959 @@ def main():
 
     )
 
-    print("="*60)
+    print("=" * 100)
 
-# ============================================================
+# ================================================================
+# PART 3 : QUALIFICATION ENGINE
+# ================================================================
+
+logger.info("Loading Qualification Engine...")
+
+# ================================================================
+# CONFIGURABLE QUALIFICATION RULES
+# ================================================================
+
+RULES = {
+
+    "MIN_MEDIAN_COMPOSITE": 80,
+
+    "MIN_DEPLOY_PERCENT": 15,
+
+    "MIN_INVESTABLE_STOCKS": 25,
+
+    "MAX_CV": 0.25,
+
+    "MIN_TOP20_COMPOSITE": 85
+
+}
+
+# ================================================================
+# QUALIFY ONE STRATEGY
+# ================================================================
+
+def qualify_strategy(row):
+
+    reasons = []
+
+    qualified = True
+
+    # ------------------------------------------------------------
+    # Median Composite
+    # ------------------------------------------------------------
+
+    if row["Median Composite"] < RULES["MIN_MEDIAN_COMPOSITE"]:
+
+        qualified = False
+
+        reasons.append("Weak Universe Quality")
+
+    # ------------------------------------------------------------
+    # Deploy %
+    # ------------------------------------------------------------
+
+    if row["Deploy %"] < RULES["MIN_DEPLOY_PERCENT"]:
+
+        qualified = False
+
+        reasons.append("Low Deployability")
+
+    # ------------------------------------------------------------
+    # Investable Stocks
+    # ------------------------------------------------------------
+
+    if row["Investable Stocks"] < RULES["MIN_INVESTABLE_STOCKS"]:
+
+        qualified = False
+
+        reasons.append("Insufficient Opportunities")
+
+    # ------------------------------------------------------------
+    # Consistency
+    # ------------------------------------------------------------
+
+    if row["CV"] > RULES["MAX_CV"]:
+
+        qualified = False
+
+        reasons.append("High Dispersion")
+
+    # ------------------------------------------------------------
+    # Top20 Quality
+    # ------------------------------------------------------------
+
+    if row["Top20 Composite"] < RULES["MIN_TOP20_COMPOSITE"]:
+
+        qualified = False
+
+        reasons.append("Weak High Conviction Ideas")
+
+    return pd.Series({
+
+        "Qualified": qualified,
+
+        "Qualification":
+
+            "PASS"
+
+            if qualified
+
+            else
+
+            "FAIL",
+
+        "Reason":
+
+            "; ".join(reasons)
+
+            if reasons
+
+            else
+
+            "Qualified"
+
+    })
+
+# ================================================================
+# APPLY QUALIFICATION
+# ================================================================
+
+def qualification_engine(analytics):
+
+    logger.info(
+
+        "Applying Qualification Rules..."
+
+    )
+
+    result = analytics.apply(
+
+        qualify_strategy,
+
+        axis=1
+
+    )
+
+    analytics = pd.concat(
+
+        [
+
+            analytics,
+
+            result
+
+        ],
+
+        axis=1
+
+    )
+
+    logger.info(
+
+        f"Qualified Strategies : "
+
+        f"{analytics['Qualified'].sum()}"
+
+    )
+
+    return analytics
+
+# ================================================================
+# PREVIEW
+# ================================================================
+
+def preview_qualification(df):
+
+    print()
+
+    print("=" * 100)
+
+    print("QUALIFICATION RESULTS")
+
+    print("=" * 100)
+
+    print(
+
+        df[
+
+            [
+
+                "Strategy",
+
+                "Qualification",
+
+                "Reason"
+
+            ]
+
+        ]
+
+    )
+
+    print("=" * 100)
+
+# ================================================================
+# PART 4 : UNIVERSE RANKING ENGINE
+# ================================================================
+
+logger.info("Loading Universe Ranking Engine...")
+
+# ================================================================
+# RANK STRATEGIES
+# ================================================================
+
+def rank_universes(analytics):
+
+    logger.info("Ranking Universes...")
+
+    ranking = analytics.copy()
+
+    ranking = ranking.sort_values(
+
+        by=[
+
+            "Median Composite",
+
+            "Deploy %",
+
+            "CV",
+
+            "Top20 Composite",
+
+            "Investable Stocks",
+
+            "Average Signal"
+
+        ],
+
+        ascending=[
+
+            False,
+
+            False,
+
+            True,
+
+            False,
+
+            False,
+
+            False
+
+        ]
+
+    )
+
+    ranking.reset_index(
+
+        drop=True,
+
+        inplace=True
+
+    )
+
+    ranking["Universe Rank"] = (
+
+        ranking.index + 1
+
+    )
+
+    return ranking
+
+# ================================================================
+# BEST STRATEGY
+# ================================================================
+
+def best_universe(ranking):
+
+    best = ranking.iloc[0]
+
+    logger.info(
+
+        f"Best Strategy : {best['Strategy']}"
+
+    )
+
+    logger.info(
+
+        f"Median Composite : {best['Median Composite']:.2f}"
+
+    )
+
+    logger.info(
+
+        f"Deploy % : {best['Deploy %']:.2f}"
+
+    )
+
+    return best
+
+# ================================================================
+# TOP STRATEGIES
+# ================================================================
+
+def preview_ranking(ranking):
+
+    print()
+
+    print("=" * 100)
+
+    print("BEST STOCK UNIVERSES")
+
+    print("=" * 100)
+
+    print(
+
+        ranking[
+
+            [
+
+                "Universe Rank",
+
+                "Strategy",
+
+                "Median Composite",
+
+                "Deploy %",
+
+                "CV",
+
+                "Top20 Composite",
+
+                "Investable Stocks"
+
+            ]
+
+        ]
+
+    )
+
+    print("=" * 100)
+
+# ================================================================
+# PART 5 : UNIVERSE DIAGNOSTICS ENGINE
+# ================================================================
+
+logger.info("Loading Universe Diagnostics Engine...")
+
+# ================================================================
+# QUALITY RATING
+# ================================================================
+
+def quality_rating(value):
+
+    if value >= 90:
+
+        return "Excellent"
+
+    elif value >= 85:
+
+        return "Very Good"
+
+    elif value >= 80:
+
+        return "Good"
+
+    elif value >= 70:
+
+        return "Average"
+
+    return "Poor"
+
+# ================================================================
+# DEPLOYABILITY RATING
+# ================================================================
+
+def deploy_rating(value):
+
+    if value >= 40:
+
+        return "Excellent"
+
+    elif value >= 30:
+
+        return "Very Good"
+
+    elif value >= 20:
+
+        return "Good"
+
+    elif value >= 10:
+
+        return "Average"
+
+    return "Poor"
+
+# ================================================================
+# CONSISTENCY RATING
+# ================================================================
+
+def consistency_rating(cv):
+
+    if cv <= 0.08:
+
+        return "Excellent"
+
+    elif cv <= 0.12:
+
+        return "Very Good"
+
+    elif cv <= 0.18:
+
+        return "Good"
+
+    elif cv <= 0.25:
+
+        return "Average"
+
+    return "Poor"
+
+# ================================================================
+# COVERAGE RATING
+# ================================================================
+
+def coverage_rating(stocks):
+
+    if stocks >= 150:
+
+        return "Excellent"
+
+    elif stocks >= 100:
+
+        return "Very Good"
+
+    elif stocks >= 60:
+
+        return "Good"
+
+    elif stocks >= 30:
+
+        return "Average"
+
+    return "Poor"
+
+# ================================================================
+# BUILD DIAGNOSTICS
+# ================================================================
+
+def build_diagnostics(df):
+
+    logger.info("Generating Diagnostics...")
+
+    df["Quality Rating"] = df["Median Composite"].apply(
+
+        quality_rating
+
+    )
+
+    df["Deployability Rating"] = df["Deploy %"].apply(
+
+        deploy_rating
+
+    )
+
+    df["Consistency Rating"] = df["CV"].apply(
+
+        consistency_rating
+
+    )
+
+    df["Coverage Rating"] = df["Investable Stocks"].apply(
+
+        coverage_rating
+
+    )
+
+    strengths = []
+
+    weaknesses = []
+
+    decisions = []
+
+    risks = []
+
+    for _, row in df.iterrows():
+
+        s = []
+
+        w = []
+
+        # ----------------------------------------------------
+        # Strengths
+        # ----------------------------------------------------
+
+        if row["Quality Rating"] == "Excellent":
+
+            s.append("High Quality Universe")
+
+        if row["Deployability Rating"] == "Excellent":
+
+            s.append("Excellent Deployability")
+
+        if row["Consistency Rating"] == "Excellent":
+
+            s.append("Highly Consistent")
+
+        if row["Coverage Rating"] == "Excellent":
+
+            s.append("Broad Opportunity Set")
+
+        # ----------------------------------------------------
+        # Weaknesses
+        # ----------------------------------------------------
+
+        if row["Quality Rating"] == "Poor":
+
+            w.append("Weak Universe Quality")
+
+        if row["Deployability Rating"] == "Poor":
+
+            w.append("Low Deployability")
+
+        if row["Consistency Rating"] == "Poor":
+
+            w.append("High Dispersion")
+
+        if row["Coverage Rating"] == "Poor":
+
+            w.append("Limited Opportunities")
+
+        # ----------------------------------------------------
+        # Decision
+        # ----------------------------------------------------
+
+        if (
+
+            row["Quality Rating"] == "Excellent"
+
+            and
+
+            row["Deployability Rating"] in
+
+            ["Excellent", "Very Good"]
+
+            and
+
+            row["Consistency Rating"] in
+
+            ["Excellent", "Very Good"]
+
+        ):
+
+            decision = "DEPLOY"
+
+            risk = "LOW"
+
+        elif (
+
+            row["Quality Rating"] in
+
+            ["Very Good", "Good"]
+
+        ):
+
+            decision = "PAPER TRADE"
+
+            risk = "MEDIUM"
+
+        else:
+
+            decision = "REJECT"
+
+            risk = "HIGH"
+
+        strengths.append(
+
+            "; ".join(s)
+
+            if s
+
+            else
+
+            "None"
+
+        )
+
+        weaknesses.append(
+
+            "; ".join(w)
+
+            if w
+
+            else
+
+            "None"
+
+        )
+
+        decisions.append(
+
+            decision
+
+        )
+
+        risks.append(
+
+            risk
+
+        )
+
+    df["Strengths"] = strengths
+
+    df["Weaknesses"] = weaknesses
+
+    df["Risk"] = risks
+
+    df["Decision"] = decisions
+
+    logger.info(
+
+        "Diagnostics Completed."
+
+    )
+
+    return df
+
+# ================================================================
+# PREVIEW
+# ================================================================
+
+def preview_diagnostics(df):
+
+    print()
+
+    print("=" * 120)
+
+    print("UNIVERSE DIAGNOSTICS")
+
+    print("=" * 120)
+
+    print(
+
+        df[
+
+            [
+
+                "Universe Rank",
+
+                "Strategy",
+
+                "Quality Rating",
+
+                "Deployability Rating",
+
+                "Consistency Rating",
+
+                "Coverage Rating",
+
+                "Decision"
+
+            ]
+
+        ]
+
+    )
+
+    print("=" * 120)
+
+# ================================================================
+# PART 6 : REPORT GENERATOR
+# ================================================================
+
+logger.info("Loading Report Generator...")
+
+# ================================================================
+# EXPORT EXCEL REPORT
+# ================================================================
+
+def export_report(universe, analytics):
+
+    logger.info(
+
+        "Generating Excel Report..."
+
+    )
+
+    dashboard = analytics[
+
+        [
+
+            "Universe Rank",
+
+            "Strategy",
+
+            "Median Composite",
+
+            "Deploy %",
+
+            "CV",
+
+            "Investable Stocks",
+
+            "Quality Rating",
+
+            "Deployability Rating",
+
+            "Consistency Rating",
+
+            "Coverage Rating",
+
+            "Decision"
+
+        ]
+
+    ].copy()
+
+    diagnostics = analytics[
+
+        [
+
+            "Universe Rank",
+
+            "Strategy",
+
+            "Strengths",
+
+            "Weaknesses",
+
+            "Risk",
+
+            "Decision"
+
+        ]
+
+    ].copy()
+
+    analytics_sheet = analytics.copy()
+
+    raw_data = universe.copy()
+
+    with pd.ExcelWriter(
+
+        CONFIG["OUTPUT_FILE"],
+
+        engine="openpyxl"
+
+    ) as writer:
+
+        dashboard.to_excel(
+
+            writer,
+
+            sheet_name="Dashboard",
+
+            index=False
+
+        )
+
+        diagnostics.to_excel(
+
+            writer,
+
+            sheet_name="Diagnostics",
+
+            index=False
+
+        )
+
+        analytics_sheet.to_excel(
+
+            writer,
+
+            sheet_name="Universe Analytics",
+
+            index=False
+
+        )
+
+        raw_data.to_excel(
+
+            writer,
+
+            sheet_name="Raw Data",
+
+            index=False
+
+        )
+
+    logger.info(
+
+        f"Workbook Saved : {CONFIG['OUTPUT_FILE']}"
+
+    )
+
+# ================================================================
+# FINAL SUMMARY
+# ================================================================
+
+def print_final_summary(df):
+
+    print()
+
+    print("=" * 90)
+
+    print("BEST STOCK UNIVERSE")
+
+    print("=" * 90)
+
+    best = df.iloc[0]
+
+    print(
+
+        f"Strategy           : {best['Strategy']}"
+
+    )
+
+    print(
+
+        f"Universe Rank      : {best['Universe Rank']}"
+
+    )
+
+    print(
+
+        f"Median Composite   : {best['Median Composite']:.2f}"
+
+    )
+
+    print(
+
+        f"Deploy %           : {best['Deploy %']:.2f}"
+
+    )
+
+    print(
+
+        f"Investable Stocks  : {best['Investable Stocks']}"
+
+    )
+
+    print(
+
+        f"Decision           : {best['Decision']}"
+
+    )
+
+    print()
+
+    print("Strengths")
+
+    print(best["Strengths"])
+
+    print()
+
+    print("Weaknesses")
+
+    print(best["Weaknesses"])
+
+    print("=" * 90)
+
+# ================================================================
+# MAIN
+# ================================================================
+
+def main():
+
+    logger.info("=" * 80)
+
+    logger.info(
+
+        "Institutional Strategy Universe Evaluation Engine V3"
+
+    )
+
+    logger.info("=" * 80)
+
+    # ------------------------------------------------------------
+    # Load
+    # ------------------------------------------------------------
+
+    universe = load_universe()
+
+    print_input_summary(
+
+        universe
+
+    )
+
+    # ------------------------------------------------------------
+    # Analytics
+    # ------------------------------------------------------------
+
+    analytics = build_universe_analytics(
+
+        universe
+
+    )
+
+    preview_universe(
+
+        analytics
+
+    )
+
+    # ------------------------------------------------------------
+    # Ranking
+    # ------------------------------------------------------------
+
+    analytics = rank_universes(
+
+        analytics
+
+    )
+
+    preview_ranking(
+
+        analytics
+
+    )
+
+    # ------------------------------------------------------------
+    # Diagnostics
+    # ------------------------------------------------------------
+
+    analytics = build_diagnostics(
+
+        analytics
+
+    )
+
+    preview_diagnostics(
+
+        analytics
+
+    )
+
+    # ------------------------------------------------------------
+    # Export
+    # ------------------------------------------------------------
+
+    export_report(
+
+        universe,
+
+        analytics
+
+    )
+
+    print_final_summary(
+
+        analytics
+
+    )
+
+    logger.info("=" * 80)
+
+    logger.info(
+
+        "PROCESS COMPLETED SUCCESSFULLY"
+
+    )
+
+    logger.info("=" * 80)
+
+# ================================================================
 # START
-# ============================================================
+# ================================================================
 
 if __name__ == "__main__":
 

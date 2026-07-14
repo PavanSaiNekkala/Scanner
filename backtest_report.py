@@ -25,9 +25,9 @@ warnings.filterwarnings("ignore")
 
 CONFIG = {
 
-    "INPUT_FILE": "Backtest.csv",
+    "INPUT_FILE": "Backtest_WF_Str_Tr.csv",
 
-    "OUTPUT_FILE": "Institutional_Stock_Report.csv",
+    "OUTPUT_FILE": "Backtest_WF_Str_Tr_Report.csv",
 
     "ROUND_DECIMALS": 2
 

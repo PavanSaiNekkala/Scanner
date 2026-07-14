@@ -227,20 +227,21 @@ class ComparisonPage:
 
             })
 
-        df = df.astype(str)
+        df = pd.DataFrame(
 
-        st.dataframe(
-            df,
-            width="stretch"
+            rows
+
+        )
+
+        df = df.astype(
+
+            str
+
         )
 
         st.dataframe(
 
-            pd.DataFrame(
-
-                rows
-
-            ),
+            df,
 
             width="stretch",
 
@@ -334,11 +335,10 @@ class ComparisonPage:
 
         })
 
-        df = df.astype(str)
+        summary = summary.astype(
 
-        st.dataframe(
-            df,
-            width="stretch"
+            str
+
         )
 
         st.dataframe(

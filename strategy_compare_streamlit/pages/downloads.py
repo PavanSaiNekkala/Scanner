@@ -119,20 +119,21 @@ class DownloadPage:
 
         ]
 
-        df = df.astype(str)
+        df = pd.DataFrame(
 
-        st.table(
-            df,
-            width="stretch"
+            rows
+
+        )
+
+        df = df.astype(
+
+            str
+
         )
 
         st.table(
 
-            pd.DataFrame(
-
-                rows
-
-            )
+            df
 
         )
 
@@ -250,16 +251,17 @@ class DownloadPage:
 
         )
 
-        df = df.astype(str)
+        df = self.ranked.copy()
 
-        st.dataframe(
-            df,
-            width="stretch"
+        df = df.astype(
+
+            str
+
         )
 
         st.dataframe(
 
-            self.ranked,
+            df,
 
             width="stretch",
 

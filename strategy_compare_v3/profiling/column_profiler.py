@@ -3,10 +3,9 @@
 Institutional Strategy Comparison Engine V3
 File : profiling/column_profiler.py
 
-Master Column Profiling Engine
+Production Grade Column Profiler
 
-Every other profiling module uses this output.
-
+Author : Pavan Sai
 ============================================================
 """
 
@@ -15,29 +14,38 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from pandas.api.types import (
+    is_bool_dtype,
+    is_datetime64_any_dtype,
+    is_numeric_dtype,
+)
+
 from core.logger import get_logger
 
 logger = get_logger(__name__)
 
 
 class ColumnProfiler:
-
     """
-    Creates one complete profile for every column.
+    Creates a complete statistical profile
+    for every column.
     """
 
     def __init__(self, dataframe: pd.DataFrame):
 
         self.df = dataframe.copy()
 
-    # -----------------------------------------------------
+    # =====================================================
+    # OUTLIERS
+    # =====================================================
 
     @staticmethod
-    def _iqr_outliers(series: pd.Series):
+    def _iqr_outliers(series: pd.Series) -> int:
 
         series = series.dropna()
 
         if series.empty:
+
             return 0
 
         q1 = series.quantile(0.25)
@@ -51,16 +59,21 @@ class ColumnProfiler:
         upper = q3 + 1.5 * iqr
 
         return int(
-            ((series < lower) |
-             (series > upper)).sum()
+
+            ((series < lower) | (series > upper)).sum()
+
         )
 
-    # -----------------------------------------------------
+    # =====================================================
+    # PROFILE
+    # =====================================================
 
-    def profile(self):
+    def profile(self) -> pd.DataFrame:
 
         logger.info(
+
             "Generating column profiles..."
+
         )
 
         rows = []
@@ -71,7 +84,19 @@ class ColumnProfiler:
 
             s = self.df[column]
 
-            numeric = pd.api.types.is_numeric_dtype(s)
+            is_numeric = (
+
+                is_numeric_dtype(s)
+
+                and
+
+                not is_bool_dtype(s)
+
+            )
+
+            is_boolean = is_bool_dtype(s)
+
+            is_datetime = is_datetime64_any_dtype(s)
 
             profile = {
 
@@ -94,32 +119,56 @@ class ColumnProfiler:
                 "Missing %":
 
                     round(
-                        s.isna().mean()*100,
+
+                        s.isna().mean() * 100,
+
                         2
+
                     ),
 
                 "Unique":
 
-                    int(s.nunique()),
+                    int(s.nunique(dropna=True)),
 
                 "Duplicate":
 
                     int(
-                        total_rows -
-                        s.nunique()
+
+                        total_rows
+
+                        -
+
+                        s.nunique(dropna=True)
+
                     ),
 
                 "Mode":
 
                     (
+
                         s.mode().iloc[0]
+
                         if not s.mode().empty
+
                         else np.nan
-                    ),
+
+                    )
 
             }
 
-            if numeric:
+            # ==============================================
+            # NUMERIC
+            # ==============================================
+
+            if is_numeric:
+
+                mean = s.mean()
+
+                std = s.std()
+
+                q1 = s.quantile(0.25)
+
+                q3 = s.quantile(0.75)
 
                 profile.update({
 
@@ -129,7 +178,7 @@ class ColumnProfiler:
 
                     "Mean":
 
-                        s.mean(),
+                        mean,
 
                     "Median":
 
@@ -149,37 +198,41 @@ class ColumnProfiler:
 
                     "Std Dev":
 
-                        s.std(),
+                        std,
 
                     "CV %":
 
                         (
-                            s.std()/s.mean()*100
-                            if s.mean()!=0
+
+                            std / mean * 100
+
+                            if pd.notna(mean)
+
+                            and mean != 0
+
                             else np.nan
+
                         ),
 
                     "Q1":
 
-                        s.quantile(.25),
+                        q1,
 
                     "Q3":
 
-                        s.quantile(.75),
+                        q3,
 
                     "IQR":
 
-                        s.quantile(.75)
-                        -
-                        s.quantile(.25),
+                        q3 - q1,
 
                     "5%":
 
-                        s.quantile(.05),
+                        s.quantile(0.05),
 
                     "95%":
 
-                        s.quantile(.95),
+                        s.quantile(0.95),
 
                     "Skewness":
 
@@ -191,21 +244,159 @@ class ColumnProfiler:
 
                     "Positive":
 
-                        int((s>0).sum()),
+                        int((s > 0).sum()),
 
                     "Negative":
 
-                        int((s<0).sum()),
+                        int((s < 0).sum()),
 
                     "Zero":
 
-                        int((s==0).sum()),
+                        int((s == 0).sum()),
 
                     "Outliers":
 
                         self._iqr_outliers(s)
 
                 })
+
+            # ==============================================
+            # BOOLEAN
+            # ==============================================
+
+            elif is_boolean:
+
+                profile.update({
+
+                    "Sum":
+
+                        int(s.sum()),
+
+                    "Mean":
+
+                        float(s.mean()),
+
+                    "Median":
+
+                        np.nan,
+
+                    "Minimum":
+
+                        bool(s.min()),
+
+                    "Maximum":
+
+                        bool(s.max()),
+
+                    "Variance":
+
+                        np.nan,
+
+                    "Std Dev":
+
+                        np.nan,
+
+                    "CV %":
+
+                        np.nan,
+
+                    "Q1":
+
+                        np.nan,
+
+                    "Q3":
+
+                        np.nan,
+
+                    "IQR":
+
+                        np.nan,
+
+                    "5%":
+
+                        np.nan,
+
+                    "95%":
+
+                        np.nan,
+
+                    "Skewness":
+
+                        np.nan,
+
+                    "Kurtosis":
+
+                        np.nan,
+
+                    "Positive":
+
+                        int(s.sum()),
+
+                    "Negative":
+
+                        0,
+
+                    "Zero":
+
+                        int((~s).sum()),
+
+                    "Outliers":
+
+                        0
+
+                })
+
+            # ==============================================
+            # DATETIME
+            # ==============================================
+
+            elif is_datetime:
+
+                profile.update({
+
+                    "Sum": np.nan,
+
+                    "Mean": np.nan,
+
+                    "Median": np.nan,
+
+                    "Minimum": s.min(),
+
+                    "Maximum": s.max(),
+
+                    "Variance": np.nan,
+
+                    "Std Dev": np.nan,
+
+                    "CV %": np.nan,
+
+                    "Q1": np.nan,
+
+                    "Q3": np.nan,
+
+                    "IQR": np.nan,
+
+                    "5%": np.nan,
+
+                    "95%": np.nan,
+
+                    "Skewness": np.nan,
+
+                    "Kurtosis": np.nan,
+
+                    "Positive": np.nan,
+
+                    "Negative": np.nan,
+
+                    "Zero": np.nan,
+
+                    "Outliers": np.nan
+
+                })
+
+            # ==============================================
+            # OBJECT / TEXT
+            # ==============================================
 
             else:
 
@@ -254,7 +445,9 @@ class ColumnProfiler:
             rows.append(profile)
 
         logger.info(
+
             "Column profiling completed."
+
         )
 
         return pd.DataFrame(rows)
@@ -263,5 +456,7 @@ class ColumnProfiler:
 if __name__ == "__main__":
 
     print(
-        "Import this class in profiler.py"
+
+        "Import ColumnProfiler into profiler.py"
+
     )

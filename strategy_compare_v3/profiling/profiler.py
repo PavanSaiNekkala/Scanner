@@ -27,7 +27,7 @@ from profiling.data_quality import DataQuality
 logger = get_logger(__name__)
 
 
-class Profiler:
+class DataProfiler:
     """
     Master profiling engine.
 

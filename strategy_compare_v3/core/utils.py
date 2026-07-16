@@ -315,18 +315,62 @@ def convert_numeric(
     df: pd.DataFrame
 ) -> pd.DataFrame:
     """
-    Attempt numeric conversion.
+    Safely convert numeric-like columns while preserving
+    identifiers and text columns.
     """
+
+    df = df.copy()
+
+    text_keywords = {
+
+        "stock",
+        "symbol",
+        "strategy",
+        "name",
+        "remark",
+        "remarks",
+        "sector",
+        "industry",
+        "recommendation"
+
+    }
 
     for column in df.columns:
 
-        df[column] = pd.to_numeric(
-            df[column],
-            errors="ignore"
+        if pd.api.types.is_numeric_dtype(df[column]):
+            continue
+
+        if column.lower() in text_keywords:
+            continue
+
+        cleaned = (
+
+            df[column]
+
+            .astype(str)
+
+            .str.replace(",", "", regex=False)
+
+            .str.replace("%", "", regex=False)
+
+            .str.strip()
+
         )
 
-    return df
+        converted = pd.to_numeric(
 
+            cleaned,
+
+            errors="coerce"
+
+        )
+
+        # Convert only if most values are numeric
+        if converted.notna().mean() >= 0.80:
+
+            df[column] = converted
+
+    return df
 
 # ==========================================================
 # PERCENTAGE

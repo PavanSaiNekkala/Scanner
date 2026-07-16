@@ -3,7 +3,7 @@
 Institutional Strategy Comparison Engine V3
 File : relationships/correlation.py
 
-Correlation Analysis Engine
+Production Grade Correlation Analysis Engine
 
 Author : Pavan Sai
 ============================================================
@@ -21,13 +21,14 @@ logger = get_logger(__name__)
 
 class CorrelationEngine:
     """
-    Computes multiple correlation matrices.
+    Production-grade correlation analysis.
 
-    Methods
-    -------
-    Pearson
-    Spearman
-    Kendall
+    Generates
+
+    ✓ Pearson Correlation
+    ✓ Spearman Correlation
+    ✓ Kendall Correlation
+    ✓ Strong Relationship Report
     """
 
     def __init__(
@@ -35,140 +36,226 @@ class CorrelationEngine:
         dataframe: pd.DataFrame
     ):
 
-        self.df = dataframe.select_dtypes(
+        df = dataframe.select_dtypes(
             include=np.number
         ).copy()
 
-    # -----------------------------------------------------
+        df.replace(
+            [np.inf, -np.inf],
+            np.nan,
+            inplace=True
+        )
 
-    def pearson(self) -> pd.DataFrame:
+        df.dropna(
+            axis=1,
+            how="all",
+            inplace=True
+        )
+
+        if not df.empty:
+
+            df = df.fillna(
+                df.median(
+                    numeric_only=True
+                )
+            )
+
+            # Remove constant columns
+
+            df = df.loc[
+                :,
+                df.nunique(dropna=False) > 1
+            ]
+
+        self.df = df
+
+    # =====================================================
+    # INTERNAL
+    # =====================================================
+
+    def _empty_check(self):
+
+        return self.df.shape[1] >= 2
+
+    # =====================================================
+    # PEARSON
+    # =====================================================
+
+    def pearson(self):
 
         logger.info(
             "Computing Pearson correlation..."
         )
 
+        if not self._empty_check():
+
+            return pd.DataFrame()
+
         return self.df.corr(
             method="pearson"
         )
 
-    # -----------------------------------------------------
+    # =====================================================
+    # SPEARMAN
+    # =====================================================
 
-    def spearman(self) -> pd.DataFrame:
+    def spearman(self):
 
         logger.info(
             "Computing Spearman correlation..."
         )
 
+        if not self._empty_check():
+
+            return pd.DataFrame()
+
         return self.df.corr(
             method="spearman"
         )
 
-    # -----------------------------------------------------
+    # =====================================================
+    # KENDALL
+    # =====================================================
 
-    def kendall(self) -> pd.DataFrame:
+    def kendall(self):
 
         logger.info(
             "Computing Kendall correlation..."
         )
 
+        if not self._empty_check():
+
+            return pd.DataFrame()
+
         return self.df.corr(
             method="kendall"
         )
 
-    # -----------------------------------------------------
+    # =====================================================
+    # STRONG RELATIONSHIPS
+    # =====================================================
 
     def strongest_relationships(
         self,
-        method: str = "pearson",
-        threshold: float = 0.70
-    ) -> pd.DataFrame:
-        """
-        Return feature pairs whose absolute
-        correlation exceeds the threshold.
-        """
+        method="pearson",
+        threshold=0.70
+    ):
+
+        logger.info(
+            "Finding strong relationships..."
+        )
+
+        if not self._empty_check():
+
+            return pd.DataFrame()
 
         corr = self.df.corr(
             method=method
         )
 
         upper = corr.where(
+
             np.triu(
-                np.ones(
-                    corr.shape
-                ),
+
+                np.ones(corr.shape),
+
                 k=1
+
             ).astype(bool)
+
         )
 
         rows = []
 
-        for col in upper.columns:
+        for column in upper.columns:
 
-            values = upper[col].dropna()
+            values = upper[column].dropna()
 
-            for idx, value in values.items():
+            for feature, value in values.items():
 
-                if abs(value) >= threshold:
+                absolute = abs(value)
 
-                    rows.append({
+                if absolute < threshold:
 
-                        "Feature 1":
+                    continue
 
-                            idx,
+                if absolute >= 0.90:
 
-                        "Feature 2":
+                    strength = "Very Strong"
 
-                            col,
+                elif absolute >= 0.70:
 
-                        "Correlation":
+                    strength = "Strong"
 
-                            round(
-                                value,
-                                4
-                            ),
+                elif absolute >= 0.50:
 
-                        "Strength":
+                    strength = "Moderate"
 
-                            (
-                                "Strong"
+                else:
 
-                                if abs(value) >= 0.90
+                    strength = "Weak"
 
-                                else "Moderate"
+                rows.append({
 
-                            ),
+                    "Feature A":
 
-                        "Direction":
+                        feature,
 
-                            (
+                    "Feature B":
 
-                                "Positive"
+                        column,
 
-                                if value > 0
+                    "Correlation":
 
-                                else "Negative"
+                        round(value, 4),
 
-                            )
+                    "Absolute":
 
-                    })
+                        round(absolute, 4),
 
-        report = pd.DataFrame(rows)
+                    "Strength":
 
-        if not report.empty:
+                        strength,
 
-            report = report.sort_values(
+                    "Direction":
 
-                "Correlation",
+                        (
 
-                key=np.abs,
+                            "Positive"
+
+                            if value >= 0
+
+                            else
+
+                            "Negative"
+
+                        )
+
+                })
+
+        if not rows:
+
+            return pd.DataFrame()
+
+        report = (
+
+            pd.DataFrame(rows)
+
+            .sort_values(
+
+                "Absolute",
 
                 ascending=False
 
-            ).reset_index(drop=True)
+            )
+
+            .reset_index(drop=True)
+
+        )
 
         logger.info(
 
-            "%d strong relationships detected.",
+            "%d strong relationships found.",
 
             len(report)
 
@@ -176,7 +263,9 @@ class CorrelationEngine:
 
         return report
 
-    # -----------------------------------------------------
+    # =====================================================
+    # GENERATE
+    # =====================================================
 
     def generate(self):
 
@@ -208,5 +297,5 @@ class CorrelationEngine:
 if __name__ == "__main__":
 
     print(
-        "Import inside relationship_engine.py"
+        "Import CorrelationEngine from relationship_engine.py"
     )

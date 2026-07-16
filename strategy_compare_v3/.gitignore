@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+outputs/logs/*
+*.log
+
+# Excel Outputs
+outputs/excel/*
+!outputs/excel/.gitkeep
+
+# Charts
+outputs/charts/*
+!outputs/charts/.gitkeep
+
+# Reports
+outputs/reports/*
+!outputs/reports/.gitkeep
+
+# Cache
+.pytest_cache/
+.mypy_cache/
+
+# OS
+.DS_Store
+Thumbs.db

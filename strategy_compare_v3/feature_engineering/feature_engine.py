@@ -18,32 +18,64 @@ from typing import Dict, Any
 
 import pandas as pd
 
+
 from core.cache import CacheManager
 from core.logger import get_logger
+from core.feature_contract import FeatureContract
 
 
-from feature_engineering.reward_risk import RewardRiskEngine
-from feature_engineering.expectancy import ExpectancyEngine
-from feature_engineering.profitability import ProfitabilityEngine
-from feature_engineering.efficiency import EfficiencyEngine
-from feature_engineering.stability import StabilityEngine
-from feature_engineering.quality import QualityEngine
-from feature_engineering.opportunity import OpportunityEngine
+
+from feature_engineering.reward_risk import (
+    RewardRiskEngine
+)
+
+from feature_engineering.expectancy import (
+    ExpectancyEngine
+)
+
+from feature_engineering.profitability import (
+    ProfitabilityEngine
+)
+
+from feature_engineering.efficiency import (
+    EfficiencyEngine
+)
+
+from feature_engineering.stability import (
+    StabilityEngine
+)
+
+from feature_engineering.quality import (
+    QualityEngine
+)
+
+from feature_engineering.opportunity import (
+    OpportunityEngine
+)
+
 from feature_engineering.institutional_metrics import (
     InstitutionalMetricsEngine
 )
 
 
+
 logger = get_logger(__name__)
+
 
 
 class FeatureEngine:
     """
     Master Feature Engineering Pipeline.
 
-    Executes feature engineering modules
-    in dependency order.
+    Responsibilities
+    ----------------
+    ✓ Apply feature contract
+    ✓ Execute feature modules
+    ✓ Track generated features
+    ✓ Capture execution metrics
+    ✓ Preserve dataframe integrity
     """
+
 
 
     def __init__(
@@ -52,350 +84,36 @@ class FeatureEngine:
         use_cache: bool = False,
     ):
 
+
         self.df = dataframe.copy()
+
 
         self.use_cache = use_cache
 
+
         self.cache = CacheManager()
+
 
         self.execution_time = 0.0
 
+
         self.feature_count = 0
 
+
         self.generated_features = []
+
 
         self.module_summary = []
 
 
 
     # ==================================================
-    # COLUMN CONTRACT NORMALIZATION
+    # MODULE LIST
     # ==================================================
 
-    def _normalize_feature_columns(self):
-
-        """
-        Convert raw backtest columns into
-        institutional feature contract.
-        """
-
-        created = []
-
-
-        # --------------------------------------------------
-        # Win Percentage
-        # --------------------------------------------------
-
-        if "outcome" in self.df.columns:
-
-            if "Win_Pct" not in self.df.columns:
-
-                self.df["Win_Pct"] = (
-
-                    self.df["outcome"]
-                    .astype(str)
-                    .str.lower()
-                    .eq("win")
-                    .astype(int)
-                    .mean()
-
-                    * 100
-
-                )
-
-                created.append(
-                    "Win_Pct"
-                )
-
-
-        # --------------------------------------------------
-        # Average Win
-        # --------------------------------------------------
-
-        if "net_return_Pct" in self.df.columns:
-
-            if "Avg_winPct" not in self.df.columns:
-
-                wins = self.df.loc[
-
-                    self.df["net_return_Pct"] > 0,
-
-                    "net_return_Pct"
-
-                ]
-
-
-                self.df["Avg_winPct"] = (
-
-                    wins.mean()
-
-                    if not wins.empty
-
-                    else 0
-
-                )
-
-
-                created.append(
-                    "Avg_winPct"
-                )
-
-
-
-        # --------------------------------------------------
-        # Average Loss
-        # --------------------------------------------------
-
-        if "net_return_Pct" in self.df.columns:
-
-            if "Avg_lossPct" not in self.df.columns:
-
-
-                losses = self.df.loc[
-
-                    self.df["net_return_Pct"] < 0,
-
-                    "net_return_Pct"
-
-                ]
-
-
-                self.df["Avg_lossPct"] = (
-
-                    losses.abs().mean()
-
-                    if not losses.empty
-
-                    else 0
-
-                )
-
-
-                created.append(
-                    "Avg_lossPct"
-                )
-
-
-
-        # --------------------------------------------------
-        # Expectancy
-        # --------------------------------------------------
-
-        if {
-
-            "Win_Pct",
-            "Avg_winPct",
-            "Avg_lossPct"
-
-        }.issubset(self.df.columns):
-
-
-            if "ExpectancyPct" not in self.df.columns:
-
-
-                win_rate = (
-
-                    self.df["Win_Pct"]
-
-                    /
-
-                    100
-
-                )
-
-
-                self.df["ExpectancyPct"] = (
-
-                    win_rate
-
-                    *
-
-                    self.df["Avg_winPct"]
-
-                    -
-
-                    (1-win_rate)
-
-                    *
-
-                    self.df["Avg_lossPct"]
-
-                )
-
-
-                created.append(
-                    "ExpectancyPct"
-                )
-
-
-            
-        if "Trades" not in self.df.columns:
-
-            self.df["Trades"] = 1
-
-
-        # --------------------------------------------------
-        # Profit Factor
-        # --------------------------------------------------
-
-        if "net_return_Pct" in self.df.columns:
-
-
-            if "Profit_Factor" not in self.df.columns:
-
-
-                gross_profit = self.df.loc[
-
-                    self.df["net_return_Pct"] > 0,
-
-                    "net_return_Pct"
-
-                ].sum()
-
-
-                gross_loss = abs(
-
-                    self.df.loc[
-
-                        self.df["net_return_Pct"] < 0,
-
-                        "net_return_Pct"
-
-                    ].sum()
-
-                )
-
-
-                self.df["Profit_Factor"] = (
-
-                    gross_profit / gross_loss
-
-                    if gross_loss != 0
-
-                    else 0
-
-                )
-
-
-                created.append(
-                    "Profit_Factor"
-                )
-
-
-
-        logger.info(
-
-            "Created feature aliases: %s",
-
-            created
-
-        )
-
-
-        return self.df
-
-    # ==================================================
-    # DEBUG INPUT CONTRACT
-    # ==================================================
-
-    def _validate_feature_inputs(self):
-
-        required_watch = [
-
-            "Avg win%",
-
-            "Avg loss%",
-
-            "Win %",
-
-            "Expectancy%",
-
-            "Profit Factor",
-
-            "Target %",
-
-            "Stop %"
-
-        ]
-
-
-        available = [
-
-            col
-
-            for col in required_watch
-
-            if col in self.df.columns
-
-        ]
-
-
-        missing = [
-
-            col
-
-            for col in required_watch
-
-            if col not in self.df.columns
-
-        ]
-
-
-        logger.info(
-            "Feature Engine available columns: %s",
-            available
-        )
-
-
-        if missing:
-
-            logger.warning(
-                "Feature Engine missing columns: %s",
-                missing
-            )
-
-
-
-    # ==================================================
-    # TRACK FEATURES
-    # ==================================================
-
-    def _track_features(
-        self,
-        before,
-        after
-    ):
-
-
-        generated = sorted(
-
-            list(
-
-                set(after)
-
-                -
-
-                set(before)
-
-            )
-
-        )
-
-
-        self.generated_features.extend(
-            generated
-        )
-
-
-        return generated
-
-
-
-    # ==================================================
-    # MODULE PIPELINE
-    # ==================================================
 
     def _modules(self):
+
 
         return [
 
@@ -420,16 +138,85 @@ class FeatureEngine:
 
 
     # ==================================================
-    # RUN ENGINE
+    # TRACK GENERATED FEATURES
     # ==================================================
+
+
+    def _track_features(
+        self,
+        before,
+        after
+    ):
+
+
+        generated = sorted(
+
+            list(
+
+                set(after)
+
+                -
+
+                set(before)
+
+            )
+
+        )
+
+
+        self.generated_features.extend(
+
+            generated
+
+        )
+
+
+        return generated
+
+
+
+    # ==================================================
+    # VALIDATION
+    # ==================================================
+
+
+    def _validate_input(self):
+
+
+        if self.df.empty:
+
+            raise ValueError(
+
+                "Feature Engine received empty dataframe."
+
+            )
+
+
+        logger.info(
+
+            "Feature Engine input shape: %s",
+
+            self.df.shape
+
+        )
+
+
+
+    # ==================================================
+    # RUN
+    # ==================================================
+
 
     def run(self):
 
 
         logger.info("=" * 80)
 
+
         logger.info(
+
             "Starting Feature Engineering..."
+
         )
 
 
@@ -437,16 +224,27 @@ class FeatureEngine:
 
 
 
-        # Normalize columns
-
-        self._normalize_feature_columns()
-
-
-        self._validate_feature_inputs()
+        # ------------------------------------------------
+        # Apply centralized contract
+        # ------------------------------------------------
 
 
+        self.df = FeatureContract.normalize(
 
+            self.df
+
+        )
+
+
+
+        self._validate_input()
+
+
+
+        # ------------------------------------------------
         # Execute modules
+        # ------------------------------------------------
+
 
         for module in self._modules():
 
@@ -454,27 +252,32 @@ class FeatureEngine:
             module_start = time.perf_counter()
 
 
-            module_name = module.__name__
-
-
-
-            logger.info(
-                "Running %s",
-                module_name
-            )
+            name = module.__name__
 
 
             before = (
+
                 self.df.columns.tolist()
+
             )
 
+
+            logger.info(
+
+                "Running %s",
+
+                name
+
+            )
 
 
             try:
 
 
                 engine = module(
+
                     self.df
+
                 )
 
 
@@ -483,12 +286,14 @@ class FeatureEngine:
 
 
                 after = (
+
                     self.df.columns.tolist()
+
                 )
 
 
 
-                new_features = self._track_features(
+                generated = self._track_features(
 
                     before,
 
@@ -515,46 +320,42 @@ class FeatureEngine:
                 self.module_summary.append({
 
                     "Module":
-                        module_name,
+
+                        name,
+
 
                     "Status":
+
                         "Completed",
 
+
                     "Generated":
-                        new_features,
+
+                        generated,
+
 
                     "Count":
-                        len(new_features),
+
+                        len(generated),
+
 
                     "Time":
+
                         elapsed
 
                 })
 
 
 
-                if new_features:
+                logger.info(
 
-                    logger.info(
+                    "%s generated %d features",
 
-                        "%s generated %d features",
+                    name,
 
-                        module_name,
+                    len(generated)
 
-                        len(new_features)
-
-                    )
-
-
-                else:
-
-                    logger.warning(
-
-                        "%s generated no features",
-
-                        module_name
-
-                    )
+                )
 
 
 
@@ -563,9 +364,9 @@ class FeatureEngine:
 
                 logger.exception(
 
-                    "%s failed : %s",
+                    "%s failed: %s",
 
-                    module_name,
+                    name,
 
                     error
 
@@ -575,19 +376,27 @@ class FeatureEngine:
                 self.module_summary.append({
 
                     "Module":
-                        module_name,
+
+                        name,
+
 
                     "Status":
+
                         "Failed",
 
+
                     "Error":
+
                         str(error)
 
                 })
 
 
 
-        # Remove duplicate tracking
+        # ------------------------------------------------
+        # Finalize
+        # ------------------------------------------------
+
 
         self.generated_features = sorted(
 
@@ -607,7 +416,6 @@ class FeatureEngine:
         )
 
 
-
         self.execution_time = round(
 
             time.perf_counter()
@@ -624,7 +432,7 @@ class FeatureEngine:
 
         logger.info(
 
-            "Generated %d engineered features.",
+            "Generated %d engineered features",
 
             self.feature_count
 
@@ -633,7 +441,7 @@ class FeatureEngine:
 
         logger.info(
 
-            "Feature Engineering completed in %.3f seconds.",
+            "Feature Engineering completed in %.3f seconds",
 
             self.execution_time
 
@@ -652,7 +460,9 @@ class FeatureEngine:
     # SUMMARY
     # ==================================================
 
+
     def summary(self) -> Dict[str, Any]:
+
 
         return {
 
@@ -681,8 +491,9 @@ class FeatureEngine:
 
 
     # ==================================================
-    # DATAFRAME ACCESS
+    # ACCESSOR
     # ==================================================
+
 
     def get_dataframe(self):
 
@@ -692,6 +503,9 @@ class FeatureEngine:
 
 if __name__ == "__main__":
 
+
     print(
+
         "Import FeatureEngine into main.py"
+
     )

@@ -1,9 +1,10 @@
 """
 ============================================================
 Institutional Strategy Comparison Engine V3
+
 File : recommendation/recommendation_engine.py
 
-Recommendation Engine
+Master Recommendation Engine
 
 Author : Pavan Sai
 ============================================================
@@ -11,23 +12,40 @@ Author : Pavan Sai
 
 from __future__ import annotations
 
+
+import numpy as np
+
 import pandas as pd
 
+
 from core.logger import get_logger
-from recommendation.thresholds import RecommendationThresholds
+
 
 logger = get_logger(__name__)
+
+
 
 
 class RecommendationEngine:
     """
     Institutional Recommendation Engine.
 
-    Generates recommendations from the
-    Composite Score.
+
+    Generates final strategy recommendation
+    based on Composite Score.
+
+
+    Output Contract
+    ---------------
+
+    Composite Score
+
+    Recommendation
+
+
     """
 
-    SCORE_COLUMN = "Composite Score"
+
 
     def __init__(
         self,
@@ -36,142 +54,166 @@ class RecommendationEngine:
 
         self.df = dataframe.copy()
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # VALIDATION
+    # ==================================================
 
     def validate(self):
 
-        if self.SCORE_COLUMN not in self.df.columns:
+
+        required = [
+
+            "Composite Score"
+
+        ]
+
+
+        missing = [
+
+            col
+
+            for col in required
+
+            if col not in self.df.columns
+
+        ]
+
+
+        if missing:
+
 
             raise ValueError(
 
-                f"'{self.SCORE_COLUMN}' column not found."
+                f"Missing recommendation columns: {missing}"
 
             )
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # RECOMMENDATION LOGIC
+    # ==================================================
 
     def generate_recommendation(self):
 
-        self.df["Recommendation"] = (
 
-            self.df[self.SCORE_COLUMN]
+        score = self.df[
 
-            .apply(
+            "Composite Score"
 
-                RecommendationThresholds.get_label
+        ]
 
-            )
 
-        )
 
-    # --------------------------------------------------
+        conditions = [
 
-    def generate_color(self):
+            score >= 85,
 
-        self.df["Recommendation Color"] = (
+            score >= 70,
 
-            self.df[self.SCORE_COLUMN]
+            score >= 50,
 
-            .apply(
+            score >= 30
 
-                RecommendationThresholds.get_color
+        ]
 
-            )
 
-        )
 
-    # --------------------------------------------------
+        choices = [
 
-    def recommendation_rank(self):
+            "Strong Buy",
 
-        ranking = {
+            "Buy",
 
-            "STRONG BUY": 1,
+            "Watch",
 
-            "BUY": 2,
+            "Avoid"
 
-            "ACCUMULATE": 3,
+        ]
 
-            "WATCH": 4,
 
-            "HOLD": 5,
 
-            "REDUCE": 6,
+        self.df["Recommendation"] = np.select(
 
-            "SELL": 7,
+            conditions,
 
-            "AVOID": 8
+            choices,
 
-        }
-
-        self.df["Recommendation Rank"] = (
-
-            self.df["Recommendation"]
-
-            .map(ranking)
-
-            .astype(int)
+            default="Reject"
 
         )
 
-    # --------------------------------------------------
 
-    def confidence(self):
 
-        """
-        Confidence is based on the
-        Composite Score itself.
-        """
+    # ==================================================
+    # QUALITY LABEL
+    # ==================================================
 
-        self.df["Recommendation Confidence"] = (
+    def generate_quality_grade(self):
 
-            self.df[self.SCORE_COLUMN]
 
-            .clip(0, 100)
+        if "Composite Score" not in self.df.columns:
 
-            .round(2)
+            return
+
+
+
+        score = self.df[
+
+            "Composite Score"
+
+        ]
+
+
+
+        conditions = [
+
+            score >= 90,
+
+            score >= 75,
+
+            score >= 60,
+
+            score >= 40
+
+        ]
+
+
+
+        choices = [
+
+            "Institutional Grade",
+
+            "High Quality",
+
+            "Acceptable",
+
+            "Low Quality"
+
+        ]
+
+
+
+        self.df["Quality Grade"] = np.select(
+
+            conditions,
+
+            choices,
+
+            default="Poor"
 
         )
 
-    # --------------------------------------------------
 
-    def sort(self):
 
-        self.df = (
-
-            self.df
-
-            .sort_values(
-
-                by=[
-
-                    "Recommendation Rank",
-
-                    self.SCORE_COLUMN
-
-                ],
-
-                ascending=[
-
-                    True,
-
-                    False
-
-                ]
-
-            )
-
-            .reset_index(
-
-                drop=True
-
-            )
-
-        )
-
-    # --------------------------------------------------
+    # ==================================================
+    # FINAL OUTPUT
+    # ==================================================
 
     def generate(self):
+
 
         logger.info(
 
@@ -179,17 +221,16 @@ class RecommendationEngine:
 
         )
 
+
         self.validate()
+
 
         self.generate_recommendation()
 
-        self.generate_color()
 
-        self.recommendation_rank()
+        self.generate_quality_grade()
 
-        self.confidence()
 
-        self.sort()
 
         logger.info(
 
@@ -197,13 +238,18 @@ class RecommendationEngine:
 
         )
 
+
+
         return self.df
+
+
 
 
 if __name__ == "__main__":
 
+
     print(
 
-        "Import inside main.py"
+        "Import RecommendationEngine inside pipeline"
 
     )

@@ -11,50 +11,82 @@ Author : Pavan Sai
 
 from __future__ import annotations
 
+
 import traceback
 
+
 import streamlit as st
+
 import pandas as pd
+
+
 
 from core.loader import DataLoader
 
+
 from profiling.profiler import DataProfiler
+
 
 from relationships.relationship_engine import (
     RelationshipEngine
 )
 
+
+
+from derived_metrics.derived_engine import (
+    DerivedMetricsEngine
+)
+
+
+
 from feature_engineering.feature_engine import (
     FeatureEngine
 )
+
+
 
 from normalization.normalization_engine import (
     NormalizationEngine
 )
 
+
+
 from scoring.scoring_engine import (
     ScoringEngine
 )
+
+
 
 from recommendation.recommendation_engine import (
     RecommendationEngine
 )
 
+
+
 from optimization.optimization_engine import (
     OptimizationEngine
 )
+
+
 
 from visualization.dashboards import (
     DashboardEngine
 )
 
+
+
 from reports.report_engine import (
     ReportEngine
 )
 
+
+
+
+
 # ==========================================================
 # PAGE CONFIG
 # ==========================================================
+
 
 st.set_page_config(
 
@@ -68,9 +100,14 @@ st.set_page_config(
 
 )
 
+
+
+
+
 # ==========================================================
 # SESSION STATE
 # ==========================================================
+
 
 DEFAULT_KEYS = [
 
@@ -81,6 +118,8 @@ DEFAULT_KEYS = [
     "profile",
 
     "relationships",
+
+    "derived_metrics",
 
     "features",
 
@@ -96,15 +135,24 @@ DEFAULT_KEYS = [
 
 ]
 
+
+
 for key in DEFAULT_KEYS:
+
 
     if key not in st.session_state:
 
+
         st.session_state[key] = None
+
+
+
+
 
 # ==========================================================
 # HEADER
 # ==========================================================
+
 
 st.title(
 
@@ -112,23 +160,34 @@ st.title(
 
 )
 
+
+
 st.caption(
 
     "Professional Quantitative Strategy Analytics Platform"
 
 )
 
+
+
 st.divider()
+
+
+
+
 
 # ==========================================================
 # SIDEBAR
 # ==========================================================
+
 
 st.sidebar.header(
 
     "Data Source"
 
 )
+
+
 
 uploaded_file = st.sidebar.file_uploader(
 
@@ -146,13 +205,20 @@ uploaded_file = st.sidebar.file_uploader(
 
 )
 
+
+
+
+
 # ==========================================================
 # LOAD DATA
 # ==========================================================
 
+
 if uploaded_file is not None:
 
+
     try:
+
 
         loader = DataLoader(
 
@@ -160,11 +226,19 @@ if uploaded_file is not None:
 
         )
 
+
+
         dataframe = loader.run()
+
+
 
         st.session_state["dataframe"] = dataframe
 
+
+
         st.session_state["metadata"] = loader.get_metadata()
+
+
 
         st.success(
 
@@ -176,6 +250,8 @@ if uploaded_file is not None:
 
         )
 
+
+
         with st.expander(
 
             "Dataset Metadata",
@@ -184,13 +260,17 @@ if uploaded_file is not None:
 
         ):
 
+
             st.json(
 
                 loader.get_metadata()
 
             )
 
+
+
     except Exception as exc:
+
 
         st.error(
 
@@ -198,15 +278,21 @@ if uploaded_file is not None:
 
         )
 
+
+
         st.code(
 
             traceback.format_exc()
 
         )
 
+
         st.stop()
 
+
+
 else:
+
 
     st.info(
 
@@ -214,11 +300,13 @@ else:
 
     )
 
+
     st.stop()
 
 # ==========================================================
 # ANALYSIS BUTTON
 # ==========================================================
+
 
 run_analysis = st.sidebar.button(
 
@@ -228,45 +316,78 @@ run_analysis = st.sidebar.button(
 
 )
 
+
+
+
+
 # ==========================================================
 # EXECUTION
 # ==========================================================
 
+
 if run_analysis:
+
 
     progress = st.progress(0)
 
+
     status = st.empty()
+
 
     df = st.session_state["dataframe"]
 
+
+
     try:
 
+
         # --------------------------------------------------
+        # STEP 1
+        # --------------------------------------------------
+
 
         status.info(
 
-            "Step 1/8 : Data Profiling"
+            "Step 1/9 : Data Profiling"
 
         )
 
-        profiler = DataProfiler(df)
+
+
+        profiler = DataProfiler(
+
+            df
+
+        )
+
+
 
         st.session_state["profile"] = (
 
-            profiler.run()
+            profiler.generate()
 
         )
 
-        progress.progress(12)
+
+
+        progress.progress(11)
+
+
+
+
 
         # --------------------------------------------------
+        # STEP 2
+        # --------------------------------------------------
+
 
         status.info(
 
-            "Step 2/8 : Relationship Analysis"
+            "Step 2/9 : Relationship Analysis"
 
         )
+
+
 
         relationship_engine = RelationshipEngine(
 
@@ -274,71 +395,144 @@ if run_analysis:
 
         )
 
+
+
         st.session_state["relationships"] = (
 
-            relationship_engine.run()
+            relationship_engine.generate()
 
         )
 
-        progress.progress(25)
+
+
+        progress.progress(22)
+
+
+
+
 
         # --------------------------------------------------
+        # STEP 3
+        # --------------------------------------------------
+
 
         status.info(
 
-            "Step 3/8 : Feature Engineering"
+            "Step 3/9 : Derived Metrics"
 
         )
 
-        feature_engine = FeatureEngine(
+
+
+        derived_engine = DerivedMetricsEngine(
 
             df
 
         )
 
+
+
+        derived_df = derived_engine.run()
+
+
+
+        st.session_state["derived_metrics"] = derived_df
+
+
+
+        progress.progress(33)
+
+
+
+
+
+        # --------------------------------------------------
+        # STEP 4
+        # --------------------------------------------------
+
+
+        status.info(
+
+            "Step 4/9 : Feature Engineering"
+
+        )
+
+
+
+        feature_engine = FeatureEngine(
+
+            derived_df
+
+        )
+
+
+
         feature_df = feature_engine.run()
+
+
 
         st.session_state["features"] = feature_df
 
-        progress.progress(38)
 
+
+        progress.progress(44)
+
+    
         # --------------------------------------------------
+        # STEP 5
+        # --------------------------------------------------
+
 
         status.info(
 
-            "Step 4/8 : Normalization"
+            "Step 5/9 : Normalization"
 
         )
 
-        normalization_engine = (
 
-            NormalizationEngine(
 
-                feature_df
+        normalization_engine = NormalizationEngine(
 
-            )
+            feature_df
 
         )
 
-        normalized = (
 
-            normalization_engine.run()
 
-        )
+        normalized = normalization_engine.run()
+
+
 
         st.session_state["normalized"] = normalized
 
-        analysis_df = normalized["Percentile"]
 
-        progress.progress(50)
+
+        analysis_df = normalized[
+
+            "Percentile"
+
+        ]
+
+
+
+        progress.progress(55)
+
+
+
+
 
         # --------------------------------------------------
+        # STEP 6
+        # --------------------------------------------------
+
 
         status.info(
 
-            "Step 5/8 : Institutional Scoring"
+            "Step 6/9 : Institutional Scoring"
 
         )
+
+
 
         scoring_engine = ScoringEngine(
 
@@ -346,19 +540,34 @@ if run_analysis:
 
         )
 
+
+
         scored = scoring_engine.run()
+
+
 
         st.session_state["scores"] = scored
 
-        progress.progress(62)
+
+
+        progress.progress(66)
+
+
+
+
 
         # --------------------------------------------------
+        # STEP 7
+        # --------------------------------------------------
+
 
         status.info(
 
-            "Step 6/8 : Recommendations"
+            "Step 7/9 : Recommendations"
 
         )
+
+
 
         recommendation_engine = RecommendationEngine(
 
@@ -366,21 +575,37 @@ if run_analysis:
 
         )
 
+
+
         recommended = recommendation_engine.generate()
+
+
 
         st.session_state["recommendations"] = recommended
 
-        progress.progress(75)
+
+
+        progress.progress(77)
+
+
+
+
 
         # --------------------------------------------------
+        # STEP 8
+        # --------------------------------------------------
+
 
         status.info(
 
-            "Step 7/8 : Optimization"
+            "Step 8/9 : Optimization"
 
         )
 
+
+
         try:
+
 
             optimization_engine = OptimizationEngine(
 
@@ -388,25 +613,40 @@ if run_analysis:
 
             )
 
+
             optimization = optimization_engine.run()
+
+
 
         except TypeError:
 
-            # Engine may require additional arguments
 
             optimization = {}
 
+
+
         st.session_state["optimization"] = optimization
 
-        progress.progress(87)
+
+
+        progress.progress(88)
+
+
+
+
 
         # --------------------------------------------------
+        # STEP 9
+        # --------------------------------------------------
+
 
         status.info(
 
-            "Step 8/8 : Reports"
+            "Step 9/9 : Reports"
 
         )
+
+
 
         report_engine = ReportEngine(
 
@@ -414,11 +654,19 @@ if run_analysis:
 
         )
 
+
+
         reports = report_engine.run()
+
+
 
         st.session_state["reports"] = reports
 
+
+
         progress.progress(100)
+
+
 
         status.success(
 
@@ -426,7 +674,10 @@ if run_analysis:
 
         )
 
+
+
     except Exception as exc:
+
 
         st.error(
 
@@ -434,13 +685,17 @@ if run_analysis:
 
         )
 
+
+
         st.code(
 
             traceback.format_exc()
 
         )
 
+
         st.stop()
+
 
 # ==========================================================
 # STREAMLIT SAFE DISPLAY HELPERS
@@ -450,16 +705,22 @@ if run_analysis:
 def make_streamlit_safe(data):
 
     """
-    Convert DataFrames into Arrow compatible format.
-    Prevents Streamlit conversion failures.
+    Convert objects into Streamlit compatible format.
+    Prevents Arrow conversion errors.
     """
 
+
     if isinstance(
+
         data,
+
         pd.DataFrame
+
     ):
 
+
         df = data.copy()
+
 
 
         for column in df.columns:
@@ -477,28 +738,24 @@ def make_streamlit_safe(data):
                 )
 
 
+
         return df
+
 
 
     return data
 
 
 
+
+
 def display_dataframe(
+
     title,
+
     data
+
 ):
-
-    """
-    Universal renderer.
-
-    Supports:
-
-    DataFrame
-    Dictionary of DataFrames
-    Normal objects
-
-    """
 
 
     st.subheader(title)
@@ -508,6 +765,7 @@ def display_dataframe(
     # ----------------------------------------------
     # DataFrame
     # ----------------------------------------------
+
 
     if isinstance(
 
@@ -534,6 +792,7 @@ def display_dataframe(
     # ----------------------------------------------
     # Dictionary
     # ----------------------------------------------
+
 
     if isinstance(
 
@@ -563,15 +822,16 @@ def display_dataframe(
             )
 
 
+
         return
 
 
 
-    # ----------------------------------------------
-    # Other Objects
-    # ----------------------------------------------
-
     st.write(data)
+
+
+
+
 
 # ==========================================================
 # DISPLAY RESULTS
@@ -581,10 +841,13 @@ def display_dataframe(
 if st.session_state["recommendations"] is not None:
 
 
+
     recommended = st.session_state["recommendations"]
 
 
+
     st.divider()
+
 
 
     st.header(
@@ -592,6 +855,8 @@ if st.session_state["recommendations"] is not None:
         "Analysis Results"
 
     )
+
+
 
 
 
@@ -613,6 +878,7 @@ if st.session_state["recommendations"] is not None:
     )
 
 
+
     metric2.metric(
 
         "Columns",
@@ -624,6 +890,7 @@ if st.session_state["recommendations"] is not None:
 
 
     if "Composite Score" in recommended.columns:
+
 
 
         metric3.metric(
@@ -662,12 +929,14 @@ if st.session_state["recommendations"] is not None:
 
 
 
+
+
     # ------------------------------------------------------
     # TABS
     # ------------------------------------------------------
 
 
-    tab1, tab2, tab3, tab4 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
 
         [
 
@@ -677,11 +946,15 @@ if st.session_state["recommendations"] is not None:
 
             "Profiling",
 
-            "Relationships"
+            "Relationships",
+
+            "Derived Metrics"
 
         ]
 
     )
+
+
 
 
 
@@ -703,6 +976,8 @@ if st.session_state["recommendations"] is not None:
 
 
 
+
+
     # ======================================================
     # TAB 2 : CHARTS
     # ======================================================
@@ -719,6 +994,7 @@ if st.session_state["recommendations"] is not None:
                 "Recommendation Distribution"
 
             )
+
 
 
             st.bar_chart(
@@ -745,6 +1021,7 @@ if st.session_state["recommendations"] is not None:
             )
 
 
+
             chart_data = (
 
                 recommended
@@ -764,11 +1041,16 @@ if st.session_state["recommendations"] is not None:
             )
 
 
+
             st.line_chart(
 
                 chart_data
 
             )
+
+
+
+
 
     # ======================================================
     # TAB 3 : PROFILING
@@ -779,6 +1061,7 @@ if st.session_state["recommendations"] is not None:
 
 
         profile = st.session_state["profile"]
+
 
 
         if profile is not None:
@@ -794,6 +1077,8 @@ if st.session_state["recommendations"] is not None:
 
 
 
+
+
     # ======================================================
     # TAB 4 : RELATIONSHIPS
     # ======================================================
@@ -803,6 +1088,7 @@ if st.session_state["recommendations"] is not None:
 
 
         relationships = st.session_state["relationships"]
+
 
 
         if relationships is not None:
@@ -818,6 +1104,35 @@ if st.session_state["recommendations"] is not None:
 
 
 
+
+
+    # ======================================================
+    # TAB 5 : DERIVED METRICS
+    # ======================================================
+
+
+    with tab5:
+
+
+        derived = st.session_state["derived_metrics"]
+
+
+
+        if derived is not None:
+
+
+            display_dataframe(
+
+                "Strategy Derived Metrics",
+
+                derived
+
+            )
+
+
+
+
+
 # ==========================================================
 # DOWNLOAD REPORT
 # ==========================================================
@@ -826,7 +1141,9 @@ if st.session_state["recommendations"] is not None:
 reports = st.session_state["reports"]
 
 
+
 if reports is not None:
+
 
 
     excel_file = reports.get(
@@ -834,6 +1151,7 @@ if reports is not None:
         "Excel File"
 
     )
+
 
 
     if excel_file:
@@ -856,13 +1174,16 @@ if reports is not None:
 
                 ),
 
+
                 data=file,
+
 
                 file_name=(
 
                     "Institutional_Report.xlsx"
 
                 ),
+
 
                 mime=(
 
@@ -872,9 +1193,12 @@ if reports is not None:
 
                 ),
 
+
                 width="stretch"
 
             )
+
+
 
 
 
@@ -882,11 +1206,15 @@ if reports is not None:
 # FOOTER
 # ==========================================================
 
+
 st.divider()
+
+
 
 st.caption(
 
     "Institutional Strategy Comparison Engine V3 | "
 
     "Professional Quantitative Analytics Platform"
+
 )

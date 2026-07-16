@@ -2,7 +2,9 @@
 ============================================================
 Institutional Strategy Comparison Engine V3
 
-Main Entry Point
+File : main.py
+
+Master Execution Runner
 
 Author : Pavan Sai
 
@@ -11,141 +13,205 @@ Author : Pavan Sai
 
 from __future__ import annotations
 
-import argparse
-import sys
+
 from pathlib import Path
 
-from core.loader import DataLoader
+
 from core.logger import get_logger
-from pipeline.analysis_pipeline import AnalysisPipeline
+
+
+from batch_processing.parallel_runner import (
+    ParallelBatchRunner
+)
+
+
+from reports.strategy_comparison_report import (
+    StrategyComparisonReport
+)
+
+
+from reports.excel_strategy_exporter import (
+    ExcelStrategyExporter
+)
+
+
 
 logger = get_logger(__name__)
 
 
-def parse_arguments():
-
-    parser = argparse.ArgumentParser(
-
-        description="Institutional Strategy Comparison Engine V3"
-
-    )
-
-    parser.add_argument(
-
-        "--input",
-
-        required=True,
-
-        help="CSV / Excel file"
-
-    )
-
-    parser.add_argument(
-
-        "--config",
-
-        required=False,
-
-        default=None,
-
-        help="Configuration file"
-
-    )
-
-    return parser.parse_args()
 
 
 def main():
 
-    args = parse_arguments()
 
-    input_file = Path(args.input)
+    logger.info("=" * 80)
 
-    if not input_file.exists():
 
-        logger.error(
+    logger.info(
 
-            "Input file not found."
+        "Institutional Strategy Comparison Engine Started"
+
+    )
+
+
+    # ==================================================
+    # CONFIGURATION
+    # ==================================================
+
+
+    BACKTEST_PATH = Path(
+
+        "."
+
+    )
+
+
+    OUTPUT_PATH = (
+
+        "outputs/excel/"
+        "Institutional_Strategy_Comparison.xlsx"
+
+    )
+
+
+    WORKERS = 8
+
+
+
+    # ==================================================
+    # STEP 1
+    # PARALLEL PROCESSING
+    # ==================================================
+
+
+    logger.info(
+
+        "Starting Parallel Batch Processing..."
+
+    )
+
+
+    batch_runner = ParallelBatchRunner(
+
+        BACKTEST_PATH,
+
+        workers=WORKERS
+
+    )
+
+
+    comparison_dataframe = batch_runner.run()
+
+
+
+    if comparison_dataframe.empty:
+
+
+        raise RuntimeError(
+
+            "No strategy results generated."
 
         )
 
-        sys.exit(1)
+
 
     logger.info(
 
-        "=" * 80
+        "Processed records: %d",
+
+        len(comparison_dataframe)
 
     )
+
+
+
+    # ==================================================
+    # STEP 2
+    # STRATEGY COMPARISON
+    # ==================================================
+
 
     logger.info(
 
-        "Institutional Strategy Comparison Engine"
+        "Generating Strategy Comparison Report..."
 
     )
+
+
+    report_engine = StrategyComparisonReport(
+
+        comparison_dataframe
+
+    )
+
+
+    report = report_engine.generate()
+
+
+
+    # Add complete dataset
+
+    report[
+
+        "Complete Comparison"
+
+    ] = comparison_dataframe
+
+
+
+    # ==================================================
+    # STEP 3
+    # EXCEL EXPORT
+    # ==================================================
+
 
     logger.info(
 
-        "=" * 80
+        "Exporting Institutional Excel Report..."
 
     )
 
-    # -----------------------------------------
 
-    loader = DataLoader(
+    exporter = ExcelStrategyExporter(
 
-        input_file
-
-    )
-
-    dataframe = loader.load()
-
-    # -----------------------------------------
-
-    pipeline = AnalysisPipeline(
-
-        dataframe
+        OUTPUT_PATH
 
     )
 
-    results = pipeline.run()
 
-    # -----------------------------------------
+    excel_file = exporter.export(
+
+        report
+
+    )
+
+
 
     logger.info(
 
-        "=" * 80
+        "Excel Generated: %s",
+
+        excel_file
 
     )
+
+
+
+    logger.info("=" * 80)
+
 
     logger.info(
 
-        "Execution Completed"
+        "PROCESS COMPLETED SUCCESSFULLY"
 
     )
 
-    logger.info(
 
-        "Execution Time : %.3f sec",
+    logger.info("=" * 80)
 
-        results["Execution Time"]
-
-    )
-
-    logger.info(
-
-        "=" * 80
-
-    )
-
-    print()
-
-    print(
-
-        pipeline.summary()
-
-    )
 
 
 if __name__ == "__main__":
+
 
     main()

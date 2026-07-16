@@ -11,58 +11,115 @@ Author : Pavan Sai
 
 from __future__ import annotations
 
+
 import time
+
 from typing import Dict, Any
+
 
 import pandas as pd
 
+
 from core.logger import get_logger
+
 
 from profiling.profiler import DataProfiler
 
+
 from relationships.relationship_engine import RelationshipEngine
 
+
+from derived_metrics.derived_metrics_engine import (
+    DerivedMetricsEngine
+)
+
+
 from feature_engineering.feature_engine import FeatureEngine
+
 
 from normalization.normalization_engine import (
     NormalizationEngine
 )
 
+
 from scoring.scoring_engine import (
     ScoringEngine
 )
+
 
 from recommendation.recommendation_engine import (
     RecommendationEngine
 )
 
+
 from optimization.optimization_engine import (
     OptimizationEngine
 )
+
 
 from visualization.dashboards import (
     DashboardEngine
 )
 
+
 from reports.report_engine import (
     ReportEngine
 )
 
+
+
 logger = get_logger(__name__)
 
 
-class AnalysisPipeline:
 
+
+class AnalysisPipeline:
     """
     Master Institutional Pipeline.
 
-    Coordinates every engine.
+    Execution Flow
 
-    No calculations are performed here.
+    Raw Backtest Data
 
-    Every calculation belongs to the
-    respective module.
+            |
+
+    Profiling
+
+            |
+
+    Relationships
+
+            |
+
+    Derived Metrics
+
+            |
+
+    Feature Engineering
+
+            |
+
+    Normalization
+
+            |
+
+    Scoring
+
+            |
+
+    Recommendation
+
+            |
+
+    Optimization
+
+            |
+
+    Reports
+
     """
+
+
 
     def __init__(
 
@@ -74,17 +131,29 @@ class AnalysisPipeline:
 
     ):
 
+
+        self.raw_df = dataframe.copy()
+
+
         self.df = dataframe.copy()
+
 
         self.config = config or {}
 
+
         self.results: Dict[str, Any] = {}
+
 
         self.execution_time = 0.0
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # PROFILING
+    # ==================================================
 
     def profile(self):
+
 
         logger.info(
 
@@ -92,15 +161,21 @@ class AnalysisPipeline:
 
         )
 
+
         return DataProfiler(
 
             self.df
 
         ).generate()
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # RELATIONSHIPS
+    # ==================================================
 
     def relationships(self):
+
 
         logger.info(
 
@@ -108,15 +183,53 @@ class AnalysisPipeline:
 
         )
 
+
         return RelationshipEngine(
 
             self.df
 
         ).generate()
 
-    # --------------------------------------------------
 
-    def features(self):
+
+    # ==================================================
+    # DERIVED METRICS
+    # ==================================================
+
+    def derived_metrics(self):
+
+
+        logger.info(
+
+            "Derived Metrics..."
+
+        )
+
+
+        derived_df = DerivedMetricsEngine(
+
+            self.df
+
+        ).run()
+
+
+
+        return derived_df
+
+
+
+    # ==================================================
+    # FEATURE ENGINEERING
+    # ==================================================
+
+    def features(
+
+        self,
+
+        dataframe
+
+    ):
+
 
         logger.info(
 
@@ -124,13 +237,18 @@ class AnalysisPipeline:
 
         )
 
+
         return FeatureEngine(
 
-            self.df
+            dataframe
 
         ).run()
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # NORMALIZATION
+    # ==================================================
 
     def normalize(
 
@@ -140,11 +258,13 @@ class AnalysisPipeline:
 
     ):
 
+
         logger.info(
 
             "Normalization..."
 
         )
+
 
         return NormalizationEngine(
 
@@ -152,7 +272,11 @@ class AnalysisPipeline:
 
         ).run()
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # SCORING
+    # ==================================================
 
     def scoring(
 
@@ -162,11 +286,13 @@ class AnalysisPipeline:
 
     ):
 
+
         logger.info(
 
             "Scoring..."
 
         )
+
 
         return ScoringEngine(
 
@@ -174,7 +300,11 @@ class AnalysisPipeline:
 
         ).run()
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # RECOMMENDATION
+    # ==================================================
 
     def recommendation(
 
@@ -184,11 +314,13 @@ class AnalysisPipeline:
 
     ):
 
+
         logger.info(
 
             "Recommendations..."
 
         )
+
 
         return RecommendationEngine(
 
@@ -196,7 +328,11 @@ class AnalysisPipeline:
 
         ).generate()
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # OPTIMIZATION
+    # ==================================================
 
     def optimization(
 
@@ -206,17 +342,16 @@ class AnalysisPipeline:
 
     ):
 
+
         logger.info(
 
             "Optimization..."
 
         )
 
-        def objective(
 
-            df
+        def objective(df):
 
-        ):
 
             return df[
 
@@ -224,7 +359,10 @@ class AnalysisPipeline:
 
             ].mean()
 
+
+
         parameter_space = {
+
 
             "Edge Weight":
 
@@ -238,6 +376,7 @@ class AnalysisPipeline:
 
                 ],
 
+
             "Risk Weight":
 
                 [
@@ -250,13 +389,18 @@ class AnalysisPipeline:
 
         }
 
+
+
         scenarios = {
+
 
             "Baseline":
 
                 lambda x: x
 
         }
+
+
 
         return OptimizationEngine(
 
@@ -272,7 +416,11 @@ class AnalysisPipeline:
 
         )
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # VISUALIZATION
+    # ==================================================
 
     def visualization(
 
@@ -282,11 +430,13 @@ class AnalysisPipeline:
 
     ):
 
+
         logger.info(
 
             "Visualization..."
 
         )
+
 
         return DashboardEngine(
 
@@ -294,7 +444,11 @@ class AnalysisPipeline:
 
         ).run()
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # REPORTS
+    # ==================================================
 
     def reports(
 
@@ -304,11 +458,13 @@ class AnalysisPipeline:
 
     ):
 
+
         logger.info(
 
             "Reports..."
 
         )
+
 
         return ReportEngine(
 
@@ -316,11 +472,17 @@ class AnalysisPipeline:
 
         ).run()
 
-    # --------------------------------------------------
+
+
+    # ==================================================
+    # MASTER RUNNER
+    # ==================================================
 
     def run(self):
 
+
         logger.info("=" * 80)
+
 
         logger.info(
 
@@ -328,8 +490,13 @@ class AnalysisPipeline:
 
         )
 
+
         start = time.perf_counter()
 
+
+
+        # ----------------------------------------------
+        # Profiling
         # ----------------------------------------------
 
         self.results["Profiling"] = (
@@ -338,18 +505,48 @@ class AnalysisPipeline:
 
         )
 
+
+
+        # ----------------------------------------------
+        # Relationships
+        # ----------------------------------------------
+
         self.results["Relationships"] = (
 
             self.relationships()
 
         )
 
+
+
+        # ----------------------------------------------
+        # Derived Metrics
         # ----------------------------------------------
 
-        features = self.features()
+        derived = self.derived_metrics()
+
+
+        self.results["Derived Metrics"] = derived
+
+
+
+        # ----------------------------------------------
+        # Feature Engineering
+        # ----------------------------------------------
+
+        features = self.features(
+
+            derived
+
+        )
+
 
         self.results["Features"] = features
 
+
+
+        # ----------------------------------------------
+        # Normalization
         # ----------------------------------------------
 
         normalized = self.normalize(
@@ -358,10 +555,21 @@ class AnalysisPipeline:
 
         )
 
+
         self.results["Normalization"] = normalized
 
-        analysis_df = normalized["Percentile"]
 
+
+        analysis_df = normalized[
+
+            "Percentile"
+
+        ]
+
+
+
+        # ----------------------------------------------
+        # Scoring
         # ----------------------------------------------
 
         scored = self.scoring(
@@ -370,8 +578,13 @@ class AnalysisPipeline:
 
         )
 
+
         self.results["Scoring"] = scored
 
+
+
+        # ----------------------------------------------
+        # Recommendation
         # ----------------------------------------------
 
         recommended = self.recommendation(
@@ -380,8 +593,13 @@ class AnalysisPipeline:
 
         )
 
+
         self.results["Recommendation"] = recommended
 
+
+
+        # ----------------------------------------------
+        # Optimization
         # ----------------------------------------------
 
         self.results["Optimization"] = (
@@ -394,6 +612,12 @@ class AnalysisPipeline:
 
         )
 
+
+
+        # ----------------------------------------------
+        # Visualization
+        # ----------------------------------------------
+
         self.results["Visualization"] = (
 
             self.visualization(
@@ -403,6 +627,12 @@ class AnalysisPipeline:
             )
 
         )
+
+
+
+        # ----------------------------------------------
+        # Reports
+        # ----------------------------------------------
 
         self.results["Reports"] = (
 
@@ -414,23 +644,29 @@ class AnalysisPipeline:
 
         )
 
-        # ----------------------------------------------
+
 
         self.execution_time = round(
 
             time.perf_counter()
 
-            - start,
+            -
+
+            start,
 
             3
 
         )
+
+
 
         self.results["Execution Time"] = (
 
             self.execution_time
 
         )
+
+
 
         logger.info(
 
@@ -440,23 +676,31 @@ class AnalysisPipeline:
 
         )
 
+
         logger.info("=" * 80)
+
+
 
         return self.results
 
-    # --------------------------------------------------
+
+
 
     def summary(self):
 
+
         return {
+
 
             "Pipeline":
 
                 "Completed",
 
+
             "Execution Time":
 
                 self.execution_time,
+
 
             "Modules":
 
@@ -469,7 +713,10 @@ class AnalysisPipeline:
         }
 
 
+
+
 if __name__ == "__main__":
+
 
     print(
 

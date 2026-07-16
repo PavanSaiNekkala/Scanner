@@ -1,7 +1,11 @@
+"""
+Strategy Comparison Dashboard Configuration
+"""
+
 from pathlib import Path
 
 ###########################################################################
-# PATHS
+# PROJECT PATHS
 ###########################################################################
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -9,6 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent
 OUTPUTS = BASE_DIR / "outputs"
 
 REPORTS = BASE_DIR / "reports"
+
+ASSETS = BASE_DIR / "assets"
 
 OUTPUTS.mkdir(
 
@@ -22,15 +28,65 @@ REPORTS.mkdir(
 
 )
 
+ASSETS.mkdir(
+
+    exist_ok=True
+
+)
+
+###########################################################################
+# INPUT / OUTPUT
+###########################################################################
+
+INPUT_PATTERN = "Output*.xlsx"
+
 REPORT_NAME = REPORTS / "Strategy_Comparison.xlsx"
 
 ###########################################################################
-# METRICS
+# EXCEL SHEETS
 ###########################################################################
 
-PRIMARY_METRICS = [
+SHEETS = {
+
+    "ranking":
+
+        "Strategy Ranking",
+
+    "recommendations":
+
+        "Recommendations",
+
+    "overlap":
+
+        "Top Stocks",
+
+    "executive":
+
+        "Executive Summary",
+
+    "comparison":
+
+        "Comparison",
+
+    "analytics":
+
+        "Analytics"
+
+}
+
+###########################################################################
+# REQUIRED COLUMNS
+###########################################################################
+
+REQUIRED_COLUMNS = [
+
+    "Strategy Rank",
+
+    "Stock",
 
     "Overall Score",
+
+    "Recommendation",
 
     "Performance Score",
 
@@ -43,20 +99,48 @@ PRIMARY_METRICS = [
 ]
 
 ###########################################################################
-# WEIGHTS
+# PRIMARY METRICS
+###########################################################################
+
+PRIMARY_METRICS = (
+
+    "Overall Score",
+
+    "Performance Score",
+
+    "Reliability Score",
+
+    "Execution Score",
+
+    "Opportunity Score"
+
+)
+
+###########################################################################
+# SCORING WEIGHTS
 ###########################################################################
 
 WEIGHTS = {
 
-    "Overall Score": 0.40,
+    "Overall Score":
 
-    "Performance Score": 0.20,
+        0.40,
 
-    "Reliability Score": 0.15,
+    "Performance Score":
 
-    "Execution Score": 0.15,
+        0.20,
 
-    "Opportunity Score": 0.10
+    "Reliability Score":
+
+        0.15,
+
+    "Execution Score":
+
+        0.15,
+
+    "Opportunity Score":
+
+        0.10
 
 }
 
@@ -66,17 +150,29 @@ WEIGHTS = {
 
 GRADE_RULES = {
 
-    90: "A+",
+    90:
 
-    80: "A",
+        "A+",
 
-    70: "B",
+    80:
 
-    60: "C",
+        "A",
 
-    50: "D",
+    70:
 
-    0: "F"
+        "B",
+
+    60:
+
+        "C",
+
+    50:
+
+        "D",
+
+    0:
+
+        "F"
 
 }
 
@@ -86,16 +182,90 @@ GRADE_RULES = {
 
 RECOMMENDATION_RULES = {
 
-    90: "Strong Buy",
+    90:
 
-    80: "Buy",
+        "Strong Buy",
 
-    70: "Watch",
+    80:
 
-    60: "Improve",
+        "Buy",
 
-    50: "Avoid",
+    70:
 
-    0: "Reject"
+        "Watch",
+
+    60:
+
+        "Improve",
+
+    50:
+
+        "Avoid",
+
+    0:
+
+        "Reject"
 
 }
+
+###########################################################################
+# DASHBOARD SETTINGS
+###########################################################################
+
+TOP_N = 10
+
+DEFAULT_RADAR_INDEX = 0
+
+DECIMAL_PLACES = 2
+
+###########################################################################
+# CHART SETTINGS
+###########################################################################
+
+CHART_HEIGHT = 500
+
+PIE_HEIGHT = 450
+
+RADAR_HEIGHT = 600
+
+SCATTER_HEIGHT = 550
+
+HEATMAP_HEIGHT = 700
+
+###########################################################################
+# STREAMLIT SETTINGS
+###########################################################################
+
+PAGE_TITLE = "Strategy Comparison Dashboard"
+
+PAGE_ICON = "📈"
+
+LAYOUT = "wide"
+
+DATAFRAME_WIDTH = "stretch"
+
+###########################################################################
+# EXPORT SETTINGS
+###########################################################################
+
+CSV_EXPORT_NAME = "Strategy_Ranking.csv"
+
+JSON_EXPORT_NAME = "Strategy_Ranking.json"
+
+###########################################################################
+# APPLICATION INFORMATION
+###########################################################################
+
+APP_NAME = "Strategy Comparison Dashboard"
+
+APP_VERSION = "3.0.0"
+
+AUTHOR = "Pavan Sai Nekkala"
+
+DESCRIPTION = (
+
+    "Institutional-grade strategy comparison dashboard "
+
+    "for evaluating quantitative trading strategies."
+
+)

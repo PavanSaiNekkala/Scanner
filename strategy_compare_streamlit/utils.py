@@ -8,14 +8,29 @@ import numpy as np
 
 import pandas as pd
 
+from config import (
+
+    DECIMAL_PLACES,
+
+    TOP_N
+
+)
 
 ###########################################################################
-# PATH
+# DIRECTORY
 ###########################################################################
 
-def ensure_directory(path):
+def ensure_directory(
 
-    path = Path(path)
+    path
+
+):
+
+    path = Path(
+
+        path
+
+    )
 
     path.mkdir(
 
@@ -29,10 +44,35 @@ def ensure_directory(path):
 
 
 ###########################################################################
-# NUMERIC CONVERSION
+# EMPTY DATAFRAME
 ###########################################################################
 
-def numeric(series):
+def is_empty_dataframe(
+
+    dataframe
+
+):
+
+    return (
+
+        dataframe is None
+
+        or
+
+        dataframe.empty
+
+    )
+
+
+###########################################################################
+# NUMERIC
+###########################################################################
+
+def numeric(
+
+    series
+
+):
 
     return pd.to_numeric(
 
@@ -94,20 +134,30 @@ def percentage(
 
 ):
 
-    return safe_divide(
+    return (
 
-        numerator,
+        safe_divide(
 
-        denominator
+            numerator,
 
-    ) * 100
+            denominator
+
+        )
+
+        * 100
+
+    )
 
 
 ###########################################################################
-# NORMALIZE SERIES
+# NORMALIZE
 ###########################################################################
 
-def normalize(series):
+def normalize(
+
+    series
+
+):
 
     series = numeric(
 
@@ -115,23 +165,19 @@ def normalize(series):
 
     )
 
+    if series.isna().all():
+
+        return series
+
     minimum = series.min()
 
     maximum = series.max()
-
-    if pd.isna(minimum):
-
-        return series
-
-    if pd.isna(maximum):
-
-        return series
 
     if maximum == minimum:
 
         return pd.Series(
 
-            100,
+            100.0,
 
             index=series.index
 
@@ -139,38 +185,50 @@ def normalize(series):
 
     return (
 
-        (series - minimum)
+        (
+
+            series
+
+            - minimum
+
+        )
 
         /
 
-        (maximum - minimum)
+        (
+
+            maximum
+
+            - minimum
+
+        )
 
     ) * 100
 
 
 ###########################################################################
-# ROUND DATAFRAME
+# ROUND
 ###########################################################################
 
 def round_dataframe(
 
     dataframe,
 
-    digits=2
+    digits=DECIMAL_PLACES
 
 ):
 
     df = dataframe.copy()
 
-    numeric_cols = df.select_dtypes(
+    cols = df.select_dtypes(
 
         include=np.number
 
     ).columns
 
-    df[numeric_cols] = df[
+    df[cols] = df[
 
-        numeric_cols
+        cols
 
     ].round(
 
@@ -182,7 +240,7 @@ def round_dataframe(
 
 
 ###########################################################################
-# FIND NUMERIC COLUMNS
+# NUMERIC COLUMNS
 ###########################################################################
 
 def numeric_columns(
@@ -199,7 +257,7 @@ def numeric_columns(
 
 
 ###########################################################################
-# FIND TEXT COLUMNS
+# TEXT COLUMNS
 ###########################################################################
 
 def text_columns(
@@ -216,6 +274,29 @@ def text_columns(
 
 
 ###########################################################################
+# IS NUMERIC
+###########################################################################
+
+def is_numeric_column(
+
+    dataframe,
+
+    column
+
+):
+
+    if column not in dataframe.columns:
+
+        return False
+
+    return pd.api.types.is_numeric_dtype(
+
+        dataframe[column]
+
+    )
+
+
+###########################################################################
 # CHECK REQUIRED COLUMNS
 ###########################################################################
 
@@ -227,17 +308,15 @@ def check_columns(
 
 ):
 
-    missing = [
+    return [
 
-        c
+        column
 
-        for c in required
+        for column in required
 
-        if c not in dataframe.columns
+        if column not in dataframe.columns
 
     ]
-
-    return missing
 
 
 ###########################################################################
@@ -250,11 +329,19 @@ def top_n(
 
     column,
 
-    n=10
+    n=TOP_N
 
 ):
 
-    if column not in dataframe.columns:
+    if (
+
+        column not in dataframe.columns
+
+        or
+
+        dataframe.empty
+
+    ):
 
         return dataframe
 
@@ -277,11 +364,19 @@ def bottom_n(
 
     column,
 
-    n=10
+    n=TOP_N
 
 ):
 
-    if column not in dataframe.columns:
+    if (
+
+        column not in dataframe.columns
+
+        or
+
+        dataframe.empty
+
+    ):
 
         return dataframe
 
@@ -295,12 +390,20 @@ def bottom_n(
 
 
 ###########################################################################
-# FORMAT PERCENT
+# FORMAT %
 ###########################################################################
 
-def percent(value):
+def percent(
 
-    if pd.isna(value):
+    value
+
+):
+
+    if pd.isna(
+
+        value
+
+    ):
 
         return ""
 
@@ -315,11 +418,15 @@ def number(
 
     value,
 
-    digits=2
+    digits=DECIMAL_PLACES
 
 ):
 
-    if pd.isna(value):
+    if pd.isna(
+
+        value
+
+    ):
 
         return ""
 
@@ -333,7 +440,34 @@ def number(
 
 
 ###########################################################################
-# SORT DESCENDING
+# SORT
+###########################################################################
+
+def sort_dataframe(
+
+    dataframe,
+
+    column,
+
+    ascending=False
+
+):
+
+    if column not in dataframe.columns:
+
+        return dataframe
+
+    return dataframe.sort_values(
+
+        column,
+
+        ascending=ascending
+
+    )
+
+
+###########################################################################
+# DESCENDING
 ###########################################################################
 
 def descending(
@@ -344,21 +478,19 @@ def descending(
 
 ):
 
-    if column not in dataframe.columns:
+    return sort_dataframe(
 
-        return dataframe
-
-    return dataframe.sort_values(
+        dataframe,
 
         column,
 
-        ascending=False
+        False
 
     )
 
 
 ###########################################################################
-# SORT ASCENDING
+# ASCENDING
 ###########################################################################
 
 def ascending(
@@ -369,15 +501,55 @@ def ascending(
 
 ):
 
-    if column not in dataframe.columns:
+    return sort_dataframe(
 
-        return dataframe
-
-    return dataframe.sort_values(
+        dataframe,
 
         column,
 
-        ascending=True
+        True
+
+    )
+
+
+###########################################################################
+# FORMAT DATAFRAME
+###########################################################################
+
+def format_dataframe(
+
+    dataframe
+
+):
+
+    return dataframe.astype(
+
+        str
+
+    )
+
+
+###########################################################################
+# MEMORY
+###########################################################################
+
+def memory_usage(
+
+    dataframe
+
+):
+
+    return round(
+
+        dataframe.memory_usage(
+
+            deep=True
+
+        ).sum()
+
+        / 1024,
+
+        2
 
     )
 
@@ -394,32 +566,28 @@ def dataframe_info(
 
     return {
 
-        "Rows": len(
+        "Rows":
 
-            dataframe
+            len(
 
-        ),
+                dataframe
 
-        "Columns": len(
+            ),
 
-            dataframe.columns
+        "Columns":
 
-        ),
+            len(
 
-        "Memory (KB)": round(
+                dataframe.columns
 
-            dataframe.memory_usage(
+            ),
 
-                deep=True
+        "Memory (KB)":
 
-            ).sum()
+            memory_usage(
 
-            /
+                dataframe
 
-            1024,
-
-            2
-
-        )
+            )
 
     }

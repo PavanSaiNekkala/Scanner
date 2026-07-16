@@ -1,7 +1,19 @@
+"""
+Strategy Report Loader
+"""
+
 from pathlib import Path
 
 import pandas as pd
 
+from config import INPUT_PATTERN
+
+from logger import StrategyLogger
+
+
+###########################################################################
+# LOADER
+###########################################################################
 
 class StrategyLoader:
 
@@ -19,6 +31,12 @@ class StrategyLoader:
 
         )
 
+        self.logger = StrategyLogger()
+
+    ###########################################################################
+    # LOAD REPORTS
+    ###########################################################################
+
     def load(self):
 
         reports = {}
@@ -27,34 +45,100 @@ class StrategyLoader:
 
             self.folder.glob(
 
-                "Output*.xlsx"
+                INPUT_PATTERN
 
             )
 
         )
 
-        print("=" * 60)
-        print("Loading Reports")
-        print("=" * 60)
+        if len(
 
-        for file in files:
+            files
 
-            print(file.name)
+        ) == 0:
 
-            df = pd.read_excel(
+            raise FileNotFoundError(
 
-                file
+                f"No reports found in {self.folder}"
 
             )
 
-            reports[file.stem] = df
+        self.logger.separator()
 
-        print()
+        self.logger.info(
 
-        print(
+            "Loading Strategy Reports"
+
+        )
+
+        self.logger.separator()
+
+        for file in files:
+
+            try:
+
+                self.logger.info(
+
+                    f"Loading : {file.name}"
+
+                )
+
+                dataframe = pd.read_excel(
+
+                    file
+
+                )
+
+                if dataframe.empty:
+
+                    self.logger.warning(
+
+                        f"{file.name} is empty. Skipping."
+
+                    )
+
+                    continue
+
+                reports[
+
+                    file.stem
+
+                ] = dataframe
+
+                self.logger.info(
+
+                    f"Loaded : {dataframe.shape[0]} rows × {dataframe.shape[1]} columns"
+
+                )
+
+            except Exception as e:
+
+                self.logger.error(
+
+                    f"Failed to load {file.name}: {e}"
+
+                )
+
+        if len(
+
+            reports
+
+        ) == 0:
+
+            raise RuntimeError(
+
+                "No valid strategy reports were loaded."
+
+            )
+
+        self.logger.separator()
+
+        self.logger.info(
 
             f"Total Reports Loaded : {len(reports)}"
 
         )
+
+        self.logger.separator()
 
         return reports

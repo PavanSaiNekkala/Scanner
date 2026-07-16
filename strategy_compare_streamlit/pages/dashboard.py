@@ -1,15 +1,26 @@
+"""
+Main Dashboard
+"""
+
+import copy
+
 import streamlit as st
 
 import pandas as pd
 
-import plotly.express as px
+from pages.executive import ExecutivePage
 
-import plotly.graph_objects as go
+from pages.ranking import RankingPage
 
-from pathlib import Path
+from pages.comparison import ComparisonPage
+
+from pages.analytics import AnalyticsPage
+
+from pages.downloads import DownloadPage
+
 
 ###########################################################################
-# EXECUTIVE DASHBOARD
+# DASHBOARD
 ###########################################################################
 
 class DashboardPage:
@@ -24,87 +35,75 @@ class DashboardPage:
 
         self.result = result
 
-        self.ranked = result["ranked"]
+        self.original = result[
 
-        self.filtered = self.filtered.copy()
+            "ranked"
 
-    ###########################################################################
+        ].copy()
 
-    def render(self):
+        self.filtered = self.original.copy()
 
-        self.sidebar_filters()
-
-        self.header()
-
-        self.kpi_cards()
-
-        tabs = st.tabs([
-
-            "Executive",
-
-            "Ranking",
-
-            "Comparison",
-
-            "Analytics",
-
-            "Downloads"
-
-        ])
-
-        with tabs[0]:
-
-            self.best_strategy()
-
-            self.top5()
-
-        with tabs[1]:
-
-            self.ranking_table()
-
-            self.strategy_selector()
-
-        with tabs[2]:
-
-            self.compare_strategies()
-
-            self.metric_leaders()
-
-        with tabs[3]:
-
-            self.overall_score_chart()
-
-            self.grade_chart()
-
-            self.recommendation_chart()
-
-            self.radar_chart()
-
-            self.scatter_chart()
-
-        with tabs[4]:
-
-            self.downloads()
+        self.session()
 
     ###########################################################################
+    # SESSION STATE
+    ###########################################################################
 
-    def header(self):
+    def session(
 
-        st.header(
+        self
 
-            "Executive Dashboard"
+    ):
+
+        defaults = {
+
+            "dashboard_search": "",
+
+            "dashboard_grade": [],
+
+            "dashboard_recommendation": [],
+
+            "dashboard_min_score": 0.0,
+
+            "dashboard_max_score": 100.0
+
+        }
+
+        for key, value in defaults.items():
+
+            if key not in st.session_state:
+
+                st.session_state[
+
+                    key
+
+                ] = value
+
+    ###########################################################################
+    # PAGE
+    ###########################################################################
+
+    def render(
+
+        self
+
+    ):
+
+        st.title(
+
+            "Institutional Strategy Comparison Dashboard"
 
         )
 
-    ###########################################################################
+        st.caption(
 
-    def kpi_cards(self):
-
-        total = len(
-
-            self.filtered
+            "Institutional Strategy Evaluation & Analytics"
 
         )
+
+        self.sidebar()
+
+        self.apply_filters()
 
         if self.filtered.empty:
 
@@ -116,186 +115,233 @@ class DashboardPage:
 
             return
 
-        best = self.filtered.iloc[0]
+        self.kpis()
 
-        average = round(
+        st.divider()
 
-            self.filtered["Overall Score"].mean(),
+        self.build_tabs()
 
-            2
+    ###########################################################################
+    # SIDEBAR
+    ###########################################################################
 
-        )
+    def sidebar(
 
-        col1, col2, col3, col4 = st.columns(4)
+        self
 
-        col1.metric(
+    ):
 
-            "Strategies",
+        st.sidebar.header(
 
-            total
-
-        )
-
-        col2.metric(
-
-            "Best Strategy",
-
-            best["Strategy"]
+            "Global Filters"
 
         )
 
-        col3.metric(
+        st.session_state[
 
-            "Best Score",
+            "dashboard_search"
 
-            round(
+        ] = st.sidebar.text_input(
 
-                best["Overall Score"],
+            "Search Strategy",
 
-                2
+            value=st.session_state[
+
+                "dashboard_search"
+
+            ]
+
+        )
+
+        grades = sorted(
+
+            self.original[
+
+                "Grade"
+
+            ]
+
+            .dropna()
+
+            .unique()
+
+            .tolist()
+
+        )
+
+        st.session_state[
+
+            "dashboard_grade"
+
+        ] = st.sidebar.multiselect(
+
+            "Grade",
+
+            grades,
+
+            default=grades
+
+        )
+
+        recommendations = sorted(
+
+            self.original[
+
+                "Recommendation"
+
+            ]
+
+            .dropna()
+
+            .unique()
+
+            .tolist()
+
+        )
+
+        st.session_state[
+
+            "dashboard_recommendation"
+
+        ] = st.sidebar.multiselect(
+
+            "Recommendation",
+
+            recommendations,
+
+            default=recommendations
+
+        )
+
+        minimum = float(
+
+            self.original[
+
+                "Overall Score"
+
+            ].min()
+
+        )
+
+        maximum = float(
+
+            self.original[
+
+                "Overall Score"
+
+            ].max()
+
+        )
+
+        score = st.sidebar.slider(
+
+            "Overall Score",
+
+            minimum,
+
+            maximum,
+
+            (
+
+                st.session_state[
+
+                    "dashboard_min_score"
+
+                ],
+
+                st.session_state[
+
+                    "dashboard_max_score"
+
+                ]
 
             )
 
         )
 
-        col4.metric(
+        st.session_state[
 
-            "Average Score",
+            "dashboard_min_score"
 
-            average
+        ] = score[0]
 
-        )
+        st.session_state[
 
-    ###########################################################################
+            "dashboard_max_score"
 
-    def best_strategy(self):
+        ] = score[1]
 
-        st.subheader(
+        st.sidebar.divider()
 
-            "Best Strategy"
+        if st.sidebar.button(
 
-        )
+            "Reset Filters",
 
-        best = self.filtered.iloc[0]
-
-        info = pd.DataFrame({
-
-            "Metric":[
-
-                "Strategy",
-
-                "Overall Score",
-
-                "Grade",
-
-                "Recommendation"
-
-            ],
-
-            "Value":[
-
-                best["Strategy"],
-
-                round(
-
-                    best["Overall Score"],
-
-                    2
-
-                ),
-
-                best["Grade"],
-
-                best["Recommendation"]
-
-            ]
-
-        })
-
-        df = df.astype(str)
-
-        st.table(
-            df,
             width="stretch"
-        )
 
-        st.table(
+        ):
 
-            info
+            st.session_state[
 
-        )
+                "dashboard_search"
+
+            ] = ""
+
+            st.session_state[
+
+                "dashboard_grade"
+
+            ] = grades
+
+            st.session_state[
+
+                "dashboard_recommendation"
+
+            ] = recommendations
+
+            st.session_state[
+
+                "dashboard_min_score"
+
+            ] = minimum
+
+            st.session_state[
+
+                "dashboard_max_score"
+
+            ] = maximum
+
+            st.rerun()
 
     ###########################################################################
+    # APPLY FILTERS
+    ###########################################################################
 
-    def top5(self):
+    def apply_filters(
 
-        st.subheader(
+        self
 
-            "Top 5 Strategies"
+    ):
 
-        )
+        dataframe = self.original.copy()
 
-        cols = [
+        search = st.session_state[
 
-            "Rank",
-
-            "Strategy",
-
-            "Overall Score",
-
-            "Grade",
-
-            "Recommendation"
+            "dashboard_search"
 
         ]
-
-        cols = [
-
-            c
-
-            for c in cols
-
-            if c in self.filtered.columns
-
-        ]
-
-        st.dataframe(
-
-            self.filtered[cols].head(5),
-
-            width="stretch",
-
-            hide_index=True
-
-        )
-
-    ###########################################################################
-    # RANKING TABLE
-    ###########################################################################
-
-    def ranking_table(self):
-
-        st.subheader(
-
-            "Strategy Ranking"
-
-        )
-
-        search = st.text_input(
-
-            "Search Strategy",
-
-            ""
-
-        )
-
-        table = self.filtered.copy()
 
         if search:
 
-            table = table[
+            dataframe = dataframe[
 
-                table["Strategy"].str.contains(
+                dataframe[
+
+                    "Strategy"
+
+                ]
+
+                .str.contains(
 
                     search,
 
@@ -307,751 +353,841 @@ class DashboardPage:
 
             ]
 
-        st.dataframe(
+        grades = st.session_state[
 
-            table,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
-
-
-    ###########################################################################
-    # STRATEGY SELECTOR
-    ###########################################################################
-
-    def strategy_selector(self):
-
-        st.subheader(
-
-            "Strategy Details"
-
-        )
-
-        strategy = st.selectbox(
-
-            "Select Strategy",
-
-            self.filtered["Strategy"]
-
-        )
-
-        row = self.filtered[
-
-            self.filtered["Strategy"] == strategy
-
-        ].iloc[0]
-
-        self.strategy_details(
-
-            row
-
-        )
-
-    ###########################################################################
-    # STRATEGY DETAILS
-    ###########################################################################
-
-    def strategy_details(
-
-        self,
-
-        row
-
-    ):
-
-        details = row.to_frame()
-
-        details.columns = [
-
-            "Value"
+            "dashboard_grade"
 
         ]
 
-        st.dataframe(
+        if grades:
 
-            details,
+            dataframe = dataframe[
 
-            width="stretch"
+                dataframe[
 
-        )
+                    "Grade"
 
-    ###########################################################################
-    # STRATEGY COMPARISON
-    ###########################################################################
+                ]
 
-    def compare_strategies(self):
+                .isin(
 
-        st.subheader(
-
-            "Strategy Comparison"
-
-        )
-
-        strategies = self.filtered["Strategy"].tolist()
-
-        col1, col2 = st.columns(2)
-
-        left = col1.selectbox(
-
-            "Strategy A",
-
-            strategies,
-
-            key="strategy_a"
-
-        )
-
-        right = col2.selectbox(
-
-            "Strategy B",
-
-            strategies,
-
-            index=min(1, len(strategies) - 1),
-
-            key="strategy_b"
-
-        )
-
-        if left == right:
-
-            st.warning(
-
-                "Please choose two different strategies."
-
-            )
-
-            return
-
-        row_a = self.filtered[
-
-            self.filtered["Strategy"] == left
-
-        ].iloc[0]
-
-        row_b = self.filtered[
-
-            self.filtered["Strategy"] == right
-
-        ].iloc[0]
-
-        self.comparison_table(
-
-            row_a,
-
-            row_b
-
-        )
-
-    ###########################################################################
-    # COMPARISON TABLE
-    ###########################################################################
-
-    def comparison_table(
-
-        self,
-
-        row_a,
-
-        row_b
-
-    ):
-
-        metrics = [
-
-            "Overall Score",
-
-            "Performance Score_Mean",
-
-            "Reliability Score_Mean",
-
-            "Execution Score_Mean",
-
-            "Opportunity Score_Mean",
-
-            "Grade",
-
-            "Recommendation"
-
-        ]
-
-        metrics = [
-
-            m
-
-            for m in metrics
-
-            if m in self.filtered.columns
-
-        ]
-
-        rows = []
-
-        for metric in metrics:
-
-            value_a = row_a[metric]
-
-            value_b = row_b[metric]
-
-            winner = "-"
-
-            if isinstance(
-
-                value_a,
-
-                (int, float)
-
-            ) and isinstance(
-
-                value_b,
-
-                (int, float)
-
-            ):
-
-                if value_a > value_b:
-
-                    winner = row_a["Strategy"]
-
-                elif value_b > value_a:
-
-                    winner = row_b["Strategy"]
-
-                else:
-
-                    winner = "Tie"
-
-            rows.append({
-
-                "Metric": metric,
-
-                row_a["Strategy"]: value_a,
-
-                row_b["Strategy"]: value_b,
-
-                "Winner": winner
-
-            })
-
-        st.dataframe(
-
-            rows,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
-
-    ###########################################################################
-    # METRIC LEADERS
-    ###########################################################################
-
-    def metric_leaders(self):
-
-        st.subheader(
-
-            "Metric Leaders"
-
-        )
-
-        metrics = [
-
-            c
-
-            for c in self.filtered.columns
-
-            if c.endswith("_Mean")
-
-        ]
-
-        leaders = []
-
-        for metric in metrics:
-
-            idx = self.filtered[metric].idxmax()
-
-            leaders.append({
-
-                "Metric":
-
-                    metric.replace(
-
-                        "_Mean",
-
-                        ""
-
-                    ),
-
-                "Leader":
-
-                    self.filtered.loc[
-
-                        idx,
-
-                        "Strategy"
-
-                    ],
-
-                "Value":
-
-                    round(
-
-                        self.filtered.loc[
-
-                            idx,
-
-                            metric
-
-                        ],
-
-                        2
-
-                    )
-
-            })
-
-        st.dataframe(
-
-            leaders,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
-
-    ###########################################################################
-    # OVERALL SCORE CHART
-    ###########################################################################
-
-    def overall_score_chart(self):
-
-        st.subheader(
-
-            "Overall Strategy Score"
-
-        )
-
-        fig = px.bar(
-
-            self.filtered,
-
-            x="Strategy",
-
-            y="Overall Score",
-
-            color="Overall Score",
-
-            text="Overall Score"
-
-        )
-
-        fig.update_layout(
-
-            height=500,
-
-            xaxis_title="Strategy",
-
-            yaxis_title="Overall Score"
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            width="stretch"
-
-        )
-
-    ###########################################################################
-    # GRADE DISTRIBUTION
-    ###########################################################################
-
-    def grade_chart(self):
-
-        if "Grade" not in self.filtered.columns:
-
-            return
-
-        st.subheader(
-
-            "Grade Distribution"
-
-        )
-
-        df = (
-
-            self.filtered["Grade"]
-
-            .value_counts()
-
-            .reset_index()
-
-        )
-
-        df.columns = [
-
-            "Grade",
-
-            "Count"
-
-        ]
-
-        fig = px.pie(
-
-            df,
-
-            values="Count",
-
-            names="Grade"
-
-        )
-
-        fig.update_layout(
-
-            height=450
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            width="stretch"
-
-        )
-
-    ###########################################################################
-    # RECOMMENDATION DISTRIBUTION
-    ###########################################################################
-
-    def recommendation_chart(self):
-
-        st.subheader(
-
-            "Recommendation Distribution"
-
-        )
-
-        df = (
-
-            self.filtered["Recommendation"]
-
-            .value_counts()
-
-            .reset_index()
-
-        )
-
-        df.columns = [
-
-            "Recommendation",
-
-            "Count"
-
-        ]
-
-        fig = px.pie(
-
-            df,
-
-            values="Count",
-
-            names="Recommendation"
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            width="stretch"
-
-        )
-
-    ###########################################################################
-    # RADAR CHART
-    ###########################################################################
-
-    def radar_chart(self):
-
-        metrics = [
-
-            "Overall Score_Mean",
-
-            "Performance Score_Mean",
-
-            "Reliability Score_Mean",
-
-            "Execution Score_Mean",
-
-            "Opportunity Score_Mean"
-
-        ]
-
-        metrics = [
-
-            m
-
-            for m in metrics
-
-            if m in self.filtered.columns
-
-        ]
-
-        if len(metrics) == 0:
-
-            return
-
-        st.subheader(
-
-            "Strategy Radar"
-
-        )
-
-        strategy = st.selectbox(
-
-            "Radar Strategy",
-
-            self.filtered["Strategy"],
-
-            key="radar"
-
-        )
-
-        row = self.filtered[
-
-            self.filtered["Strategy"] == strategy
-
-        ].iloc[0]
-
-        fig = go.Figure()
-
-        fig.add_trace(
-
-            go.Scatterpolar(
-
-                r=[
-
-                    row[m]
-
-                    for m in metrics
-
-                ],
-
-                theta=[
-
-                    m.replace(
-
-                        "_Mean",
-
-                        ""
-
-                    )
-
-                    for m in metrics
-
-                ],
-
-                fill="toself",
-
-                name=strategy
-
-            )
-
-        )
-
-        fig.update_layout(
-
-            polar=dict(
-
-                radialaxis=dict(
-
-                    visible=True
+                    grades
 
                 )
 
-            ),
+            ]
 
-            height=600
+        recommendations = st.session_state[
 
-        )
+            "dashboard_recommendation"
 
-        st.plotly_chart(
+        ]
 
-            fig,
+        if recommendations:
 
-            width="stretch"
+            dataframe = dataframe[
 
-        )
+                dataframe[
 
-    ###########################################################################
-    # SCATTER
-    ###########################################################################
+                    "Recommendation"
 
-    def scatter_chart(self):
+                ]
 
-        x = "Performance Score_Mean"
+                .isin(
 
-        y = "Reliability Score_Mean"
+                    recommendations
 
-        if x not in self.filtered.columns:
+                )
 
-            return
+            ]
 
-        if y not in self.filtered.columns:
+        dataframe = dataframe[
 
-            return
+            (
 
-        st.subheader(
+                dataframe[
 
-            "Performance vs Reliability"
+                    "Overall Score"
 
-        )
+                ]
 
-        fig = px.scatter(
+                >=
 
-            self.filtered,
+                st.session_state[
 
-            x=x,
+                    "dashboard_min_score"
 
-            y=y,
-
-            hover_name="Strategy",
-
-            size="Overall Score",
-
-            color="Overall Score"
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            width="stretch"
-
-        )
-
-    ###########################################################################
-    # DOWNLOADS
-    ###########################################################################
-
-    def downloads(self):
-
-        st.subheader(
-
-            "Download Reports"
-
-        )
-
-        excel = self.result["excel"]
-
-        with open(
-
-            excel,
-
-            "rb"
-
-        ) as f:
-
-            st.download_button(
-
-                "Download Excel Report",
-
-                f,
-
-                file_name=Path(
-
-                    excel
-
-                ).name,
-
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ]
 
             )
 
-        csv = self.filtered.to_csv(
+            &
 
-            index=False
+            (
 
-        ).encode(
+                dataframe[
 
-            "utf-8"
+                    "Overall Score"
 
-        )
+                ]
 
-        st.download_button(
+                <=
 
-            "Download Ranking CSV",
+                st.session_state[
 
-            csv,
+                    "dashboard_max_score"
 
-            file_name="ranking.csv",
-
-            mime="text/csv"
-
-        )
-
-        json_data = self.filtered.to_json(
-
-            orient="records",
-
-            indent=4
-
-        )
-
-        st.download_button(
-
-            "Download Ranking JSON",
-
-            json_data,
-
-            file_name="ranking.json",
-
-            mime="application/json"
-
-        )
-
-    ###########################################################################
-    # SIDEBAR FILTERS
-    ###########################################################################
-
-    def sidebar_filters(self):
-
-        st.sidebar.header(
-
-            "Dashboard Filters"
-
-        )
-
-        grades = sorted(
-
-            self.filtered["Grade"].unique()
-
-        )
-
-        selected = st.sidebar.multiselect(
-
-            "Grades",
-
-            grades,
-
-            default=grades
-
-        )
-
-        self.filtered = self.filtered[
-
-            self.filtered["Grade"].isin(
-
-                selected
+                ]
 
             )
 
         ]
+
+        self.filtered = dataframe.reset_index(
+
+            drop=True
+
+        )
+
+    ###########################################################################
+    # KPI CARDS
+    ###########################################################################
+
+    def kpis(
+
+        self
+
+    ):
+
+        best = self.filtered.iloc[
+
+            0
+
+        ]
+
+        col1, col2, col3, col4 = st.columns(
+
+            4
+
+        )
+
+        col1.metric(
+
+            "Strategies",
+
+            len(
+
+                self.filtered
+
+            )
+
+        )
+
+        col2.metric(
+
+            "Top Strategy",
+
+            best[
+
+                "Strategy"
+
+            ]
+
+        )
+
+        col3.metric(
+
+            "Highest Score",
+
+            round(
+
+                self.filtered[
+
+                    "Overall Score"
+
+                ].max(),
+
+                2
+
+            )
+
+        )
+
+        col4.metric(
+
+            "Average Score",
+
+            round(
+
+                self.filtered[
+
+                    "Overall Score"
+
+                ].mean(),
+
+                2
+
+            )
+
+        )
+
+    ###########################################################################
+    # DASHBOARD SUMMARY
+    ###########################################################################
+
+    def summary(
+
+        self
+
+    ):
+
+        st.subheader(
+
+            "Portfolio Summary"
+
+        )
+
+        summary = pd.DataFrame({
+
+            "Metric": [
+
+                "Strategies",
+
+                "Highest Score",
+
+                "Average Score",
+
+                "Lowest Score",
+
+                "Strong Buy",
+
+                "Buy",
+
+                "Watch"
+
+            ],
+
+            "Value": [
+
+                len(
+
+                    self.filtered
+
+                ),
+
+                round(
+
+                    self.filtered[
+
+                        "Overall Score"
+
+                    ].max(),
+
+                    2
+
+                ),
+
+                round(
+
+                    self.filtered[
+
+                        "Overall Score"
+
+                    ].mean(),
+
+                    2
+
+                ),
+
+                round(
+
+                    self.filtered[
+
+                        "Overall Score"
+
+                    ].min(),
+
+                    2
+
+                ),
+
+                int(
+
+                    (
+
+                        self.filtered[
+
+                            "Recommendation"
+
+                        ]
+
+                        ==
+
+                        "Strong Buy"
+
+                    ).sum()
+
+                ),
+
+                int(
+
+                    (
+
+                        self.filtered[
+
+                            "Recommendation"
+
+                        ]
+
+                        ==
+
+                        "Buy"
+
+                    ).sum()
+
+                ),
+
+                int(
+
+                    (
+
+                        self.filtered[
+
+                            "Recommendation"
+
+                        ]
+
+                        ==
+
+                        "Watch"
+
+                    ).sum()
+
+                )
+
+            ]
+
+        })
+
+        summary = summary.astype(
+
+            str
+
+        )
+
+        st.dataframe(
+
+            summary,
+
+            width="stretch",
+
+            hide_index=True
+
+        )
+
+    ###########################################################################
+    # BUILD FILTERED RESULT
+    ###########################################################################
+
+    def filtered_result(
+
+        self
+
+    ):
+
+        result = copy.deepcopy(
+
+            self.result
+
+        )
+
+        result[
+
+            "ranked"
+
+        ] = self.filtered.copy()
+
+        return result
+
+    ###########################################################################
+    # BUILD TABS
+    ###########################################################################
+
+    def build_tabs(
+
+        self
+
+    ):
+
+        self.summary()
+
+        st.divider()
+
+        result = self.filtered_result()
+
+        tabs = st.tabs(
+
+            [
+
+                "Executive",
+
+                "Ranking",
+
+                "Comparison",
+
+                "Analytics",
+
+                "Downloads"
+
+            ]
+
+        )
+
+        with tabs[
+
+            0
+
+        ]:
+
+            self.executive_tab(
+
+                result
+
+            )
+
+        with tabs[
+
+            1
+
+        ]:
+
+            self.ranking_tab(
+
+                result
+
+            )
+
+        with tabs[
+
+            2
+
+        ]:
+
+            self.comparison_tab(
+
+                result
+
+            )
+
+        with tabs[
+
+            3
+
+        ]:
+
+            self.analytics_tab(
+
+                result
+
+            )
+
+        with tabs[
+
+            4
+
+        ]:
+
+            self.downloads_tab(
+
+                result
+
+            )
+
+    ###########################################################################
+    # EXECUTIVE TAB
+    ###########################################################################
+
+    def executive_tab(
+
+        self,
+
+        result
+
+    ):
+
+        try:
+
+            page = ExecutivePage(
+
+                result
+
+            )
+
+            page.render()
+
+        except Exception as error:
+
+            st.error(
+
+                f"Executive page failed: {error}"
+
+            )
+
+    ###########################################################################
+    # RANKING TAB
+    ###########################################################################
+
+    def ranking_tab(
+
+        self,
+
+        result
+
+    ):
+
+        try:
+
+            page = RankingPage(
+
+                result
+
+            )
+
+            page.render()
+
+        except Exception as error:
+
+            st.error(
+
+                f"Ranking page failed: {error}"
+
+            )
+
+    ###########################################################################
+    # COMPARISON TAB
+    ###########################################################################
+
+    def comparison_tab(
+
+        self,
+
+        result
+
+    ):
+
+        try:
+
+            page = ComparisonPage(
+
+                result
+
+            )
+
+            page.render()
+
+        except Exception as error:
+
+            st.error(
+
+                f"Comparison page failed: {error}"
+
+            )
+
+    ###########################################################################
+    # ANALYTICS TAB
+    ###########################################################################
+
+    def analytics_tab(
+
+        self,
+
+        result
+
+    ):
+
+        try:
+
+            page = AnalyticsPage(
+
+                result
+
+            )
+
+            page.render()
+
+        except Exception as error:
+
+            st.error(
+
+                f"Analytics page failed: {error}"
+
+            )
+
+    ###########################################################################
+    # DOWNLOADS TAB
+    ###########################################################################
+
+    def downloads_tab(
+
+        self,
+
+        result
+
+    ):
+
+        try:
+
+            page = DownloadPage(
+
+                result
+
+            )
+
+            page.render()
+
+        except Exception as error:
+
+            st.error(
+
+                f"Downloads page failed: {error}"
+
+            )
+
+    ###########################################################################
+    # REFRESH DASHBOARD
+    ###########################################################################
+
+    def refresh(
+
+        self
+
+    ):
+
+        col1, col2 = st.columns(
+
+            [
+
+                1,
+
+                5
+
+            ]
+
+        )
+
+        with col1:
+
+            if st.button(
+
+                "🔄 Refresh",
+
+                width="stretch"
+
+            ):
+
+                st.rerun()
+
+        with col2:
+
+            st.caption(
+
+                "Refresh the dashboard after generating a new comparison report."
+
+            )
+
+    ###########################################################################
+    # ABOUT
+    ###########################################################################
+
+    def about(
+
+        self
+
+    ):
+
+        st.divider()
+
+        with st.expander(
+
+            "About Dashboard",
+
+            expanded=False
+
+        ):
+
+            rows = [
+
+                {
+
+                    "Property":
+
+                        "Application",
+
+                    "Value":
+
+                        "Institutional Strategy Comparison Dashboard"
+
+                },
+
+                {
+
+                    "Property":
+
+                        "Version",
+
+                    "Value":
+
+                        "3.0"
+
+                },
+
+                {
+
+                    "Property":
+
+                        "Framework",
+
+                    "Value":
+
+                        "Streamlit"
+
+                },
+
+                {
+
+                    "Property":
+
+                        "Analytics Engine",
+
+                    "Value":
+
+                        "Institutional Quant V3"
+
+                },
+
+                {
+
+                    "Property":
+
+                        "Ranking Engine",
+
+                    "Value":
+
+                        "Weighted Multi-Factor"
+
+                },
+
+                {
+
+                    "Property":
+
+                        "Visualization",
+
+                    "Value":
+
+                        "Plotly"
+
+                },
+
+                {
+
+                    "Property":
+
+                        "Export Formats",
+
+                    "Value":
+
+                        "Excel / CSV / JSON"
+
+                }
+
+            ]
+
+            dataframe = pd.DataFrame(
+
+                rows
+
+            )
+
+            dataframe = dataframe.astype(
+
+                str
+
+            )
+
+            st.dataframe(
+
+                dataframe,
+
+                width="stretch",
+
+                hide_index=True
+
+            )
+
+    ###########################################################################
+    # FOOTER
+    ###########################################################################
+
+    def footer(
+
+        self
+
+    ):
+
+        st.divider()
+
+        st.caption(
+
+            "© 2026 Institutional Strategy Comparison Dashboard • Version 3.0"
+        )
+
+    ###########################################################################
+    # COMPLETE PAGE
+    ###########################################################################
+
+    def render(
+
+        self
+
+    ):
+
+        st.title(
+
+            "Institutional Strategy Comparison Dashboard"
+
+        )
+
+        st.caption(
+
+            "Comprehensive Strategy Evaluation, Ranking, Analytics & Reporting"
+
+        )
+
+        self.sidebar()
+
+        self.apply_filters()
+
+        if self.filtered.empty:
+
+            st.warning(
+
+                "No strategies match the selected filters."
+
+            )
+
+            return
+
+        self.refresh()
+
+        st.divider()
+
+        self.kpis()
+
+        st.divider()
+
+        self.build_tabs()
+
+        self.about()
+
+        self.footer()

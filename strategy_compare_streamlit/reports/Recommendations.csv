@@ -1,0 +1,9 @@
+Strategy,Overall Score,Grade,Recommendation,Strengths,Weaknesses,Deployment,Risk,Confidence
+Output_backtest_WF_Str_Tr_Report,87.76,A,Buy,Balanced profile,"Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",Deploy after validation,High,46.84
+Output_backtest_F_ATR_Tr_Report,69.3,C,Improve,Balanced profile,"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",Refine strategy,Very High,46.17
+Output_backtest_F_Str_Tr_Report,66.12,C,Improve,Balanced profile,"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",Refine strategy,Very High,46.11
+Output_backtest_F_ATR_FT_Report,46.23,F,Reject,Balanced profile,"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",Discard,Very High,45.66
+Output_backtest_WF_ATR_FT_Report,37.84,F,Reject,Balanced profile,"Low overall score, Critical Performance, Weak Reliability, Critical Execution, Critical Opportunity",Discard,Very High,45.91
+Output_backtest_WF_Str_FT_Report,29.15,F,Reject,Balanced profile,"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",Discard,Very High,45.3
+Output_backtest_F_Str_FT_Report,23.51,F,Reject,Balanced profile,"Low overall score, Critical Performance, Weak Reliability, Critical Execution, Critical Opportunity",Discard,Very High,45.28
+Output_backtest_WF_ATR_Tr_Report,21.4,F,Reject,Balanced profile,"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",Discard,Very High,45.27

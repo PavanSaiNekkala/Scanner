@@ -1,61 +1,72 @@
 """
-Strategy Comparison Dashboard
+Institutional Strategy Comparison Dashboard
+Version 3.0
 """
 
 from pathlib import Path
 
 import streamlit as st
 
+import pandas as pd
+
 from config import OUTPUTS
 
 from pipeline import StrategyPipeline
 
-from pages.executive import ExecutivePage
-from pages.ranking import RankingPage
-from pages.comparison import ComparisonPage
-from pages.analytics import AnalyticsPage
-from pages.downloads import DownloadPage
+from pages.dashboard import DashboardPage
 
 
 ###########################################################################
-# PAGE CONFIG
+# PAGE CONFIGURATION
 ###########################################################################
 
 st.set_page_config(
 
-    page_title="Strategy Comparison Dashboard",
+    page_title="Institutional Strategy Comparison",
 
     page_icon="📈",
 
-    layout="wide"
+    layout="wide",
+
+    initial_sidebar_state="expanded"
 
 )
 
 ###########################################################################
-# TITLE
+# APPLICATION HEADER
 ###########################################################################
 
 st.title(
 
-    "📈 Strategy Comparison Dashboard"
+    "📈 Institutional Strategy Comparison Dashboard"
 
 )
 
-st.markdown(
+st.caption(
 
-    "Automatically loads reports from the outputs folder. "
-    "You can also upload reports manually if required."
+    "Institutional-grade strategy evaluation, comparison, analytics and reporting."
 
 )
 
 st.info(
-    """
-    **Usage Instructions**
 
-    • Upload one or more strategy report Excel files (`.xlsx`) and click **Generate Comparison**.
-
-    • If no files are uploaded, simply click **Generate Comparison**. The application will automatically load all available `Output*.xlsx` files from the project's **`outputs/`** directory and generate the comparison dashboard and consolidated Excel report.
     """
+### Usage
+
+• Upload one or more **Output*.xlsx** strategy reports.
+
+• If no files are uploaded, reports will automatically be loaded from the project's **outputs/** folder.
+
+• Click **Generate Comparison** to execute the complete institutional pipeline.
+
+Supported exports include:
+
+- Executive Dashboard
+- Strategy Ranking
+- Strategy Comparison
+- Analytics Dashboard
+- Download Center
+"""
 )
 
 ###########################################################################
@@ -64,13 +75,15 @@ st.info(
 
 st.sidebar.header(
 
-    "Settings"
+    "Execution"
 
 )
 
-run = st.sidebar.button(
+generate = st.sidebar.button(
 
-    "Generate Comparison"
+    "🚀 Generate Comparison",
+
+    width="stretch"
 
 )
 
@@ -89,68 +102,76 @@ local_reports = sorted(
 )
 
 ###########################################################################
-# OPTIONAL UPLOAD
+# OPTIONAL FILE UPLOAD
 ###########################################################################
 
-uploaded = st.file_uploader(
+uploaded_reports = st.file_uploader(
 
     "Optional: Upload Strategy Reports",
 
-    type=["xlsx"],
+    type=[
+
+        "xlsx"
+
+    ],
 
     accept_multiple_files=True
 
 )
 
 ###########################################################################
-# SAVE UPLOADED FILES
+# SAVE UPLOADED REPORTS
 ###########################################################################
 
-def save_uploaded(files):
+def save_uploaded_reports(
+
+    files
+
+):
 
     if not files:
 
         return
 
-    for file in OUTPUTS.glob(
+    for report in OUTPUTS.glob(
 
         "*.xlsx"
 
     ):
 
-        file.unlink()
+        report.unlink()
 
-    for file in files:
+    for report in files:
 
         with open(
 
-            OUTPUTS / file.name,
+            OUTPUTS / report.name,
 
             "wb"
 
-        ) as f:
+        ) as file:
 
-            f.write(
+            file.write(
 
-                file.getbuffer()
+                report.getbuffer()
 
             )
 
 ###########################################################################
-# EXECUTION
+# EXECUTE PIPELINE
 ###########################################################################
 
-if run:
+if generate:
 
     #######################################################################
-    # Uploaded files take priority
+    # Uploaded reports override local reports
     #######################################################################
 
-    if uploaded:
+    if uploaded_reports:
 
-        save_uploaded(
+        save_uploaded_reports(
 
-            uploaded
+            uploaded_reports
 
         )
 
@@ -165,20 +186,36 @@ if run:
         )
 
     #######################################################################
-    # Validation
+    # VALIDATION
     #######################################################################
 
-    if len(local_reports) < 2:
+    if len(
+
+        local_reports
+
+    ) < 2:
 
         st.error(
 
-            "No strategy reports found in outputs/.\n\n"
-            "Either place your Output*.xlsx reports in the outputs folder "
-            "or upload them manually."
+            """
+At least two strategy reports are required.
+
+Either
+
+• Upload two or more Output*.xlsx files
+
+or
+
+• Place them inside the outputs/ directory.
+"""
 
         )
 
         st.stop()
+
+    #######################################################################
+    # PIPELINE
+    #######################################################################
 
     progress = st.progress(
 
@@ -186,125 +223,350 @@ if run:
 
     )
 
-    message = st.empty()
-
-    message.info(
-
-        "Loading strategy reports..."
-
-    )
-
-    progress.progress(
-
-        20
-
-    )
+    status = st.empty()
 
     try:
 
-        pipeline = StrategyPipeline(
+        status.info(
 
-            OUTPUTS
-
-        )
-
-        result = pipeline.execute()
-
-        st.write(
-
-            "### Pipeline Result"
+            "Loading strategy reports..."
 
         )
 
-        st.write(
+        progress.progress(
 
-            result.keys()
-
-        )
-
-        st.write(
-
-            "Ranked Shape"
+            20
 
         )
 
-        st.write(
+        with st.spinner(
 
-            result["ranked"].shape
+            "Executing institutional pipeline..."
+
+        ):
+
+            pipeline = StrategyPipeline(
+
+                OUTPUTS
+
+            )
+
+            status.info(
+
+                "Building strategy statistics..."
+
+            )
+
+            progress.progress(
+
+                40
+
+            )
+
+            result = pipeline.execute()
+
+            status.info(
+
+                "Generating rankings..."
+
+            )
+
+            progress.progress(
+
+                70
+
+            )
+
+            st.session_state[
+
+                "result"
+
+            ] = result
+
+            status.info(
+
+                "Preparing dashboard..."
+
+            )
+
+            progress.progress(
+
+                90
+
+            )
+
+        progress.progress(
+
+            100
 
         )
 
-        st.write(
+        status.success(
 
-            result["ranked"].head()
+            "Strategy comparison completed successfully."
 
         )
-        
-        st.session_state["result"] = result
 
-    except Exception as e:
+    except Exception as error:
+
+        progress.empty()
+
+        status.empty()
 
         st.exception(
 
-            e
+            error
 
         )
 
         st.stop()
 
-    progress.progress(
+###########################################################################
+# SESSION RESTORE
+###########################################################################
 
-        100
+if "result" not in st.session_state:
+
+    st.warning(
+
+        """
+No comparison has been generated.
+
+Click **Generate Comparison** to start the institutional
+strategy evaluation pipeline.
+"""
 
     )
 
-    message.success(
+    st.stop()
 
-        "Comparison completed successfully."
+###########################################################################
+# PIPELINE RESULT
+###########################################################################
+
+result = st.session_state[
+
+    "result"
+
+]
+
+ranked = result[
+
+    "ranked"
+
+]
+
+recommendations = result[
+
+    "recommendations"
+
+]
+
+overlap = result[
+
+    "overlap"
+
+]
+
+###########################################################################
+# EXECUTION SUMMARY
+###########################################################################
+
+st.success(
+
+    "Institutional comparison completed successfully."
+
+)
+
+col1, col2, col3, col4 = st.columns(
+
+    4
+
+)
+
+col1.metric(
+
+    "Strategies",
+
+    len(
+
+        ranked
 
     )
 
-if "result" in st.session_state:
+)
 
-    st.write(
+col2.metric(
 
-        "### Ranked"
+    "Recommendations",
+
+    len(
+
+        recommendations
+
+    )
+
+)
+
+col3.metric(
+
+    "Overlap Rows",
+
+    len(
+
+        overlap
+
+    )
+
+)
+
+col4.metric(
+
+    "Best Strategy",
+
+    ranked.iloc[
+
+        0
+
+    ][
+
+        "Strategy"
+
+    ]
+
+)
+
+###########################################################################
+# REPORT INFORMATION
+###########################################################################
+
+with st.expander(
+
+    "Pipeline Summary",
+
+    expanded=False
+
+):
+
+    summary = [
+
+        {
+
+            "Property":
+
+                "Reports Loaded",
+
+            "Value":
+
+                len(
+
+                    local_reports
+
+                )
+
+        },
+
+        {
+
+            "Property":
+
+                "Strategies Ranked",
+
+            "Value":
+
+                len(
+
+                    ranked
+
+                )
+
+        },
+
+        {
+
+            "Property":
+
+                "Best Strategy",
+
+            "Value":
+
+                ranked.iloc[
+
+                    0
+
+                ][
+
+                    "Strategy"
+
+                ]
+
+        },
+
+        {
+
+            "Property":
+
+                "Highest Score",
+
+            "Value":
+
+                round(
+
+                    ranked[
+
+                        "Overall Score"
+
+                    ].max(),
+
+                    2
+
+                )
+
+        },
+
+        {
+
+            "Property":
+
+                "Average Score",
+
+            "Value":
+
+                round(
+
+                    ranked[
+
+                        "Overall Score"
+
+                    ].mean(),
+
+                    2
+
+                )
+
+        }
+
+    ]
+
+    dataframe = pd.DataFrame(
+
+        summary
+
+    )
+
+    dataframe = dataframe.astype(
+
+        str
 
     )
 
     st.dataframe(
 
-        st.session_state["result"]["ranked"],
+        dataframe,
 
-        width="stretch"
+        width="stretch",
 
-    )
-
-    st.write(
-
-        "### Recommendations"
-
-    )
-
-    st.dataframe(
-
-        st.session_state["result"]["recommendations"],
-
-        width="stretch"
-
-    )
-
-    st.write(
-
-        "### Overlap"
-
-    )
-
-    st.dataframe(
-
-        st.session_state["result"]["overlap"],
-
-        width="stretch"
+        hide_index=True
 
     )
 
@@ -312,70 +574,214 @@ if "result" in st.session_state:
 # DASHBOARD
 ###########################################################################
 
-if "result" in st.session_state:
+st.divider()
 
-    result = st.session_state["result"]
+DashboardPage(
 
-    st.success(
+    result
 
-        "Comparison Generated Successfully"
+).render()
+
+###########################################################################
+# APPLICATION FOOTER
+###########################################################################
+
+st.divider()
+
+left, center, right = st.columns(
+
+    [
+
+        2,
+
+        3,
+
+        2
+
+    ]
+
+)
+
+with left:
+
+    st.caption(
+
+        "Institutional Strategy Comparison Dashboard"
 
     )
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+with center:
 
-        [
+    st.caption(
 
-            "Executive",
-
-            "Ranking",
-
-            "Comparison",
-
-            "Analytics",
-
-            "Downloads"
-
-        ]
+        "Version 3.0 • Production Release"
 
     )
 
-    with tab1:
+with right:
 
-        ExecutivePage(
+    st.caption(
 
-            result
+        "Powered by Streamlit"
 
-        ).render()
+    )
 
-    with tab2:
+###########################################################################
+# ABOUT
+###########################################################################
 
-        RankingPage(
+with st.expander(
 
-            result
+    "About",
 
-        ).render()
+    expanded=False
 
-    with tab3:
+):
 
-        ComparisonPage(
+    about = [
 
-            result
+        {
 
-        ).render()
+            "Property":
 
-    with tab4:
+                "Application",
 
-        AnalyticsPage(
+            "Value":
 
-            result
+                "Institutional Strategy Comparison Dashboard"
 
-        ).render()
+        },
 
-    with tab5:
+        {
 
-        DownloadPage(
+            "Property":
 
-            result
+                "Version",
 
-        ).render()
+            "Value":
+
+                "3.0"
+
+        },
+
+        {
+
+            "Property":
+
+                "Architecture",
+
+            "Value":
+
+                "Modular V3"
+
+        },
+
+        {
+
+            "Property":
+
+                "Pipeline",
+
+            "Value":
+
+                "StrategyPipeline"
+
+        },
+
+        {
+
+            "Property":
+
+                "Dashboard",
+
+            "Value":
+
+                "DashboardPage"
+
+        },
+
+        {
+
+            "Property":
+
+                "Analytics",
+
+            "Value":
+
+                "ChartEngine"
+
+        },
+
+        {
+
+            "Property":
+
+                "Ranking",
+
+            "Value":
+
+                "Weighted Multi-Factor"
+
+        },
+
+        {
+
+            "Property":
+
+                "Reports",
+
+            "Value":
+
+                "Excel / CSV / JSON"
+
+        },
+
+        {
+
+            "Property":
+
+                "Technology",
+
+            "Value":
+
+                "Python • Pandas • Plotly • Streamlit"
+
+        }
+
+    ]
+
+    dataframe = pd.DataFrame(
+
+        about
+
+    )
+
+    dataframe = dataframe.astype(
+
+        str
+
+    )
+
+    st.dataframe(
+
+        dataframe,
+
+        width="stretch",
+
+        hide_index=True
+
+    )
+
+###########################################################################
+# APPLICATION INFORMATION
+###########################################################################
+
+st.caption(
+
+    """
+This application automatically evaluates multiple institutional trading
+strategies, generates weighted rankings, executive insights,
+comparative analytics, visual dashboards and downloadable reports
+through a fully modular production-ready architecture.
+"""
+)

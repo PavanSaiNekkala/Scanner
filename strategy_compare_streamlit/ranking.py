@@ -6,11 +6,17 @@ import numpy as np
 
 import pandas as pd
 
-from config import WEIGHTS
+from config import (
 
-from config import GRADE_RULES
+    WEIGHTS,
 
-from config import RECOMMENDATION_RULES
+    GRADE_RULES,
+
+    RECOMMENDATION_RULES,
+
+    DECIMAL_PLACES
+
+)
 
 
 ###########################################################################
@@ -29,6 +35,24 @@ class RankingEngine:
 
         self.df = statistics.copy()
 
+        self._normalized = {}
+
+    ###########################################################################
+    # VALIDATE
+    ###########################################################################
+
+    def validate(self):
+
+        if self.df.empty:
+
+            raise ValueError(
+
+                "Statistics dataframe is empty."
+
+            )
+
+        return True
+
     ###########################################################################
     # NORMALIZE
     ###########################################################################
@@ -41,37 +65,95 @@ class RankingEngine:
 
     ):
 
+        name = series.name
+
+        if name in self._normalized:
+
+            return self._normalized[
+
+                name
+
+            ]
+
+        series = pd.to_numeric(
+
+            series,
+
+            errors="coerce"
+
+        )
+
         minimum = series.min()
 
         maximum = series.max()
 
-        if maximum == minimum:
+        if pd.isna(
 
-            return pd.Series(
+            minimum
+
+        ) or pd.isna(
+
+            maximum
+
+        ):
+
+            normalized = pd.Series(
+
+                0,
+
+                index=series.index,
+
+                dtype=float
+
+            )
+
+        elif maximum == minimum:
+
+            normalized = pd.Series(
 
                 100,
 
-                index=series.index
+                index=series.index,
+
+                dtype=float
 
             )
 
-        return (
+        else:
 
-            (
+            normalized = (
 
-                series - minimum
+                (
 
-            )
+                    series
 
-            /
+                    -
 
-            (
+                    minimum
 
-                maximum - minimum
+                )
 
-            )
+                /
 
-        ) * 100
+                (
+
+                    maximum
+
+                    -
+
+                    minimum
+
+                )
+
+            ) * 100
+
+        self._normalized[
+
+            name
+
+        ] = normalized
+
+        return normalized
 
     ###########################################################################
     # CALCULATE WEIGHTED SCORE
@@ -79,11 +161,23 @@ class RankingEngine:
 
     def calculate_scores(self):
 
+        self.validate()
+
         score = np.zeros(
 
-            len(self.df)
+            len(
+
+                self.df
+
+            ),
+
+            dtype=float
 
         )
+
+        #######################################################################
+        # WEIGHTED SCORING
+        #######################################################################
 
         for metric, weight in WEIGHTS.items():
 
@@ -95,35 +189,79 @@ class RankingEngine:
 
             normalized = self.normalize(
 
-                self.df[column]
+                self.df[
+
+                    column
+
+                ]
 
             )
 
-            score += (
+            contribution = (
 
-                normalized * weight
+                normalized
+
+                *
+
+                weight
 
             )
 
-        self.df["Overall Score"] = score.round(
+            self.df[
 
-            2
+                f"{metric}_Normalized"
+
+            ] = normalized.round(
+
+                DECIMAL_PLACES
+
+            )
+
+            self.df[
+
+                f"{metric}_Contribution"
+
+            ] = contribution.round(
+
+                DECIMAL_PLACES
+
+            )
+
+            score += contribution
+
+        #######################################################################
+        # FINAL SCORE
+        #######################################################################
+
+        self.df[
+
+            "Overall Score"
+
+        ] = np.round(
+
+            score,
+
+            DECIMAL_PLACES
 
         )
 
         return self.df
-
+    
     ###########################################################################
     # ASSIGN RANK
     ###########################################################################
 
     def assign_rank(self):
 
+        self.validate()
+
         self.df = self.df.sort_values(
 
             "Overall Score",
 
-            ascending=False
+            ascending=False,
+
+            kind="mergesort"
 
         )
 
@@ -135,9 +273,31 @@ class RankingEngine:
 
         )
 
-        self.df["Rank"] = (
+        self.df[
 
-            self.df.index + 1
+            "Rank"
+
+        ] = (
+
+            self.df[
+
+                "Overall Score"
+
+            ]
+
+            .rank(
+
+                method="dense",
+
+                ascending=False
+
+            )
+
+            .astype(
+
+                int
+
+            )
 
         )
 
@@ -151,7 +311,11 @@ class RankingEngine:
 
         grades = []
 
-        for value in self.df["Overall Score"]:
+        for score in self.df[
+
+            "Overall Score"
+
+        ]:
 
             grade = "F"
 
@@ -163,7 +327,7 @@ class RankingEngine:
 
             ):
 
-                if value >= limit:
+                if score >= limit:
 
                     grade = label
 
@@ -175,7 +339,11 @@ class RankingEngine:
 
             )
 
-        self.df["Grade"] = grades
+        self.df[
+
+            "Grade"
+
+        ] = grades
 
         return self.df
 
@@ -187,7 +355,11 @@ class RankingEngine:
 
         recommendations = []
 
-        for value in self.df["Overall Score"]:
+        for score in self.df[
+
+            "Overall Score"
+
+        ]:
 
             recommendation = "Reject"
 
@@ -199,7 +371,7 @@ class RankingEngine:
 
             ):
 
-                if value >= limit:
+                if score >= limit:
 
                     recommendation = label
 
@@ -211,17 +383,115 @@ class RankingEngine:
 
             )
 
-        self.df["Recommendation"] = recommendations
+        self.df[
+
+            "Recommendation"
+
+        ] = recommendations
 
         return self.df
 
     ###########################################################################
-    # RANK TABLE
+    # ASSIGN PERCENTILE
+    ###########################################################################
+
+    def assign_percentile(self):
+
+        self.df[
+
+            "Percentile"
+
+        ] = (
+
+            self.df[
+
+                "Overall Score"
+
+            ]
+
+            .rank(
+
+                pct=True
+
+            )
+
+            * 100
+
+        ).round(
+
+            DECIMAL_PLACES
+
+        )
+
+        return self.df
+
+    ###########################################################################
+    # ASSIGN SCORE BAND
+    ###########################################################################
+
+    def assign_score_band(self):
+
+        bands = []
+
+        for score in self.df[
+
+            "Overall Score"
+
+        ]:
+
+            if score >= 90:
+
+                band = "Elite"
+
+            elif score >= 80:
+
+                band = "Excellent"
+
+            elif score >= 70:
+
+                band = "Strong"
+
+            elif score >= 60:
+
+                band = "Average"
+
+            elif score >= 50:
+
+                band = "Weak"
+
+            else:
+
+                band = "Poor"
+
+            bands.append(
+
+                band
+
+            )
+
+        self.df[
+
+            "Score Band"
+
+        ] = bands
+
+        return self.df
+    
+    ###########################################################################
+    # FINAL RANKING
     ###########################################################################
 
     def rank(self):
 
         self.assign_rank()
+
+        self.assign_grade()
+
+        self.assign_recommendation()
+
+        self.assign_percentile()
+
+        self.assign_score_band()
 
         columns = [
 
@@ -231,6 +501,10 @@ class RankingEngine:
 
             "Overall Score",
 
+            "Percentile",
+
+            "Score Band",
+
             "Grade",
 
             "Recommendation"
@@ -239,17 +513,21 @@ class RankingEngine:
 
         remaining = [
 
-            c
+            column
 
-            for c in self.df.columns
+            for column in self.df.columns
 
-            if c not in columns
+            if column not in columns
 
         ]
 
         self.df = self.df[
 
-            columns + remaining
+            columns
+
+            +
+
+            remaining
 
         ]
 
@@ -267,7 +545,7 @@ class RankingEngine:
 
     ):
 
-        return self.df.head(
+        return self.rank().head(
 
             n
 
@@ -285,11 +563,55 @@ class RankingEngine:
 
     ):
 
-        return self.df.tail(
+        return self.rank().tail(
 
             n
 
         )
+
+    ###########################################################################
+    # SCORE BREAKDOWN
+    ###########################################################################
+
+    def score_breakdown(self):
+
+        contribution_columns = [
+
+            column
+
+            for column in self.df.columns
+
+            if column.endswith(
+
+                "_Contribution"
+
+            )
+
+        ]
+
+        if not contribution_columns:
+
+            return pd.DataFrame()
+
+        columns = [
+
+            "Strategy",
+
+            "Overall Score"
+
+        ]
+
+        columns.extend(
+
+            contribution_columns
+
+        )
+
+        return self.df[
+
+            columns
+
+        ].copy()
 
     ###########################################################################
     # SUMMARY
@@ -297,36 +619,140 @@ class RankingEngine:
 
     def summary(self):
 
+        dataframe = self.rank()
+
         return {
 
-            "Strategies": len(
+            "Strategies":
 
-                self.df
+                len(
 
-            ),
+                    dataframe
 
-            "Average Score": round(
+                ),
 
-                self.df["Overall Score"].mean(),
+            "Average Score":
 
-                2
+                round(
 
-            ),
+                    dataframe[
 
-            "Highest Score": round(
+                        "Overall Score"
 
-                self.df["Overall Score"].max(),
+                    ].mean(),
 
-                2
+                    DECIMAL_PLACES
 
-            ),
+                ),
 
-            "Lowest Score": round(
+            "Highest Score":
 
-                self.df["Overall Score"].min(),
+                round(
 
-                2
+                    dataframe[
 
-            )
+                        "Overall Score"
+
+                    ].max(),
+
+                    DECIMAL_PLACES
+
+                ),
+
+            "Lowest Score":
+
+                round(
+
+                    dataframe[
+
+                        "Overall Score"
+
+                    ].min(),
+
+                    DECIMAL_PLACES
+
+                ),
+
+            "Median Score":
+
+                round(
+
+                    dataframe[
+
+                        "Overall Score"
+
+                    ].median(),
+
+                    DECIMAL_PLACES
+
+                ),
+
+            "Top Strategy":
+
+                dataframe.iloc[
+
+                    0
+
+                ][
+
+                    "Strategy"
+
+                ],
+
+            "Top Grade":
+
+                dataframe.iloc[
+
+                    0
+
+                ][
+
+                    "Grade"
+
+                ],
+
+            "Top Recommendation":
+
+                dataframe.iloc[
+
+                    0
+
+                ][
+
+                    "Recommendation"
+
+                ]
+
+        }
+
+    ###########################################################################
+    # COMPLETE REPORT
+    ###########################################################################
+
+    def report(self):
+
+        ranked = self.rank()
+
+        return {
+
+            "ranking":
+
+                ranked,
+
+            "top":
+
+                self.top(),
+
+            "bottom":
+
+                self.bottom(),
+
+            "score_breakdown":
+
+                self.score_breakdown(),
+
+            "summary":
+
+                self.summary()
 
         }

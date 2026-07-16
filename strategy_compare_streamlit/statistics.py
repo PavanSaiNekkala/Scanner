@@ -2,13 +2,29 @@
 Portfolio Statistics Engine
 """
 
-import numpy as np
-
 import pandas as pd
+
+from config import (
+
+    DECIMAL_PLACES,
+
+    TOP_N
+
+)
+
+from utils import (
+
+    top_n,
+
+    bottom_n,
+
+    dataframe_info
+
+)
 
 
 ###########################################################################
-# STATISTICS ENGINE
+# STATISTICS REPORT
 ###########################################################################
 
 class StatisticsReport:
@@ -29,6 +45,12 @@ class StatisticsReport:
 
     def overall_summary(self):
 
+        if self.df.empty:
+
+            return pd.DataFrame()
+
+        score = self.df["Overall Score"]
+
         summary = {
 
             "Total Strategies":
@@ -43,9 +65,9 @@ class StatisticsReport:
 
                 round(
 
-                    self.df["Overall Score"].mean(),
+                    score.mean(),
 
-                    2
+                    DECIMAL_PLACES
 
                 ),
 
@@ -53,9 +75,9 @@ class StatisticsReport:
 
                 round(
 
-                    self.df["Overall Score"].max(),
+                    score.max(),
 
-                    2
+                    DECIMAL_PLACES
 
                 ),
 
@@ -63,9 +85,9 @@ class StatisticsReport:
 
                 round(
 
-                    self.df["Overall Score"].min(),
+                    score.min(),
 
-                    2
+                    DECIMAL_PLACES
 
                 ),
 
@@ -73,9 +95,9 @@ class StatisticsReport:
 
                 round(
 
-                    self.df["Overall Score"].median(),
+                    score.median(),
 
-                    2
+                    DECIMAL_PLACES
 
                 ),
 
@@ -83,9 +105,9 @@ class StatisticsReport:
 
                 round(
 
-                    self.df["Overall Score"].std(),
+                    score.std(),
 
-                    2
+                    DECIMAL_PLACES
 
                 )
 
@@ -121,17 +143,19 @@ class StatisticsReport:
 
             .value_counts()
 
-            .reset_index()
+            .rename_axis(
+
+                "Grade"
+
+            )
+
+            .reset_index(
+
+                name="Count"
+
+            )
 
         )
-
-        grades.columns = [
-
-            "Grade",
-
-            "Count"
-
-        ]
 
         grades["Percentage"] = (
 
@@ -147,7 +171,7 @@ class StatisticsReport:
 
         ).round(
 
-            2
+            DECIMAL_PLACES
 
         )
 
@@ -169,17 +193,19 @@ class StatisticsReport:
 
             .value_counts()
 
-            .reset_index()
+            .rename_axis(
+
+                "Recommendation"
+
+            )
+
+            .reset_index(
+
+                name="Count"
+
+            )
 
         )
-
-        recommendations.columns = [
-
-            "Recommendation",
-
-            "Count"
-
-        ]
 
         recommendations["Percentage"] = (
 
@@ -195,7 +221,7 @@ class StatisticsReport:
 
         ).round(
 
-            2
+            DECIMAL_PLACES
 
         )
 
@@ -207,19 +233,21 @@ class StatisticsReport:
 
     def score_distribution(self):
 
-        distribution = pd.DataFrame({
+        if self.df.empty:
 
-            "Strategy":
+            return pd.DataFrame()
 
-                self.df["Strategy"],
+        return self.df[
 
-            "Overall Score":
+            [
 
-                self.df["Overall Score"]
+                "Strategy",
 
-        })
+                "Overall Score"
 
-        return distribution.sort_values(
+            ]
+
+        ].sort_values(
 
             "Overall Score",
 
@@ -235,11 +263,11 @@ class StatisticsReport:
 
         metrics = [
 
-            c
+            column
 
-            for c in self.df.columns
+            for column in self.df.columns
 
-            if c.endswith(
+            if column.endswith(
 
                 "_Mean"
 
@@ -269,7 +297,7 @@ class StatisticsReport:
 
                         self.df[metric].mean(),
 
-                        2
+                        DECIMAL_PLACES
 
                     ),
 
@@ -279,7 +307,7 @@ class StatisticsReport:
 
                         self.df[metric].max(),
 
-                        2
+                        DECIMAL_PLACES
 
                     ),
 
@@ -289,7 +317,7 @@ class StatisticsReport:
 
                         self.df[metric].min(),
 
-                        2
+                        DECIMAL_PLACES
 
                     ),
 
@@ -299,7 +327,7 @@ class StatisticsReport:
 
                         self.df[metric].std(),
 
-                        2
+                        DECIMAL_PLACES
 
                     )
 
@@ -312,6 +340,22 @@ class StatisticsReport:
         )
 
     ###########################################################################
+    # SCORE STATISTICS
+    ###########################################################################
+
+    def score_statistics(self):
+
+        return self.df[
+
+            "Overall Score"
+
+        ].describe().round(
+
+            DECIMAL_PLACES
+
+        )
+
+    ###########################################################################
     # TOP STRATEGIES
     ###########################################################################
 
@@ -319,11 +363,15 @@ class StatisticsReport:
 
         self,
 
-        n=5
+        n=TOP_N
 
     ):
 
-        return self.df.head(
+        return top_n(
+
+            self.df,
+
+            "Overall Score",
 
             n
 
@@ -337,11 +385,15 @@ class StatisticsReport:
 
         self,
 
-        n=5
+        n=TOP_N
 
     ):
 
-        return self.df.tail(
+        return bottom_n(
+
+            self.df,
+
+            "Overall Score",
 
             n
 
@@ -369,7 +421,7 @@ class StatisticsReport:
 
                     self.df["Overall Score"].mean(),
 
-                    2
+                    DECIMAL_PLACES
 
                 ),
 
@@ -379,7 +431,7 @@ class StatisticsReport:
 
                     self.df["Overall Score"].max(),
 
-                    2
+                    DECIMAL_PLACES
 
                 ),
 
@@ -389,11 +441,7 @@ class StatisticsReport:
 
                     (
 
-                        self.df[
-
-                            "Recommendation"
-
-                        ]
+                        self.df["Recommendation"]
 
                         ==
 
@@ -409,11 +457,7 @@ class StatisticsReport:
 
                     (
 
-                        self.df[
-
-                            "Recommendation"
-
-                        ]
+                        self.df["Recommendation"]
 
                         ==
 
@@ -424,6 +468,18 @@ class StatisticsReport:
                 )
 
         }
+
+    ###########################################################################
+    # DATAFRAME INFO
+    ###########################################################################
+
+    def dataframe_summary(self):
+
+        return dataframe_info(
+
+            self.df
+
+        )
 
     ###########################################################################
     # COMPLETE REPORT
@@ -453,6 +509,10 @@ class StatisticsReport:
 
                 self.score_distribution(),
 
+            "statistics":
+
+                self.score_statistics(),
+
             "top":
 
                 self.top_strategies(),
@@ -463,6 +523,10 @@ class StatisticsReport:
 
             "kpi":
 
-                self.executive_kpi()
+                self.executive_kpi(),
+
+            "dataframe":
+
+                self.dataframe_summary()
 
         }

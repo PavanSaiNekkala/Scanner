@@ -4,6 +4,8 @@ Logging Module
 
 import logging
 
+from logging.handlers import RotatingFileHandler
+
 from pathlib import Path
 
 
@@ -19,7 +21,9 @@ class StrategyLogger:
 
         log_directory="logs",
 
-        log_name="strategy_compare.log"
+        log_name="strategy_compare.log",
+
+        level=logging.INFO
 
     ):
 
@@ -47,53 +51,73 @@ class StrategyLogger:
 
         self.logger.setLevel(
 
-            logging.INFO
+            level
 
         )
 
-        if not self.logger.handlers:
+        self.logger.propagate = False
 
-            formatter = logging.Formatter(
+        if self.logger.handlers:
 
-                "%(asctime)s | %(levelname)s | %(message)s"
+            self.logger.handlers.clear()
 
-            )
+        formatter = logging.Formatter(
 
-            file_handler = logging.FileHandler(
+            "%(asctime)s | %(levelname)-8s | %(message)s",
 
-                self.log_file,
+            "%Y-%m-%d %H:%M:%S"
 
-                mode="a",
+        )
 
-                encoding="utf-8"
+        #######################################################################
+        # FILE HANDLER
+        #######################################################################
 
-            )
+        file_handler = RotatingFileHandler(
 
-            file_handler.setFormatter(
+            self.log_file,
 
-                formatter
+            maxBytes=5 * 1024 * 1024,
 
-            )
+            backupCount=5,
 
-            console_handler = logging.StreamHandler()
+            encoding="utf-8"
 
-            console_handler.setFormatter(
+        )
 
-                formatter
+        file_handler.setFormatter(
 
-            )
+            formatter
 
-            self.logger.addHandler(
+        )
 
-                file_handler
+        #######################################################################
+        # CONSOLE HANDLER
+        #######################################################################
 
-            )
+        console_handler = logging.StreamHandler()
 
-            self.logger.addHandler(
+        console_handler.setFormatter(
 
-                console_handler
+            formatter
 
-            )
+        )
+
+        #######################################################################
+        # REGISTER
+        #######################################################################
+
+        self.logger.addHandler(
+
+            file_handler
+
+        )
+
+        self.logger.addHandler(
+
+            console_handler
+
+        )
 
     ###########################################################################
     # INFO
@@ -108,6 +132,24 @@ class StrategyLogger:
     ):
 
         self.logger.info(
+
+            message
+
+        )
+
+    ###########################################################################
+    # DEBUG
+    ###########################################################################
+
+    def debug(
+
+        self,
+
+        message
+
+    ):
+
+        self.logger.debug(
 
             message
 
@@ -168,24 +210,6 @@ class StrategyLogger:
         )
 
     ###########################################################################
-    # DEBUG
-    ###########################################################################
-
-    def debug(
-
-        self,
-
-        message
-
-    ):
-
-        self.logger.debug(
-
-            message
-
-        )
-
-    ###########################################################################
     # START
     ###########################################################################
 
@@ -197,9 +221,11 @@ class StrategyLogger:
 
     ):
 
+        self.separator()
+
         self.info(
 
-            f"Started: {module}"
+            f"Started : {module}"
 
         )
 
@@ -217,18 +243,76 @@ class StrategyLogger:
 
         self.info(
 
-            f"Completed: {module}"
+            f"Completed : {module}"
 
         )
+
+        self.separator()
 
     ###########################################################################
     # SEPARATOR
     ###########################################################################
 
-    def separator(self):
+    def separator(
+
+        self
+
+    ):
 
         self.info(
 
-            "-" * 80
+            "=" * 80
 
         )
+
+    ###########################################################################
+    # PIPELINE SUMMARY
+    ###########################################################################
+
+    def pipeline_summary(
+
+        self,
+
+        reports,
+
+        ranked,
+
+        recommendations,
+
+        overlap
+
+    ):
+
+        self.separator()
+
+        self.info(
+
+            "Pipeline Summary"
+
+        )
+
+        self.info(
+
+            f"Reports Loaded      : {reports}"
+
+        )
+
+        self.info(
+
+            f"Ranked Strategies   : {ranked}"
+
+        )
+
+        self.info(
+
+            f"Recommendations     : {recommendations}"
+
+        )
+
+        self.info(
+
+            f"Overlap Rows        : {overlap}"
+
+        )
+
+        self.separator()

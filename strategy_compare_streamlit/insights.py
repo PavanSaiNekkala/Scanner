@@ -4,6 +4,12 @@ Executive Insight Engine
 
 import pandas as pd
 
+from config import (
+
+    DECIMAL_PLACES
+
+)
+
 
 ###########################################################################
 # INSIGHT ENGINE
@@ -31,69 +37,155 @@ class InsightEngine:
 
             return pd.DataFrame()
 
-        best = self.df.iloc[0]
+        best = self.best_strategy()
 
-        worst = self.df.iloc[-1]
+        worst = self.worst_strategy()
 
         rows = [
 
             {
 
-                "Insight": "Best Strategy",
+                "Insight":
 
-                "Value": best["Strategy"]
+                    "Total Strategies",
 
-            },
+                "Value":
 
-            {
+                    len(
 
-                "Insight": "Best Overall Score",
+                        self.df
 
-                "Value": round(
-
-                    best["Overall Score"],
-
-                    2
-
-                )
+                    )
 
             },
 
             {
 
-                "Insight": "Highest Grade",
+                "Insight":
 
-                "Value": best["Grade"]
+                    "Best Strategy",
 
-            },
+                "Value":
 
-            {
+                    best[
 
-                "Insight": "Top Recommendation",
+                        "Strategy"
 
-                "Value": best["Recommendation"]
-
-            },
-
-            {
-
-                "Insight": "Lowest Strategy",
-
-                "Value": worst["Strategy"]
+                    ]
 
             },
 
             {
 
-                "Insight": "Lowest Score",
+                "Insight":
 
-                "Value": round(
+                    "Best Overall Score",
 
-                    worst["Overall Score"],
+                "Value":
 
-                    2
+                    round(
 
-                )
+                        best[
+
+                            "Overall Score"
+
+                        ],
+
+                        DECIMAL_PLACES
+
+                    )
+
+            },
+
+            {
+
+                "Insight":
+
+                    "Highest Grade",
+
+                "Value":
+
+                    best[
+
+                        "Grade"
+
+                    ]
+
+            },
+
+            {
+
+                "Insight":
+
+                    "Top Recommendation",
+
+                "Value":
+
+                    best[
+
+                        "Recommendation"
+
+                    ]
+
+            },
+
+            {
+
+                "Insight":
+
+                    "Lowest Strategy",
+
+                "Value":
+
+                    worst[
+
+                        "Strategy"
+
+                    ]
+
+            },
+
+            {
+
+                "Insight":
+
+                    "Lowest Score",
+
+                "Value":
+
+                    round(
+
+                        worst[
+
+                            "Overall Score"
+
+                        ],
+
+                        DECIMAL_PLACES
+
+                    )
+
+            },
+
+            {
+
+                "Insight":
+
+                    "Average Score",
+
+                "Value":
+
+                    round(
+
+                        self.df[
+
+                            "Overall Score"
+
+                        ].mean(),
+
+                        DECIMAL_PLACES
+
+                    )
 
             }
 
@@ -106,20 +198,168 @@ class InsightEngine:
         )
 
     ###########################################################################
+    # KPI SUMMARY
+    ###########################################################################
+
+    def kpi_summary(self):
+
+        if self.df.empty:
+
+            return {}
+
+        return {
+
+            "Strategies":
+
+                len(
+
+                    self.df
+
+                ),
+
+            "Average Score":
+
+                round(
+
+                    self.df[
+
+                        "Overall Score"
+
+                    ].mean(),
+
+                    DECIMAL_PLACES
+
+                ),
+
+            "Highest Score":
+
+                round(
+
+                    self.df[
+
+                        "Overall Score"
+
+                    ].max(),
+
+                    DECIMAL_PLACES
+
+                ),
+
+            "Lowest Score":
+
+                round(
+
+                    self.df[
+
+                        "Overall Score"
+
+                    ].min(),
+
+                    DECIMAL_PLACES
+
+                ),
+
+            "Median Score":
+
+                round(
+
+                    self.df[
+
+                        "Overall Score"
+
+                    ].median(),
+
+                    DECIMAL_PLACES
+
+                ),
+
+            "Average Percentile":
+
+                round(
+
+                    self.df[
+
+                        "Percentile"
+
+                    ].mean(),
+
+                    DECIMAL_PLACES
+
+                )
+
+                if "Percentile" in self.df.columns
+
+                else None
+
+        }
+
+    ###########################################################################
+    # BEST STRATEGY
+    ###########################################################################
+
+    def best_strategy(self):
+
+        if self.df.empty:
+
+            return pd.Series(
+
+                dtype=object
+
+            )
+
+        return self.df.loc[
+
+            self.df[
+
+                "Overall Score"
+
+            ].idxmax()
+
+        ]
+
+    ###########################################################################
+    # WORST STRATEGY
+    ###########################################################################
+
+    def worst_strategy(self):
+
+        if self.df.empty:
+
+            return pd.Series(
+
+                dtype=object
+
+            )
+
+        return self.df.loc[
+
+            self.df[
+
+                "Overall Score"
+
+            ].idxmin()
+
+        ]
+    
+    ###########################################################################
     # METRIC LEADERS
     ###########################################################################
 
     def metric_leaders(self):
 
+        if self.df.empty:
+
+            return pd.DataFrame()
+
         rows = []
 
         metrics = [
 
-            c
+            column
 
-            for c in self.df.columns
+            for column in self.df.columns
 
-            if c.endswith(
+            if column.endswith(
 
                 "_Mean"
 
@@ -129,11 +369,23 @@ class InsightEngine:
 
         for metric in metrics:
 
-            idx = self.df[
+            values = pd.to_numeric(
 
-                metric
+                self.df[
 
-            ].idxmax()
+                    metric
+
+                ],
+
+                errors="coerce"
+
+            )
+
+            if values.dropna().empty:
+
+                continue
+
+            index = values.idxmax()
 
             rows.append({
 
@@ -151,25 +403,23 @@ class InsightEngine:
 
                     self.df.loc[
 
-                        idx,
+                        index,
 
                         "Strategy"
 
                     ],
 
-                "Value":
+                "Score":
 
                     round(
 
-                        self.df.loc[
+                        values.loc[
 
-                            idx,
-
-                            metric
+                            index
 
                         ],
 
-                        2
+                        DECIMAL_PLACES
 
                     )
 
@@ -182,225 +432,919 @@ class InsightEngine:
         )
 
     ###########################################################################
-    # DEPLOYMENT GUIDE
+    # METRIC LAGGARDS
     ###########################################################################
 
-    def deployment(self):
+    def metric_laggards(self):
+
+        if self.df.empty:
+
+            return pd.DataFrame()
+
+        rows = []
+
+        metrics = [
+
+            column
+
+            for column in self.df.columns
+
+            if column.endswith(
+
+                "_Mean"
+
+            )
+
+        ]
+
+        for metric in metrics:
+
+            values = pd.to_numeric(
+
+                self.df[
+
+                    metric
+
+                ],
+
+                errors="coerce"
+
+            )
+
+            if values.dropna().empty:
+
+                continue
+
+            index = values.idxmin()
+
+            rows.append({
+
+                "Metric":
+
+                    metric.replace(
+
+                        "_Mean",
+
+                        ""
+
+                    ),
+
+                "Strategy":
+
+                    self.df.loc[
+
+                        index,
+
+                        "Strategy"
+
+                    ],
+
+                "Score":
+
+                    round(
+
+                        values.loc[
+
+                            index
+
+                        ],
+
+                        DECIMAL_PLACES
+
+                    )
+
+            })
+
+        return pd.DataFrame(
+
+            rows
+
+        )
+
+    ###########################################################################
+    # STRATEGY HIGHLIGHTS
+    ###########################################################################
+
+    def strategy_highlights(self):
+
+        if self.df.empty:
+
+            return pd.DataFrame()
 
         rows = []
 
         for _, row in self.df.iterrows():
 
-            recommendation = row[
+            highlights = []
+
+            metrics = [
+
+                column
+
+                for column in self.df.columns
+
+                if column.endswith(
+
+                    "_Mean"
+
+                )
+
+            ]
+
+            for metric in metrics:
+
+                value = row[
+
+                    metric
+
+                ]
+
+                if pd.isna(
+
+                    value
+
+                ):
+
+                    continue
+
+                name = metric.replace(
+
+                    "_Mean",
+
+                    ""
+
+                )
+
+                if value >= 90:
+
+                    highlights.append(
+
+                        f"Outstanding {name}"
+
+                    )
+
+                elif value >= 80:
+
+                    highlights.append(
+
+                        f"Strong {name}"
+
+                    )
+
+            if not highlights:
+
+                highlights.append(
+
+                    "Balanced Strategy"
+
+                )
+
+            rows.append({
+
+                "Strategy":
+
+                    row[
+
+                        "Strategy"
+
+                    ],
+
+                "Highlights":
+
+                    ", ".join(
+
+                        highlights
+
+                    )
+
+            })
+
+        return pd.DataFrame(
+
+            rows
+
+        )
+
+    ###########################################################################
+    # DEPLOYMENT MATRIX
+    ###########################################################################
+
+    def deployment_matrix(self):
+
+        if self.df.empty:
+
+            return pd.DataFrame()
+
+        columns = [
+
+            "Strategy",
+
+            "Overall Score",
+
+            "Grade",
+
+            "Recommendation"
+
+        ]
+
+        if "Percentile" in self.df.columns:
+
+            columns.append(
+
+                "Percentile"
+
+            )
+
+        if "Score Band" in self.df.columns:
+
+            columns.append(
+
+                "Score Band"
+
+            )
+
+        matrix = self.df[
+
+            columns
+
+        ].copy()
+
+        matrix["Deployment"] = matrix[
+
+            "Recommendation"
+
+        ].map({
+
+            "Strong Buy":
+
+                "Immediate",
+
+            "Buy":
+
+                "Validate & Deploy",
+
+            "Watch":
+
+                "Paper Trade",
+
+            "Improve":
+
+                "Optimize",
+
+            "Avoid":
+
+                "Do Not Deploy",
+
+            "Reject":
+
+                "Discard"
+
+        }).fillna(
+
+            "Review"
+
+        )
+
+        return matrix
+    
+    ###########################################################################
+    # METRIC LEADERS
+    ###########################################################################
+
+    def metric_leaders(self):
+
+        if self.df.empty:
+
+            return pd.DataFrame()
+
+        rows = []
+
+        metrics = [
+
+            column
+
+            for column in self.df.columns
+
+            if column.endswith(
+
+                "_Mean"
+
+            )
+
+        ]
+
+        for metric in metrics:
+
+            values = pd.to_numeric(
+
+                self.df[
+
+                    metric
+
+                ],
+
+                errors="coerce"
+
+            )
+
+            if values.dropna().empty:
+
+                continue
+
+            index = values.idxmax()
+
+            rows.append({
+
+                "Metric":
+
+                    metric.replace(
+
+                        "_Mean",
+
+                        ""
+
+                    ),
+
+                "Leader":
+
+                    self.df.loc[
+
+                        index,
+
+                        "Strategy"
+
+                    ],
+
+                "Score":
+
+                    round(
+
+                        values.loc[
+
+                            index
+
+                        ],
+
+                        DECIMAL_PLACES
+
+                    )
+
+            })
+
+        return pd.DataFrame(
+
+            rows
+
+        )
+
+    ###########################################################################
+    # METRIC LAGGARDS
+    ###########################################################################
+
+    def metric_laggards(self):
+
+        if self.df.empty:
+
+            return pd.DataFrame()
+
+        rows = []
+
+        metrics = [
+
+            column
+
+            for column in self.df.columns
+
+            if column.endswith(
+
+                "_Mean"
+
+            )
+
+        ]
+
+        for metric in metrics:
+
+            values = pd.to_numeric(
+
+                self.df[
+
+                    metric
+
+                ],
+
+                errors="coerce"
+
+            )
+
+            if values.dropna().empty:
+
+                continue
+
+            index = values.idxmin()
+
+            rows.append({
+
+                "Metric":
+
+                    metric.replace(
+
+                        "_Mean",
+
+                        ""
+
+                    ),
+
+                "Strategy":
+
+                    self.df.loc[
+
+                        index,
+
+                        "Strategy"
+
+                    ],
+
+                "Score":
+
+                    round(
+
+                        values.loc[
+
+                            index
+
+                        ],
+
+                        DECIMAL_PLACES
+
+                    )
+
+            })
+
+        return pd.DataFrame(
+
+            rows
+
+        )
+
+    ###########################################################################
+    # STRATEGY HIGHLIGHTS
+    ###########################################################################
+
+    def strategy_highlights(self):
+
+        if self.df.empty:
+
+            return pd.DataFrame()
+
+        rows = []
+
+        for _, row in self.df.iterrows():
+
+            highlights = []
+
+            metrics = [
+
+                column
+
+                for column in self.df.columns
+
+                if column.endswith(
+
+                    "_Mean"
+
+                )
+
+            ]
+
+            for metric in metrics:
+
+                value = row[
+
+                    metric
+
+                ]
+
+                if pd.isna(
+
+                    value
+
+                ):
+
+                    continue
+
+                name = metric.replace(
+
+                    "_Mean",
+
+                    ""
+
+                )
+
+                if value >= 90:
+
+                    highlights.append(
+
+                        f"Outstanding {name}"
+
+                    )
+
+                elif value >= 80:
+
+                    highlights.append(
+
+                        f"Strong {name}"
+
+                    )
+
+            if not highlights:
+
+                highlights.append(
+
+                    "Balanced Strategy"
+
+                )
+
+            rows.append({
+
+                "Strategy":
+
+                    row[
+
+                        "Strategy"
+
+                    ],
+
+                "Highlights":
+
+                    ", ".join(
+
+                        highlights
+
+                    )
+
+            })
+
+        return pd.DataFrame(
+
+            rows
+
+        )
+
+    ###########################################################################
+    # DEPLOYMENT MATRIX
+    ###########################################################################
+
+    def deployment_matrix(self):
+
+        if self.df.empty:
+
+            return pd.DataFrame()
+
+        columns = [
+
+            "Strategy",
+
+            "Overall Score",
+
+            "Grade",
+
+            "Recommendation"
+
+        ]
+
+        if "Percentile" in self.df.columns:
+
+            columns.append(
+
+                "Percentile"
+
+            )
+
+        if "Score Band" in self.df.columns:
+
+            columns.append(
+
+                "Score Band"
+
+            )
+
+        matrix = self.df[
+
+            columns
+
+        ].copy()
+
+        matrix["Deployment"] = matrix[
+
+            "Recommendation"
+
+        ].map({
+
+            "Strong Buy":
+
+                "Immediate",
+
+            "Buy":
+
+                "Validate & Deploy",
+
+            "Watch":
+
+                "Paper Trade",
+
+            "Improve":
+
+                "Optimize",
+
+            "Avoid":
+
+                "Do Not Deploy",
+
+            "Reject":
+
+                "Discard"
+
+        }).fillna(
+
+            "Review"
+
+        )
+
+        return matrix
+    
+    ###########################################################################
+    # EXECUTIVE NARRATIVE
+    ###########################################################################
+
+    def executive_narrative(self):
+
+        if self.df.empty:
+
+            return []
+
+        best = self.best_strategy()
+
+        worst = self.worst_strategy()
+
+        average_score = round(
+
+            self.df[
+
+                "Overall Score"
+
+            ].mean(),
+
+            DECIMAL_PLACES
+
+        )
+
+        recommendations = (
+
+            self.df[
 
                 "Recommendation"
 
             ]
 
-            if recommendation == "Strong Buy":
-
-                action = "Deploy Immediately"
-
-            elif recommendation == "Buy":
-
-                action = "Deploy After Validation"
-
-            elif recommendation == "Watch":
-
-                action = "Paper Trade"
-
-            elif recommendation == "Improve":
-
-                action = "Optimize Strategy"
-
-            elif recommendation == "Avoid":
-
-                action = "Do Not Deploy"
-
-            else:
-
-                action = "Reject"
-
-            rows.append({
-
-                "Strategy":
-
-                    row["Strategy"],
-
-                "Grade":
-
-                    row["Grade"],
-
-                "Recommendation":
-
-                    recommendation,
-
-                "Deployment":
-
-                    action
-
-            })
-
-        return pd.DataFrame(
-
-            rows
+            .value_counts()
 
         )
 
-    ###########################################################################
-    # STRENGTHS
-    ###########################################################################
+        dominant = recommendations.idxmax()
 
-    def strengths(self):
+        narrative = [
 
-        rows = []
+            f"Total strategies evaluated: {len(self.df)}.",
 
-        metrics = [
+            f"Best performing strategy: {best['Strategy']} "
 
-            c
+            f"({best['Overall Score']:.{DECIMAL_PLACES}f}).",
 
-            for c in self.df.columns
+            f"Lowest performing strategy: {worst['Strategy']} "
 
-            if c.endswith(
+            f"({worst['Overall Score']:.{DECIMAL_PLACES}f}).",
 
-                "_Mean"
+            f"Average overall score: "
 
-            )
+            f"{average_score:.{DECIMAL_PLACES}f}.",
+
+            f"Most common recommendation: "
+
+            f"{dominant}.",
+
+            "Deployment should prioritize "
+
+            "Strong Buy and Buy strategies.",
+
+            "Strategies classified as Watch "
+
+            "should undergo paper trading "
+
+            "before live deployment.",
+
+            "Avoid and Reject strategies "
+
+            "require significant improvement "
+
+            "before reconsideration."
 
         ]
 
-        for _, row in self.df.iterrows():
+        return narrative
 
-            strengths = []
+    ###########################################################################
+    # DASHBOARD CARDS
+    ###########################################################################
 
-            for metric in metrics:
+    def dashboard_cards(self):
 
-                if row[metric] >= 80:
+        if self.df.empty:
 
-                    strengths.append(
+            return {}
 
-                        metric.replace(
+        recommendations = (
 
-                            "_Mean",
+            self.df[
 
-                            ""
+                "Recommendation"
 
-                        )
+            ]
 
-                    )
-
-            rows.append({
-
-                "Strategy":
-
-                    row["Strategy"],
-
-                "Strengths":
-
-                    ", ".join(
-
-                        strengths
-
-                    )
-
-            })
-
-        return pd.DataFrame(
-
-            rows
+            .value_counts()
 
         )
 
-    ###########################################################################
-    # WEAKNESSES
-    ###########################################################################
+        return {
 
-    def weaknesses(self):
+            "Total Strategies":
 
-        rows = []
+                len(
 
-        metrics = [
+                    self.df
 
-            c
+                ),
 
-            for c in self.df.columns
+            "Best Strategy":
 
-            if c.endswith(
+                self.best_strategy()[
 
-                "_Mean"
+                    "Strategy"
 
-            )
+                ],
 
-        ]
+            "Best Score":
 
-        for _, row in self.df.iterrows():
+                round(
 
-            weaknesses = []
+                    self.best_strategy()[
 
-            for metric in metrics:
+                        "Overall Score"
 
-                if row[metric] < 60:
+                    ],
 
-                    weaknesses.append(
+                    DECIMAL_PLACES
 
-                        metric.replace(
+                ),
 
-                            "_Mean",
+            "Average Score":
 
-                            ""
+                round(
 
-                        )
+                    self.df[
+
+                        "Overall Score"
+
+                    ].mean(),
+
+                    DECIMAL_PLACES
+
+                ),
+
+            "Strong Buy":
+
+                int(
+
+                    recommendations.get(
+
+                        "Strong Buy",
+
+                        0
 
                     )
 
-            rows.append({
+                ),
 
-                "Strategy":
+            "Buy":
 
-                    row["Strategy"],
+                int(
 
-                "Weaknesses":
+                    recommendations.get(
 
-                    ", ".join(
+                        "Buy",
 
-                        weaknesses
+                        0
 
                     )
 
-            })
+                ),
 
-        return pd.DataFrame(
+            "Watch":
 
-            rows
+                int(
 
-        )
+                    recommendations.get(
+
+                        "Watch",
+
+                        0
+
+                    )
+
+                ),
+
+            "Improve":
+
+                int(
+
+                    recommendations.get(
+
+                        "Improve",
+
+                        0
+
+                    )
+
+                ),
+
+            "Avoid":
+
+                int(
+
+                    recommendations.get(
+
+                        "Avoid",
+
+                        0
+
+                    )
+
+                ),
+
+            "Reject":
+
+                int(
+
+                    recommendations.get(
+
+                        "Reject",
+
+                        0
+
+                    )
+
+                )
+
+        }
 
     ###########################################################################
-    # COMPLETE INSIGHT REPORT
+    # COMPLETE REPORT
     ###########################################################################
 
     def report(self):
 
         return {
 
-            "executive":
+            "executive_summary":
 
                 self.executive_summary(),
 
-            "leaders":
+            "kpi_summary":
+
+                self.kpi_summary(),
+
+            "metric_leaders":
 
                 self.metric_leaders(),
 
-            "deployment":
+            "metric_laggards":
 
-                self.deployment(),
+                self.metric_laggards(),
 
-            "strengths":
+            "strategy_highlights":
 
-                self.strengths(),
+                self.strategy_highlights(),
 
-            "weaknesses":
+            "deployment_matrix":
 
-                self.weaknesses()
+                self.deployment_matrix(),
+
+            "executive_narrative":
+
+                self.executive_narrative(),
+
+            "dashboard_cards":
+
+                self.dashboard_cards()
 
         }

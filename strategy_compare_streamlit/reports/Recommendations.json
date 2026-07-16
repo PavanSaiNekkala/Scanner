@@ -1,0 +1,90 @@
+[
+    {
+        "Strategy":"Output_backtest_WF_Str_Tr_Report",
+        "Overall Score":87.76,
+        "Grade":"A",
+        "Recommendation":"Buy",
+        "Strengths":"Balanced profile",
+        "Weaknesses":"Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",
+        "Deployment":"Deploy after validation",
+        "Risk":"High",
+        "Confidence":46.84
+    },
+    {
+        "Strategy":"Output_backtest_F_ATR_Tr_Report",
+        "Overall Score":69.3,
+        "Grade":"C",
+        "Recommendation":"Improve",
+        "Strengths":"Balanced profile",
+        "Weaknesses":"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",
+        "Deployment":"Refine strategy",
+        "Risk":"Very High",
+        "Confidence":46.17
+    },
+    {
+        "Strategy":"Output_backtest_F_Str_Tr_Report",
+        "Overall Score":66.12,
+        "Grade":"C",
+        "Recommendation":"Improve",
+        "Strengths":"Balanced profile",
+        "Weaknesses":"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",
+        "Deployment":"Refine strategy",
+        "Risk":"Very High",
+        "Confidence":46.11
+    },
+    {
+        "Strategy":"Output_backtest_F_ATR_FT_Report",
+        "Overall Score":46.23,
+        "Grade":"F",
+        "Recommendation":"Reject",
+        "Strengths":"Balanced profile",
+        "Weaknesses":"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",
+        "Deployment":"Discard",
+        "Risk":"Very High",
+        "Confidence":45.66
+    },
+    {
+        "Strategy":"Output_backtest_WF_ATR_FT_Report",
+        "Overall Score":37.84,
+        "Grade":"F",
+        "Recommendation":"Reject",
+        "Strengths":"Balanced profile",
+        "Weaknesses":"Low overall score, Critical Performance, Weak Reliability, Critical Execution, Critical Opportunity",
+        "Deployment":"Discard",
+        "Risk":"Very High",
+        "Confidence":45.91
+    },
+    {
+        "Strategy":"Output_backtest_WF_Str_FT_Report",
+        "Overall Score":29.15,
+        "Grade":"F",
+        "Recommendation":"Reject",
+        "Strengths":"Balanced profile",
+        "Weaknesses":"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",
+        "Deployment":"Discard",
+        "Risk":"Very High",
+        "Confidence":45.3
+    },
+    {
+        "Strategy":"Output_backtest_F_Str_FT_Report",
+        "Overall Score":23.51,
+        "Grade":"F",
+        "Recommendation":"Reject",
+        "Strengths":"Balanced profile",
+        "Weaknesses":"Low overall score, Critical Performance, Weak Reliability, Critical Execution, Critical Opportunity",
+        "Deployment":"Discard",
+        "Risk":"Very High",
+        "Confidence":45.28
+    },
+    {
+        "Strategy":"Output_backtest_WF_ATR_Tr_Report",
+        "Overall Score":21.4,
+        "Grade":"F",
+        "Recommendation":"Reject",
+        "Strengths":"Balanced profile",
+        "Weaknesses":"Low overall score, Weak Performance, Weak Reliability, Critical Execution, Critical Opportunity",
+        "Deployment":"Discard",
+        "Risk":"Very High",
+        "Confidence":45.27
+    }
+]

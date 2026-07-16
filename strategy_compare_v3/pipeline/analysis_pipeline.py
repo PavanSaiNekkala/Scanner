@@ -401,7 +401,6 @@ class AnalysisPipeline:
         self.results["Features"] = features
 
         # ----------------------------------------------
-
         normalized = self.normalize(
 
             features
@@ -413,14 +412,15 @@ class AnalysisPipeline:
 
 
         # ==================================================
-        # MERGE ORIGINAL FEATURES + NORMALIZED FEATURES
+        # SCORING DATAFRAME
+        # MERGE NORMALIZED FEATURES + ORIGINAL METRICS
         # ==================================================
 
         analysis_df = normalized["Percentile"].copy()
 
 
 
-        required_scoring_columns = [
+        scoring_columns = [
 
             "Expectancy%",
 
@@ -430,13 +430,21 @@ class AnalysisPipeline:
 
             "Win %",
 
-            "Edge Ratio"
+            "Edge Ratio",
+
+            "Avg win%",
+
+            "Avg loss%",
+
+            "Trades",
+
+            "Years",
 
         ]
 
 
 
-        for column in required_scoring_columns:
+        for column in scoring_columns:
 
 
             if column in features.columns:
@@ -445,6 +453,20 @@ class AnalysisPipeline:
                 analysis_df[column] = features[column]
 
 
+
+        logger.info(
+
+            "Scoring dataframe columns: %s",
+
+            analysis_df.columns.tolist()
+
+        )
+
+        print(
+
+            analysis_df.columns.tolist()
+
+        )
 
         scored = self.scoring(
 

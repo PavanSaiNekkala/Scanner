@@ -410,9 +410,41 @@ class AnalysisPipeline:
 
         self.results["Normalization"] = normalized
 
-        analysis_df = normalized["Percentile"]
 
-        # ----------------------------------------------
+
+        # ==================================================
+        # MERGE ORIGINAL FEATURES + NORMALIZED FEATURES
+        # ==================================================
+
+        analysis_df = normalized["Percentile"].copy()
+
+
+
+        required_scoring_columns = [
+
+            "Expectancy%",
+
+            "Profit Factor",
+
+            "Reward Risk Ratio",
+
+            "Win %",
+
+            "Edge Ratio"
+
+        ]
+
+
+
+        for column in required_scoring_columns:
+
+
+            if column in features.columns:
+
+
+                analysis_df[column] = features[column]
+
+
 
         scored = self.scoring(
 

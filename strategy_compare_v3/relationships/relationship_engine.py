@@ -309,6 +309,23 @@ class RelationshipEngine:
 
         )
 
+    # ==================================================
+    # PIPELINE COMPATIBILITY WRAPPER
+    # ==================================================
+
+    def generate(self):
+
+        """
+        Standard interface wrapper.
+
+        AnalysisPipeline expects
+        RelationshipEngine.generate()
+
+        Existing implementation uses run()
+        """
+
+        return self.run()
+    
 
 if __name__ == "__main__":
 

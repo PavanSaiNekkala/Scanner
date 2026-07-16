@@ -13,19 +13,25 @@ Author : Pavan Sai
 from __future__ import annotations
 
 
+import time
+
+from typing import Dict, Any
+
+
 import pandas as pd
 
 
 from core.logger import get_logger
 
 
-from derived_metrics.performance_metrics import (
-    PerformanceMetricsEngine
+
+from derived_metrics.derived_metrics_engine import (
+    TradeMetricsEngine
 )
 
 
-from derived_metrics.risk_metrics import (
-    RiskMetricsEngine
+from derived_metrics.performance_metrics import (
+    PerformanceMetricsEngine
 )
 
 
@@ -34,13 +40,18 @@ from derived_metrics.reliability_metrics import (
 )
 
 
-from derived_metrics.efficiency_metrics import (
-    EfficiencyMetricsEngine
+from derived_metrics.risk_metrics import (
+    RiskMetricsEngine
 )
 
 
 from derived_metrics.exit_metrics import (
     ExitMetricsEngine
+)
+
+
+from derived_metrics.efficiency_metrics import (
+    EfficiencyMetricsEngine
 )
 
 
@@ -55,6 +66,7 @@ from derived_metrics.statistical_metrics import (
 
 
 
+
 logger = get_logger(__name__)
 
 
@@ -63,46 +75,50 @@ logger = get_logger(__name__)
 
 class DerivedMetricsEngine:
     """
-    Master Derived Metrics Orchestrator.
+    Master Derived Metrics Pipeline.
 
-    Converts raw backtest trade data into
-    strategy-level derived metrics.
 
-    Pipeline:
+    Flow
+    ----
 
-    Raw Trades
+    Trade Level CSV
 
-        |
+            |
+
+            v
+
+    TradeMetricsEngine
+
+            |
+
+            v
+
+    Strategy Level Data
+
+            |
+
+            v
 
     Performance Metrics
 
-        |
+    Reliability Metrics
 
     Risk Metrics
 
-        |
-
-    Reliability Metrics
-
-        |
+    Exit Metrics
 
     Efficiency Metrics
 
-        |
-
-    Exit Metrics
-
-        |
-
     Opportunity Metrics
-
-        |
 
     Statistical Metrics
 
-        |
+            |
 
-    Strategy Summary DataFrame
+            v
+
+    Feature Engineering
+
 
     """
 
@@ -120,15 +136,96 @@ class DerivedMetricsEngine:
         self.df = dataframe.copy()
 
 
-        self.results = {}
+        self.execution_time = 0.0
+
+
+        self.generated_metrics = []
+
+
+        self.module_summary = []
+
+
 
 
 
     # ==================================================
-    # RUN ALL DERIVED MODULES
+    # MODULE PIPELINE
+    # ==================================================
+
+    def _modules(self):
+
+
+        return [
+
+            PerformanceMetricsEngine,
+
+            ReliabilityMetricsEngine,
+
+            RiskMetricsEngine,
+
+            ExitMetricsEngine,
+
+            EfficiencyMetricsEngine,
+
+            OpportunityMetricsEngine
+
+        ]
+
+
+
+
+
+    # ==================================================
+    # TRACK GENERATED COLUMNS
+    # ==================================================
+
+    def _track_columns(
+
+        self,
+
+        before,
+
+        after
+
+    ):
+
+
+        generated = sorted(
+
+            list(
+
+                set(after)
+
+                -
+
+                set(before)
+
+            )
+
+        )
+
+
+        self.generated_metrics.extend(
+
+            generated
+
+        )
+
+
+        return generated
+
+
+
+
+
+    # ==================================================
+    # RUN ENGINE
     # ==================================================
 
     def run(self):
+
+
+        logger.info("=" * 80)
 
 
         logger.info(
@@ -138,110 +235,252 @@ class DerivedMetricsEngine:
         )
 
 
-
-        modules = [
-
-
-            PerformanceMetricsEngine,
-
-
-            RiskMetricsEngine,
-
-
-            ReliabilityMetricsEngine,
-
-
-            EfficiencyMetricsEngine,
-
-
-            ExitMetricsEngine,
-
-
-            OpportunityMetricsEngine,
-
-
-            StatisticalMetricsEngine
-
-        ]
+        start = time.perf_counter()
 
 
 
-        for module in modules:
+        # ==================================================
+        # STEP 1
+        # TRADE LEVEL -> STRATEGY LEVEL
+        # ==================================================
+
+
+        logger.info(
+
+            "Running Trade Metrics Engine..."
+
+        )
+
+
+        self.df = TradeMetricsEngine(
+
+            self.df
+
+        ).generate()
+
+
+
+        logger.info(
+
+            "Trade level aggregation completed."
+
+        )
+
+
+
+
+        # ==================================================
+        # STEP 2
+        # DERIVED METRIC MODULES
+        # ==================================================
+
+
+        for engine_class in self._modules():
+
+
+            module_start = time.perf_counter()
+
+
+            name = engine_class.__name__
+
 
 
             logger.info(
 
                 "Running %s",
 
-                module.__name__
+                name
 
             )
 
 
 
-            output = module(
+            before = (
 
-                self.df
+                self.df.columns.tolist()
 
-            ).generate()
-
-
-
-            if isinstance(
-
-                output,
-
-                dict
-
-            ):
+            )
 
 
-                self.results.update(
 
-                    output
-
-                )
+            try:
 
 
-            elif isinstance(
+                engine = engine_class(
 
-                output,
-
-                pd.DataFrame
-
-            ):
-
-
-                self.results.update(
-
-                    output.iloc[0].to_dict()
+                    self.df
 
                 )
 
 
 
-            else:
+                self.df = engine.generate()
 
 
-                logger.warning(
 
-                    "%s returned unsupported type: %s",
+                after = (
 
-                    module.__name__,
-
-                    type(output)
+                    self.df.columns.tolist()
 
                 )
 
 
 
-        summary = pd.DataFrame(
+                generated = self._track_columns(
 
-            [
+                    before,
 
-                self.results
+                    after
 
-            ]
+                )
+
+
+
+                self.module_summary.append({
+
+                    "Module":
+
+                        name,
+
+
+                    "Status":
+
+                        "Completed",
+
+
+                    "Generated":
+
+                        generated,
+
+
+                    "Count":
+
+                        len(generated),
+
+
+                    "Execution Time":
+
+                        round(
+
+                            time.perf_counter()
+
+                            -
+
+                            module_start,
+
+                            4
+
+                        )
+
+                })
+
+
+
+                logger.info(
+
+                    "%s generated %s",
+
+                    name,
+
+                    generated
+
+                )
+
+
+
+            except Exception as error:
+
+
+
+                logger.exception(
+
+                    "%s failed",
+
+                    name
+
+                )
+
+
+
+                self.module_summary.append({
+
+                    "Module":
+
+                        name,
+
+
+                    "Status":
+
+                        "Failed",
+
+
+                    "Error":
+
+                        str(error)
+
+                })
+
+
+
+                raise
+
+
+
+
+
+
+        # ==================================================
+        # FINAL STATISTICAL ANALYSIS
+        # ==================================================
+
+
+        logger.info(
+
+            "Generating Statistical Summary..."
+
+        )
+
+
+
+        statistics = StatisticalMetricsEngine(
+
+            self.df
+
+        ).generate()
+
+
+
+        self.df.attrs["statistics"] = statistics
+
+
+
+
+        # ==================================================
+        # FINALIZE
+        # ==================================================
+
+
+        self.generated_metrics = sorted(
+
+            set(
+
+                self.generated_metrics
+
+            )
+
+        )
+
+
+
+        self.execution_time = round(
+
+            time.perf_counter()
+
+            -
+
+            start,
+
+            3
 
         )
 
@@ -249,22 +488,34 @@ class DerivedMetricsEngine:
 
         logger.info(
 
-            "Derived Metrics completed."
+            "Generated %d derived metrics",
+
+            len(
+
+                self.generated_metrics
+
+            )
 
         )
+
 
 
         logger.info(
 
-            "Generated %d derived metrics.",
+            "Derived Metrics completed in %.3f seconds",
 
-            len(summary.columns)
+            self.execution_time
 
         )
 
 
+        logger.info("=" * 80)
 
-        return summary
+
+
+        return self.df
+
+
 
 
 
@@ -272,10 +523,48 @@ class DerivedMetricsEngine:
     # SUMMARY
     # ==================================================
 
-    def get_summary(self):
+    def summary(self) -> Dict[str, Any]:
 
 
-        return self.results
+        return {
+
+
+            "Execution Time":
+
+                self.execution_time,
+
+
+            "Generated Metrics":
+
+                self.generated_metrics,
+
+
+            "Total Metrics":
+
+                len(
+
+                    self.generated_metrics
+
+                ),
+
+
+            "Modules":
+
+                self.module_summary
+
+        }
+
+
+
+
+
+    # ==================================================
+    # ACCESSOR
+    # ==================================================
+
+    def get_dataframe(self):
+
+        return self.df
 
 
 
@@ -286,6 +575,6 @@ if __name__ == "__main__":
 
     print(
 
-        "Import DerivedMetricsEngine inside analysis_pipeline.py"
+        "Import DerivedMetricsEngine inside pipeline"
 
     )

@@ -27,10 +27,11 @@ logger = get_logger(__name__)
 
 
 
-class DerivedMetricsEngine:
+
+class TradeMetricsEngine:
     """
-    Converts raw backtest trades into
-    strategy comparison metrics.
+    Converts raw backtest trade data into
+    strategy-level summary metrics.
 
 
     Input
@@ -42,8 +43,18 @@ class DerivedMetricsEngine:
     Output
     ------
 
-    Strategy level dataframe
+    Strategy level dataframe (single row)
 
+
+    Example:
+
+    200 trades
+
+        |
+
+        v
+
+    1 strategy summary row
 
     """
 
@@ -67,7 +78,7 @@ class DerivedMetricsEngine:
     # ==================================================
 
     @staticmethod
-    def safe_divide(a,b):
+    def safe_divide(a, b):
 
 
         return np.where(
@@ -83,7 +94,7 @@ class DerivedMetricsEngine:
 
 
     # ==================================================
-    # BASIC COUNTS
+    # BASIC TRADE COUNT
     # ==================================================
 
     def trade_count(self):
@@ -98,13 +109,20 @@ class DerivedMetricsEngine:
 
 
     # ==================================================
-    # WIN LOSS
+    # WIN LOSS METRICS
     # ==================================================
 
     def win_loss_metrics(self):
 
 
         if "outcome" not in self.df.columns:
+
+
+            logger.warning(
+
+                "Outcome column missing."
+
+            )
 
             return
 
@@ -121,6 +139,7 @@ class DerivedMetricsEngine:
             .eq("WIN")
 
         )
+
 
 
         losses = (
@@ -170,6 +189,13 @@ class DerivedMetricsEngine:
 
         if "net_return_Pct" not in self.df.columns:
 
+
+            logger.warning(
+
+                "net_return_Pct missing."
+
+            )
+
             return
 
 
@@ -181,6 +207,7 @@ class DerivedMetricsEngine:
             "net_return_Pct"
 
         ]
+
 
 
         loss_returns = self.df.loc[
@@ -196,6 +223,7 @@ class DerivedMetricsEngine:
         avg_win = win_returns.mean()
 
 
+
         avg_loss = abs(
 
             loss_returns.mean()
@@ -206,7 +234,7 @@ class DerivedMetricsEngine:
 
         expectancy = (
 
-            (self.df["net_return_Pct"])
+            self.df["net_return_Pct"]
 
             .mean()
 
@@ -224,11 +252,15 @@ class DerivedMetricsEngine:
 
 
 
-        self.df["Reward Risk Ratio"] = self.safe_divide(
+        self.df["Reward Risk Ratio"] = (
 
-            avg_win,
+            self.safe_divide(
 
-            avg_loss
+                avg_win,
+
+                avg_loss
+
+            )
 
         )
 
@@ -242,6 +274,7 @@ class DerivedMetricsEngine:
 
 
         if "net_return_Pct" not in self.df.columns:
+
 
             return
 
@@ -265,30 +298,37 @@ class DerivedMetricsEngine:
 
                 "net_return_Pct"
 
-            ].sum()
+            ]
+
+            .sum()
 
         )
 
 
 
-        self.df["Profit Factor"] = self.safe_divide(
+        self.df["Profit Factor"] = (
 
-            gross_profit,
+            self.safe_divide(
 
-            gross_loss
+                gross_profit,
+
+                gross_loss
+
+            )
 
         )
 
 
 
     # ==================================================
-    # HOLDING PERIOD
+    # HOLDING PERIOD METRICS
     # ==================================================
 
     def holding_metrics(self):
 
 
         if "days_held" not in self.df.columns:
+
 
             return
 
@@ -304,18 +344,22 @@ class DerivedMetricsEngine:
 
 
 
-        self.df["Expectancy Per Day"] = self.safe_divide(
+        self.df["Expectancy Per Day"] = (
 
-            self.df["Expectancy%"],
+            self.safe_divide(
 
-            self.df["Avg days"]
+                self.df["Expectancy%"],
+
+                self.df["Avg days"]
+
+            )
 
         )
 
 
 
     # ==================================================
-    # TRADE FREQUENCY
+    # FREQUENCY METRICS
     # ==================================================
 
     def frequency_metrics(self):
@@ -323,7 +367,16 @@ class DerivedMetricsEngine:
 
         if "signal_date" not in self.df.columns:
 
+
             return
+
+
+
+        dates = pd.to_datetime(
+
+            self.df["signal_date"]
+
+        )
 
 
 
@@ -331,19 +384,11 @@ class DerivedMetricsEngine:
 
             (
 
-                pd.to_datetime(
-
-                    self.df["signal_date"]
-
-                ).max()
+                dates.max()
 
                 -
 
-                pd.to_datetime(
-
-                    self.df["signal_date"]
-
-                ).min()
+                dates.min()
 
             ).days
 
@@ -359,18 +404,22 @@ class DerivedMetricsEngine:
 
 
 
-        self.df["Trades / Year"] = self.safe_divide(
+        self.df["Trades / Year"] = (
 
-            len(self.df),
+            self.safe_divide(
 
-            years
+                len(self.df),
+
+                years
+
+            )
 
         )
 
 
 
     # ==================================================
-    # GENERATE
+    # GENERATE STRATEGY SUMMARY
     # ==================================================
 
     def generate(self):
@@ -378,7 +427,7 @@ class DerivedMetricsEngine:
 
         logger.info(
 
-            "Generating Derived Metrics..."
+            "Generating Trade Level Strategy Metrics..."
 
         )
 
@@ -402,7 +451,7 @@ class DerivedMetricsEngine:
 
 
 
-        # keep one strategy summary row
+        # Keep one strategy summary record
 
         summary = self.df.tail(1).copy()
 
@@ -410,10 +459,23 @@ class DerivedMetricsEngine:
 
         logger.info(
 
-            "Derived Metrics completed."
+            "Trade Metrics completed."
 
         )
 
 
 
         return summary
+
+
+
+
+
+if __name__ == "__main__":
+
+
+    print(
+
+        "Import TradeMetricsEngine inside derived_engine.py"
+
+    )

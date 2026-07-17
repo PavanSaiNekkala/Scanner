@@ -30,7 +30,7 @@ from derived_metrics.trade_metrics import (
 )
 
 
-from derived_metrics.performance_metrics import (
+from strategy_compare_v4.derived_metrics.performance_metrics import (
     PerformanceMetricsEngine
 )
 
@@ -40,22 +40,22 @@ from derived_metrics.reliability_metrics import (
 )
 
 
-from derived_metrics.risk_metrics import (
+from strategy_compare_v4.derived_metrics.risk_metrics import (
     RiskMetricsEngine
 )
 
 
-from derived_metrics.exit_metrics import (
+from strategy_compare_v4.derived_metrics.exit_metrics import (
     ExitMetricsEngine
 )
 
 
-from derived_metrics.efficiency_metrics import (
+from strategy_compare_v4.derived_metrics.efficiency_metrics import (
     EfficiencyMetricsEngine
 )
 
 
-from derived_metrics.opportunity_metrics import (
+from strategy_compare_v4.derived_metrics.opportunity_metrics import (
     OpportunityMetricsEngine
 )
 

@@ -24,7 +24,7 @@ from relationships.relationship_engine import RelationshipEngine
 
 from feature_engineering.feature_engine import FeatureEngine
 
-from derived_metrics.derived_engine import DerivedMetricsEngine
+from strategy_compare_v4.derived_metrics.derived_engine import DerivedMetricsEngine
 
 
 from normalization.normalization_engine import (

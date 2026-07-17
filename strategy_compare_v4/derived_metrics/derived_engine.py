@@ -15,31 +15,31 @@ from __future__ import annotations
 
 import pandas as pd
 
-from derived_metrics.performance_metrics import (
+from strategy_compare_v4.derived_metrics.performance_metrics import (
     derive_performance_metrics,
 )
 
-from derived_metrics.risk_metrics import (
+from strategy_compare_v4.derived_metrics.risk_metrics import (
     derive_risk_metrics,
 )
 
-from derived_metrics.exit_metrics import (
+from strategy_compare_v4.derived_metrics.exit_metrics import (
     derive_exit_metrics,
 )
 
-from derived_metrics.opportunity_metrics import (
+from strategy_compare_v4.derived_metrics.opportunity_metrics import (
     derive_opportunity_metrics,
 )
 
-from derived_metrics.efficiency_metrics import (
+from strategy_compare_v4.derived_metrics.efficiency_metrics import (
     derive_efficiency_metrics,
 )
 
-from derived_metrics.validation_metrics import (
+from strategy_compare_v4.derived_metrics.validation_metrics import (
     derive_validation_metrics,
 )
 
-from derived_metrics.scoring_metrics import (
+from strategy_compare_v4.derived_metrics.scoring_metrics import (
     derive_scoring_metrics,
 )
 

@@ -33,7 +33,7 @@ from relationships.relationship_engine import (
 
 
 
-from derived_metrics.derived_engine import (
+from strategy_compare_v4.derived_metrics.derived_engine import (
     DerivedMetricsEngine
 )
 

@@ -6,7 +6,7 @@ Derived Metrics Package
 Author : Pavan Sai
 """
 
-from derived_metrics.derived_engine import DerivedMetricsEngine
+from strategy_compare_v4.derived_metrics.derived_engine import DerivedMetricsEngine
 
 __all__ = [
     "DerivedMetricsEngine"

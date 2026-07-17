@@ -26,6 +26,7 @@ from feature_engineering.feature_engine import FeatureEngine
 
 from derived_metrics.derived_engine import DerivedMetricsEngine
 
+
 from normalization.normalization_engine import (
     NormalizationEngine
 )
@@ -150,22 +151,6 @@ class AnalysisPipeline:
         )
 
         return FeatureEngine(
-
-            self.df
-
-        ).run()
-
-    # --------------------------------------------------
-
-    def derived_metrics(self):
-
-        logger.info(
-
-            "Derived Metrics..."
-
-        )
-
-        return DerivedMetricsEngine(
 
             self.df
 
@@ -371,19 +356,31 @@ class AnalysisPipeline:
 
         start = time.perf_counter()
 
+
+        # ----------------------------------------------
+        # Optional Research Modules
         # ----------------------------------------------
 
-        self.results["Profiling"] = (
+        if self.config.get(
 
-            self.profile()
+            "research_mode",
 
-        )
+            False
 
-        self.results["Relationships"] = (
+        ):
 
-            self.relationships()
+            self.results["Profiling"] = (
 
-        )
+                self.profile()
+
+            )
+
+
+            self.results["Relationships"] = (
+
+                self.relationships()
+
+            )
 
         # ----------------------------------------------
         # Derived Metrics
@@ -430,8 +427,6 @@ class AnalysisPipeline:
 
             "Win %",
 
-            "Edge Ratio",
-
             "Avg win%",
 
             "Avg loss%",
@@ -447,11 +442,21 @@ class AnalysisPipeline:
         for column in scoring_columns:
 
 
-            if column in features.columns:
+            if column in self.df.columns:
 
 
-                analysis_df[column] = features[column]
+                analysis_df[column] = self.df[column]
 
+            else:
+
+
+                logger.warning(
+
+                    "Missing scoring column: %s",
+
+                    column
+
+                )
 
 
         logger.info(
@@ -462,12 +467,40 @@ class AnalysisPipeline:
 
         )
 
-        print(
+        required_scoring_columns = [
 
-            analysis_df.columns.tolist()
+            "Expectancy%",
 
-        )
+            "Profit Factor",
 
+            "Reward Risk Ratio",
+
+            "Win %",
+
+            "Edge Ratio"
+
+        ]
+
+
+        missing = [
+
+            col
+
+            for col in required_scoring_columns
+
+            if col not in analysis_df.columns
+
+        ]
+
+
+        if missing:
+
+            raise ValueError(
+
+                f"Missing scoring metrics: {missing}"
+
+            )
+        
         scored = self.scoring(
 
             analysis_df

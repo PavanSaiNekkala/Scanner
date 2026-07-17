@@ -26,8 +26,6 @@ logger = get_logger(__name__)
 
 
 
-
-
 class TradeMetricsEngine:
     """
     Converts raw backtest trade data into

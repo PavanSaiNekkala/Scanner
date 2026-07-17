@@ -1,0 +1,513 @@
+strategy_compare_v3
+├── README.md
+├── audit_classes.sh
+├── backtest_F_ATR_FT
+│   ├── ADANIENT_backtest_F_ATR_FT.csv
+│   ├── BALRAMCHIN_backtest_F_ATR_FT.csv
+│   ├── BEL_backtest_F_ATR_FT.csv
+│   ├── CDSL_backtest_F_ATR_FT.csv
+│   ├── CEATLTD_backtest_F_ATR_FT.csv
+│   ├── CUMMINSIND_backtest_F_ATR_FT.csv
+│   ├── DIXON_backtest_F_ATR_FT.csv
+│   ├── HDFCBANK_backtest_F_ATR_FT.csv
+│   ├── HFCL_backtest_F_ATR_FT.csv
+│   ├── HINDUNILVR_backtest_F_ATR_FT.csv
+│   ├── IDEA_backtest_F_ATR_FT.csv
+│   ├── INDIGO_backtest_F_ATR_FT.csv
+│   ├── INFY_backtest_F_ATR_FT.csv
+│   ├── ITC_backtest_F_ATR_FT.csv
+│   ├── KEC_backtest_F_ATR_FT.csv
+│   ├── LICHSGFIN_backtest_F_ATR_FT.csv
+│   ├── MARUTI_backtest_F_ATR_FT.csv
+│   ├── MOTHERSON_backtest_F_ATR_FT.csv
+│   ├── PAYTM_backtest_F_ATR_FT.csv
+│   ├── PERSISTENT_backtest_F_ATR_FT.csv
+│   ├── RELIANCE_backtest_F_ATR_FT.csv
+│   ├── TATAPOWER_backtest_F_ATR_FT.csv
+│   ├── TCS_backtest_F_ATR_FT.csv
+│   └── YESBANK_backtest_F_ATR_FT.csv
+├── backtest_F_ATR_Tr
+│   ├── ADANIENT_backtest_F_ATR_Tr.csv
+│   ├── BALRAMCHIN_backtest_F_ATR_Tr.csv
+│   ├── BEL_backtest_F_ATR_Tr.csv
+│   ├── CDSL_backtest_F_ATR_Tr.csv
+│   ├── CEATLTD_backtest_F_ATR_Tr.csv
+│   ├── CUMMINSIND_backtest_F_ATR_Tr.csv
+│   ├── DIXON_backtest_F_ATR_Tr.csv
+│   ├── HDFCBANK_backtest_F_ATR_Tr.csv
+│   ├── HFCL_backtest_F_ATR_Tr.csv
+│   ├── HINDUNILVR_backtest_F_ATR_Tr.csv
+│   ├── IDEA_backtest_F_ATR_Tr.csv
+│   ├── INDIGO_backtest_F_ATR_Tr.csv
+│   ├── INFY_backtest_F_ATR_Tr.csv
+│   ├── ITC_backtest_F_ATR_Tr.csv
+│   ├── KEC_backtest_F_ATR_Tr.csv
+│   ├── LICHSGFIN_backtest_F_ATR_Tr.csv
+│   ├── MARUTI_backtest_F_ATR_Tr.csv
+│   ├── MOTHERSON_backtest_F_ATR_Tr.csv
+│   ├── PAYTM_backtest_F_ATR_Tr.csv
+│   ├── PERSISTENT_backtest_F_ATR_Tr.csv
+│   ├── RELIANCE_backtest_F_ATR_Tr.csv
+│   ├── TATAPOWER_backtest_F_ATR_Tr.csv
+│   ├── TCS_backtest_F_ATR_Tr.csv
+│   └── YESBANK_backtest_F_ATR_Tr.csv
+├── backtest_F_Str_FT
+│   ├── ADANIENT_backtest_F_Str_FT.csv
+│   ├── BALRAMCHIN_backtest_F_Str_FT.csv
+│   ├── BEL_backtest_F_Str_FT.csv
+│   ├── CDSL_backtest_F_Str_FT.csv
+│   ├── CEATLTD_backtest_F_Str_FT.csv
+│   ├── CUMMINSIND_backtest_F_Str_FT.csv
+│   ├── DIXON_backtest_F_Str_FT.csv
+│   ├── HDFCBANK_backtest_F_Str_FT.csv
+│   ├── HFCL_backtest_F_Str_FT.csv
+│   ├── HINDUNILVR_backtest_F_Str_FT.csv
+│   ├── IDEA_backtest_F_Str_FT.csv
+│   ├── INDIGO_backtest_F_Str_FT.csv
+│   ├── INFY_backtest_F_Str_FT.csv
+│   ├── ITC_backtest_F_Str_FT.csv
+│   ├── KEC_backtest_F_Str_FT.csv
+│   ├── LICHSGFIN_backtest_F_Str_FT.csv
+│   ├── MARUTI_backtest_F_Str_FT.csv
+│   ├── MOTHERSON_backtest_F_Str_FT.csv
+│   ├── PAYTM_backtest_F_Str_FT.csv
+│   ├── PERSISTENT_backtest_F_Str_FT.csv
+│   ├── RELIANCE_backtest_F_Str_FT.csv
+│   ├── TATAPOWER_backtest_F_Str_FT.csv
+│   ├── TCS_backtest_F_Str_FT.csv
+│   └── YESBANK_backtest_F_Str_FT.csv
+├── backtest_F_Str_Tr
+│   ├── ADANIENT_backtest_F_Str_Tr.csv
+│   ├── BALRAMCHIN_backtest_F_Str_Tr.csv
+│   ├── BEL_backtest_F_Str_Tr.csv
+│   ├── CDSL_backtest_F_Str_Tr.csv
+│   ├── CEATLTD_backtest_F_Str_Tr.csv
+│   ├── CUMMINSIND_backtest_F_Str_Tr.csv
+│   ├── DIXON_backtest_F_Str_Tr.csv
+│   ├── HDFCBANK_backtest_F_Str_Tr.csv
+│   ├── HFCL_backtest_F_Str_Tr.csv
+│   ├── HINDUNILVR_backtest_F_Str_Tr.csv
+│   ├── IDEA_backtest_F_Str_Tr.csv
+│   ├── INDIGO_backtest_F_Str_Tr.csv
+│   ├── INFY_backtest_F_Str_Tr.csv
+│   ├── ITC_backtest_F_Str_Tr.csv
+│   ├── KEC_backtest_F_Str_Tr.csv
+│   ├── LICHSGFIN_backtest_F_Str_Tr.csv
+│   ├── MARUTI_backtest_F_Str_Tr.csv
+│   ├── MOTHERSON_backtest_F_Str_Tr.csv
+│   ├── PAYTM_backtest_F_Str_Tr.csv
+│   ├── PERSISTENT_backtest_F_Str_Tr.csv
+│   ├── RELIANCE_backtest_F_Str_Tr.csv
+│   ├── TATAPOWER_backtest_F_Str_Tr.csv
+│   ├── TCS_backtest_F_Str_Tr.csv
+│   └── YESBANK_backtest_F_Str_Tr.csv
+├── backtest_WF_ATR_FT
+│   ├── ADANIENT_backtest_WF_ATR_FT.csv
+│   ├── BALRAMCHIN_backtest_WF_ATR_FT.csv
+│   ├── BEL_backtest_WF_ATR_FT.csv
+│   ├── CDSL_backtest_WF_ATR_FT.csv
+│   ├── CEATLTD_backtest_WF_ATR_FT.csv
+│   ├── CUMMINSIND_backtest_WF_ATR_FT.csv
+│   ├── DIXON_backtest_WF_ATR_FT.csv
+│   ├── HDFCBANK_backtest_WF_ATR_FT.csv
+│   ├── HFCL_backtest_WF_ATR_FT.csv
+│   ├── HINDUNILVR_backtest_WF_ATR_FT.csv
+│   ├── IDEA_backtest_WF_ATR_FT.csv
+│   ├── INDIGO_backtest_WF_ATR_FT.csv
+│   ├── INFY_backtest_WF_ATR_FT.csv
+│   ├── ITC_backtest_WF_ATR_FT.csv
+│   ├── KEC_backtest_WF_ATR_FT.csv
+│   ├── LICHSGFIN_backtest_WF_ATR_FT.csv
+│   ├── MARUTI_backtest_WF_ATR_FT.csv
+│   ├── MOTHERSON_backtest_WF_ATR_FT.csv
+│   ├── PAYTM_backtest_WF_ATR_FT.csv
+│   ├── PERSISTENT_backtest_WF_ATR_FT.csv
+│   ├── RELIANCE_backtest_WF_ATR_FT.csv
+│   ├── TATAPOWER_backtest_WF_ATR_FT.csv
+│   ├── TCS_backtest_WF_ATR_FT.csv
+│   └── YESBANK_backtest_WF_ATR_FT.csv
+├── backtest_WF_ATR_Tr
+│   ├── ADANIENT_backtest_WF_ATR_Tr.csv
+│   ├── BALRAMCHIN_backtest_WF_ATR_Tr.csv
+│   ├── BEL_backtest_WF_ATR_Tr.csv
+│   ├── CDSL_backtest_WF_ATR_Tr.csv
+│   ├── CEATLTD_backtest_WF_ATR_Tr.csv
+│   ├── CUMMINSIND_backtest_WF_ATR_Tr.csv
+│   ├── DIXON_backtest_WF_ATR_Tr.csv
+│   ├── HDFCBANK_backtest_WF_ATR_Tr.csv
+│   ├── HFCL_backtest_WF_ATR_Tr.csv
+│   ├── HINDUNILVR_backtest_WF_ATR_Tr.csv
+│   ├── IDEA_backtest_WF_ATR_Tr.csv
+│   ├── INDIGO_backtest_WF_ATR_Tr.csv
+│   ├── INFY_backtest_WF_ATR_Tr.csv
+│   ├── ITC_backtest_WF_ATR_Tr.csv
+│   ├── KEC_backtest_WF_ATR_Tr.csv
+│   ├── LICHSGFIN_backtest_WF_ATR_Tr.csv
+│   ├── MARUTI_backtest_WF_ATR_Tr.csv
+│   ├── MOTHERSON_backtest_WF_ATR_Tr.csv
+│   ├── PAYTM_backtest_WF_ATR_Tr.csv
+│   ├── PERSISTENT_backtest_WF_ATR_Tr.csv
+│   ├── RELIANCE_backtest_WF_ATR_Tr.csv
+│   ├── TATAPOWER_backtest_WF_ATR_Tr.csv
+│   ├── TCS_backtest_WF_ATR_Tr.csv
+│   └── YESBANK_backtest_WF_ATR_Tr.csv
+├── backtest_WF_Str_FT
+│   ├── ADANIENT_backtest_WF_Str_FT.csv
+│   ├── BALRAMCHIN_backtest_WF_Str_FT.csv
+│   ├── BEL_backtest_WF_Str_FT.csv
+│   ├── CDSL_backtest_WF_Str_FT.csv
+│   ├── CEATLTD_backtest_WF_Str_FT.csv
+│   ├── CUMMINSIND_backtest_WF_Str_FT.csv
+│   ├── DIXON_backtest_WF_Str_FT.csv
+│   ├── HDFCBANK_backtest_WF_Str_FT.csv
+│   ├── HFCL_backtest_WF_Str_FT.csv
+│   ├── HINDUNILVR_backtest_WF_Str_FT.csv
+│   ├── IDEA_backtest_WF_Str_FT.csv
+│   ├── INDIGO_backtest_WF_Str_FT.csv
+│   ├── INFY_backtest_WF_Str_FT.csv
+│   ├── ITC_backtest_WF_Str_FT.csv
+│   ├── KEC_backtest_WF_Str_FT.csv
+│   ├── LICHSGFIN_backtest_WF_Str_FT.csv
+│   ├── MARUTI_backtest_WF_Str_FT.csv
+│   ├── MOTHERSON_backtest_WF_Str_FT.csv
+│   ├── PAYTM_backtest_WF_Str_FT.csv
+│   ├── PERSISTENT_backtest_WF_Str_FT.csv
+│   ├── RELIANCE_backtest_WF_Str_FT.csv
+│   ├── TATAPOWER_backtest_WF_Str_FT.csv
+│   ├── TCS_backtest_WF_Str_FT.csv
+│   └── YESBANK_backtest_WF_Str_FT.csv
+├── backtest_WF_Str_Tr
+│   ├── ADANIENT_backtest_WF_Str_Tr.csv
+│   ├── BALRAMCHIN_backtest_WF_Str_Tr.csv
+│   ├── BEL_backtest_WF_Str_Tr.csv
+│   ├── CDSL_backtest_WF_Str_Tr.csv
+│   ├── CEATLTD_backtest_WF_Str_Tr.csv
+│   ├── CUMMINSIND_backtest_WF_Str_Tr.csv
+│   ├── DIXON_backtest_WF_Str_Tr.csv
+│   ├── HDFCBANK_backtest_WF_Str_Tr.csv
+│   ├── HFCL_backtest_WF_Str_Tr.csv
+│   ├── HINDUNILVR_backtest_WF_Str_Tr.csv
+│   ├── IDEA_backtest_WF_Str_Tr.csv
+│   ├── INDIGO_backtest_WF_Str_Tr.csv
+│   ├── INFY_backtest_WF_Str_Tr.csv
+│   ├── ITC_backtest_WF_Str_Tr.csv
+│   ├── KEC_backtest_WF_Str_Tr.csv
+│   ├── LICHSGFIN_backtest_WF_Str_Tr.csv
+│   ├── MARUTI_backtest_WF_Str_Tr.csv
+│   ├── MOTHERSON_backtest_WF_Str_Tr.csv
+│   ├── PAYTM_backtest_WF_Str_Tr.csv
+│   ├── PERSISTENT_backtest_WF_Str_Tr.csv
+│   ├── RELIANCE_backtest_WF_Str_Tr.csv
+│   ├── TATAPOWER_backtest_WF_Str_Tr.csv
+│   ├── TCS_backtest_WF_Str_Tr.csv
+│   └── YESBANK_backtest_WF_Str_Tr.csv
+├── batch_processing
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── batch_runner.cpython-312.pyc
+│   │   ├── parallel_runner.cpython-312.pyc
+│   │   ├── result_collector.cpython-312.pyc
+│   │   └── strategy_detector.cpython-312.pyc
+│   ├── batch_runner.py
+│   ├── parallel_runner.py
+│   ├── result_collector.py
+│   └── strategy_detector.py
+├── config.py
+├── core
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── cache.cpython-312.pyc
+│   │   ├── constants.cpython-312.pyc
+│   │   ├── feature_contract.cpython-312.pyc
+│   │   ├── loader.cpython-312.pyc
+│   │   ├── logger.cpython-312.pyc
+│   │   ├── utils.cpython-312.pyc
+│   │   └── validator.cpython-312.pyc
+│   ├── cache.py
+│   ├── constants.py
+│   ├── exceptions.py
+│   ├── feature_contract.py
+│   ├── loader.py
+│   ├── logger.py
+│   ├── utils.py
+│   └── validator.py
+├── data
+│   ├── input
+│   ├── interim
+│   ├── output
+│   └── processed
+├── derived_metrics
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── derived_engine.cpython-312.pyc
+│   │   ├── derived_metrics_engine.cpython-312.pyc
+│   │   ├── efficiency_metrics.cpython-312.pyc
+│   │   ├── exit_metrics.cpython-312.pyc
+│   │   ├── opportunity_metrics.cpython-312.pyc
+│   │   ├── performance_metrics.cpython-312.pyc
+│   │   ├── reliability_metrics.cpython-312.pyc
+│   │   ├── risk_metrics.cpython-312.pyc
+│   │   └── statistical_metrics.cpython-312.pyc
+│   ├── derived_engine.py
+│   ├── efficiency_metrics.py
+│   ├── exit_metrics.py
+│   ├── opportunity_metrics.py
+│   ├── performance_metrics.py
+│   ├── reliability_metrics.py
+│   ├── risk_metrics.py
+│   ├── statistical_metrics.py
+│   └── trade_metrics.py
+├── feature_engineering
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── efficiency.cpython-312.pyc
+│   │   ├── expectancy.cpython-312.pyc
+│   │   ├── feature_engine.cpython-312.pyc
+│   │   ├── institutional_metrics.cpython-312.pyc
+│   │   ├── opportunity.cpython-312.pyc
+│   │   ├── profitability.cpython-312.pyc
+│   │   ├── quality.cpython-312.pyc
+│   │   ├── reward_risk.cpython-312.pyc
+│   │   └── stability.cpython-312.pyc
+│   ├── efficiency.py
+│   ├── expectancy.py
+│   ├── feature_engine.py
+│   ├── institutional_metrics.py
+│   ├── opportunity.py
+│   ├── profitability.py
+│   ├── quality.py
+│   ├── reward_risk.py
+│   └── stability.py
+├── main.py
+├── normalization
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── minmax.cpython-312.pyc
+│   │   ├── normalization_engine.cpython-312.pyc
+│   │   ├── percentile.cpython-312.pyc
+│   │   ├── quantile.cpython-312.pyc
+│   │   ├── robust_zscore.cpython-312.pyc
+│   │   └── zscore.cpython-312.pyc
+│   ├── minmax.py
+│   ├── normalization_engine.py
+│   ├── percentile.py
+│   ├── quantile.py
+│   ├── robust_zscore.py
+│   └── zscore.py
+├── optimization
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── monte_carlo.cpython-312.pyc
+│   │   ├── optimization_engine.cpython-312.pyc
+│   │   ├── parameter_optimizer.cpython-312.pyc
+│   │   ├── robustness.cpython-312.pyc
+│   │   └── sensitivity_analysis.cpython-312.pyc
+│   ├── monte_carlo.py
+│   ├── optimization_engine.py
+│   ├── parameter_optimizer.py
+│   ├── robustness.py
+│   └── sensitivity_analysis.py
+├── outputs
+│   ├── cache
+│   ├── charts
+│   │   ├── adx14_boxplot.png
+│   │   ├── adx14_histogram.png
+│   │   ├── atr_pct_boxplot.png
+│   │   ├── atr_pct_histogram.png
+│   │   ├── bb_pctB_boxplot.png
+│   │   ├── bb_pctB_histogram.png
+│   │   ├── correlation_heatmap.png
+│   │   ├── days_held_boxplot.png
+│   │   ├── days_held_histogram.png
+│   │   ├── dist_52wH_boxplot.png
+│   │   ├── dist_52wH_histogram.png
+│   │   ├── entry_price_boxplot.png
+│   │   ├── entry_price_histogram.png
+│   │   ├── exit_price_boxplot.png
+│   │   ├── exit_price_histogram.png
+│   │   ├── fill_edge_Pct_boxplot.png
+│   │   ├── fill_edge_Pct_histogram.png
+│   │   ├── gross_return_Pct_boxplot.png
+│   │   ├── gross_return_Pct_histogram.png
+│   │   ├── limit_price_boxplot.png
+│   │   ├── limit_price_histogram.png
+│   │   ├── macd_hist_boxplot.png
+│   │   ├── macd_hist_histogram.png
+│   │   ├── net_return_Pct_boxplot.png
+│   │   ├── net_return_Pct_histogram.png
+│   │   ├── obv_slope10_boxplot.png
+│   │   ├── obv_slope10_histogram.png
+│   │   ├── partial_at_Pct_boxplot.png
+│   │   ├── partial_at_Pct_histogram.png
+│   │   ├── pct_vs_sma200_boxplot.png
+│   │   ├── pct_vs_sma200_histogram.png
+│   │   ├── pct_vs_sma20_boxplot.png
+│   │   ├── pct_vs_sma20_histogram.png
+│   │   ├── peak_gain_Pct_boxplot.png
+│   │   ├── peak_gain_Pct_histogram.png
+│   │   ├── roc10_boxplot.png
+│   │   ├── roc10_histogram.png
+│   │   ├── rsi14_boxplot.png
+│   │   ├── rsi14_histogram.png
+│   │   ├── signal_close_boxplot.png
+│   │   ├── signal_close_histogram.png
+│   │   ├── stop_price_boxplot.png
+│   │   ├── stop_price_histogram.png
+│   │   ├── target_price_boxplot.png
+│   │   ├── target_price_histogram.png
+│   │   ├── vol_ratio_boxplot.png
+│   │   └── vol_ratio_histogram.png
+│   ├── excel
+│   │   └── Institutional_Report.xlsx
+│   ├── logs
+│   │   └── strategy_compare.log
+│   └── reports
+├── pipeline
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   └── analysis_pipeline.cpython-312.pyc
+│   └── analysis_pipeline.py
+├── profiling
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── column_profiler.cpython-312.pyc
+│   │   ├── data_quality.cpython-312.pyc
+│   │   ├── dataset_summary.cpython-312.pyc
+│   │   ├── descriptive_statistics.cpython-312.pyc
+│   │   ├── distribution_statistics.cpython-312.pyc
+│   │   ├── missing_value_profiler.cpython-312.pyc
+│   │   └── profiler.cpython-312.pyc
+│   ├── column_profiler.py
+│   ├── data_quality.py
+│   ├── dataset_summary.py
+│   ├── descriptive_statistics.py
+│   ├── distribution_statistics.py
+│   ├── missing_value_profiler.py
+│   └── profiler.py
+├── recommendation
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   └── recommendation_engine.cpython-312.pyc
+│   ├── recommendation_engine.py
+│   └── thresholds.py
+├── relationships
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── correlation.cpython-312.pyc
+│   │   ├── dependency_matrix.cpython-312.pyc
+│   │   ├── dimensionality_reduction.cpython-312.pyc
+│   │   ├── feature_selection.cpython-312.pyc
+│   │   ├── multicollinearity.cpython-312.pyc
+│   │   └── relationship_engine.cpython-312.pyc
+│   ├── correlation.py
+│   ├── dependency_matrix.py
+│   ├── dimensionality_reduction.py
+│   ├── feature_selection.py
+│   ├── multicollinearity.py
+│   └── relationship_engine.py
+├── reports
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── excel_report.cpython-312.pyc
+│   │   ├── excel_strategy_exporter.cpython-312.pyc
+│   │   ├── institutional_report.cpython-312.pyc
+│   │   ├── report_engine.cpython-312.pyc
+│   │   ├── strategy_comparison_report.cpython-312.pyc
+│   │   └── summary_report.cpython-312.pyc
+│   ├── excel_report.py
+│   ├── excel_strategy_exporter.py
+│   ├── institutional_report.py
+│   ├── report_engine.py
+│   ├── strategy_comparison_report.py
+│   └── summary_report.py
+├── requirements.txt
+├── scoring
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── composite_score.cpython-312.pyc
+│   │   ├── edge_score.cpython-312.pyc
+│   │   ├── efficiency_score.cpython-312.pyc
+│   │   ├── execution_score.cpython-312.pyc
+│   │   ├── institutional_score.cpython-312.pyc
+│   │   ├── opportunity_score.cpython-312.pyc
+│   │   ├── reliability_score.cpython-312.pyc
+│   │   ├── risk_score.cpython-312.pyc
+│   │   ├── scoring_engine.cpython-312.pyc
+│   │   └── stability_score.cpython-312.pyc
+│   ├── composite_score.py
+│   ├── edge_score.py
+│   ├── efficiency_score.py
+│   ├── execution_score.py
+│   ├── institutional_score.py
+│   ├── opportunity_score.py
+│   ├── reliability_score.py
+│   ├── risk_score.py
+│   ├── scoring_engine.py
+│   └── stability_score.py
+├── tests
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_feature_engine.py
+│   ├── test_loader.py
+│   ├── test_normalization.py
+│   ├── test_optimization.py
+│   ├── test_performance.py
+│   ├── test_pipeline.py
+│   ├── test_profiling.py
+│   ├── test_recommendation.py
+│   ├── test_relationships.py
+│   ├── test_reports.py
+│   ├── test_scoring.py
+│   ├── test_utils.py
+│   ├── test_validator.py
+│   └── test_visualization.py
+├── ui
+│   ├── __init__.py
+│   ├── app.py
+│   ├── assets
+│   ├── components
+│   │   ├── charts.py
+│   │   ├── exporters.py
+│   │   ├── filters.py
+│   │   ├── metrics.py
+│   │   ├── sidebar.py
+│   │   └── tables.py
+│   └── pages
+│       ├── 01_Data_Profiling.py
+│       ├── 02_Relationships.py
+│       ├── 03_Feature_Engineering.py
+│       ├── 04_Normalization.py
+│       ├── 05_Scoring.py
+│       ├── 06_Recommendations.py
+│       ├── 07_Optimization.py
+│       ├── 08_Visualization.py
+│       ├── 09_Reports.py
+│       └── 10_Settings.py
+└── visualization
+    ├── __init__.py
+    ├── __pycache__
+    │   ├── __init__.cpython-312.pyc
+    │   ├── boxplots.cpython-312.pyc
+    │   ├── dashboards.cpython-312.pyc
+    │   ├── heatmaps.cpython-312.pyc
+    │   ├── histograms.cpython-312.pyc
+    │   └── scatterplots.cpython-312.pyc
+    ├── boxplots.py
+    ├── dashboards.py
+    ├── heatmaps.py
+    ├── histograms.py
+    └── scatterplots.py
+
+51 directories, 460 files

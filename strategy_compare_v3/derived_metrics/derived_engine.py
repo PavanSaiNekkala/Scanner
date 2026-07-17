@@ -25,7 +25,7 @@ from core.logger import get_logger
 
 
 
-from derived_metrics.derived_metrics_engine import (
+from derived_metrics.trade_metrics import (
     TradeMetricsEngine
 )
 
@@ -430,7 +430,8 @@ class DerivedMetricsEngine:
 
 
         # ==================================================
-        # FINAL STATISTICAL ANALYSIS
+        # STEP 3
+        # STATISTICAL ANALYSIS
         # ==================================================
 
 
@@ -441,7 +442,6 @@ class DerivedMetricsEngine:
         )
 
 
-
         statistics = StatisticalMetricsEngine(
 
             self.df
@@ -450,9 +450,33 @@ class DerivedMetricsEngine:
 
 
 
-        self.df.attrs["statistics"] = statistics
+        # Store metadata safely
+
+        if isinstance(
+
+            statistics,
+
+            dict
+
+        ):
+
+            self.df.attrs["statistics"] = statistics
 
 
+        elif isinstance(
+
+            statistics,
+
+            pd.DataFrame
+
+        ):
+
+            self.df.attrs["statistics"] = statistics.to_dict()
+
+
+        else:
+
+            self.df.attrs["statistics"] = {}
 
 
         # ==================================================

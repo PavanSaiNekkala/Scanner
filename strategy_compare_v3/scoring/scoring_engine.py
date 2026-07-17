@@ -248,6 +248,20 @@ class ScoringEngine:
 
             )
 
+        # ==================================================
+        # REMOVE PANDAS METADATA BEFORE CONCAT
+        # ==================================================
+
+        dataframe = dataframe.copy()
+
+        score_df = score_df.copy()
+
+
+        dataframe.attrs = {}
+
+        score_df.attrs = {}
+
+
 
         return pd.concat(
 
@@ -259,11 +273,11 @@ class ScoringEngine:
 
             ],
 
-            axis=1
+            axis=1,
+
+            ignore_index=False
 
         )
-
-
 
     # ==================================================
     # MODULE LIST

@@ -1,0 +1,228 @@
+[build-system]
+requires = [
+    "setuptools>=70.0",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+# ============================================================
+# Project Metadata
+# ============================================================
+
+[project]
+name = "institutional-strategy-comparison-platform"
+version = "1.0.0"
+description = "Institutional-grade Strategy Comparison Platform for quantitative trading strategy evaluation and portfolio construction."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+authors = [
+    { name = "Pavan Sai Nekkala" }
+]
+
+keywords = [
+    "algorithmic trading",
+    "backtesting",
+    "quantitative finance",
+    "portfolio",
+    "strategy comparison",
+    "stock market",
+    "institutional analytics",
+    "python"
+]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Scientific/Engineering",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Developers"
+]
+
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "scipy>=1.13",
+    "openpyxl>=3.1",
+    "xlsxwriter>=3.2",
+    "matplotlib>=3.9",
+    "plotly>=6.0",
+    "streamlit>=1.45",
+    "tqdm>=4.67"
+]
+
+# ============================================================
+# Optional Dependencies
+# ============================================================
+
+[project.optional-dependencies]
+
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "black>=25.1",
+    "ruff>=0.11",
+    "mypy>=1.15",
+    "pre-commit>=4.2",
+    "types-openpyxl"
+]
+
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.6"
+]
+
+# ============================================================
+# Console Scripts
+# ============================================================
+
+[project.scripts]
+
+strategy-compare = "strategy_comparison:main"
+
+# ============================================================
+# Package Discovery
+# ============================================================
+
+[tool.setuptools.packages.find]
+
+include = [
+    "comparison*",
+    "config*",
+    "derived_metrics*",
+    "portfolio*",
+    "reports*",
+    "utils*"
+]
+
+exclude = [
+    "tests*",
+    "docs*",
+    "examples*"
+]
+
+# ============================================================
+# PyTest
+# ============================================================
+
+[tool.pytest.ini_options]
+
+testpaths = [
+    "tests"
+]
+
+python_files = [
+    "test_*.py"
+]
+
+python_functions = [
+    "test_*"
+]
+
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--disable-warnings"
+]
+
+# ============================================================
+# Coverage
+# ============================================================
+
+[tool.coverage.run]
+
+source = [
+    "comparison",
+    "derived_metrics",
+    "portfolio",
+    "reports",
+    "utils"
+]
+
+omit = [
+    "tests/*"
+]
+
+[tool.coverage.report]
+
+show_missing = true
+skip_covered = true
+fail_under = 90
+
+# ============================================================
+# Ruff
+# ============================================================
+
+[tool.ruff]
+
+line-length = 88
+target-version = "py311"
+
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "build",
+    "dist"
+]
+
+[tool.ruff.lint]
+
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "SIM"
+]
+
+ignore = [
+    "E501"
+]
+
+# ============================================================
+# Black
+# ============================================================
+
+[tool.black]
+
+line-length = 88
+target-version = [
+    "py311"
+]
+
+# ============================================================
+# MyPy
+# ============================================================
+
+[tool.mypy]
+
+python_version = "3.11"
+
+warn_return_any = true
+
+warn_unused_configs = true
+
+warn_unused_ignores = true
+
+check_untyped_defs = true
+
+disallow_untyped_defs = false
+
+ignore_missing_imports = true
+
+pretty = true
+
+show_error_codes = true
+
+exclude = [
+    "tests/"
+]

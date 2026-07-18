@@ -2,49 +2,89 @@
 =============================================================
 Institutional Leaderboard Engine V4
 
-Module:
-    comparison/leaderboard.py
+Module
+------
+comparison/leaderboard.py
 
-Purpose:
-    Generate institutional leaderboards from the
-    Strategy Comparison Engine outputs.
+Purpose
+-------
+Generate institutional leaderboards from the
+Strategy Comparison Engine outputs.
 
 Produces
-
-    • Overall Leaderboard
-    • Best Stocks
-    • Best Strategies
-    • Best Strategy-Stock Combinations
-    • Expectancy Leaders
-    • Profit Factor Leaders
-    • Reliability Leaders
-    • Efficiency Leaders
-    • Edge Leaders
-    • Opportunity Leaders
+--------
+• Overall Leaderboard
+• Best Stocks
+• Best Strategies
+• Best Strategy-Stock Combinations
+• Expectancy Leaders
+• Profit Factor Leaders
+• Reliability Leaders
+• Efficiency Leaders
+• Edge Leaders
+• Opportunity Leaders
+• Risk Leaders
 
 =============================================================
 """
 
 from __future__ import annotations
 
+import time
+
+from typing import Dict
+
 import numpy as np
 import pandas as pd
 
-from pathlib import Path
+from strategy_compare_v4.config.constants import (
+    REQUIRED_COMPARISON_COLUMNS,
+    COMPOSITE_SCORE,
+    INSTITUTION_RANK,
+    RECOMMENDATION,
+)
 
+from strategy_compare_v4.config.recommendations import (
+    assign_recommendations,
+)
+
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
+
+from strategy_compare_v4.utils.math_utils import (
+    round_dataframe,
+)
+
+from strategy_compare_v4.utils.logger import (
+    get_logger,
+    banner,
+)
+
+logger = get_logger(__name__)
+
+
+# ============================================================
+# Leaderboard Engine
+# ============================================================
 
 class LeaderboardEngine:
-
     """
-    Institutional Leaderboard Engine
+    Institutional Leaderboard Engine.
+
+    Responsibilities
+    ----------------
+    • Generate overall leaderboard
+    • Generate stock leaderboard
+    • Generate strategy leaderboard
+    • Generate metric-specific leaderboards
+    • Produce executive summaries
+    • Export institutional reports
     """
 
     def __init__(
-
         self,
-
-        comparison_df: pd.DataFrame
-
+        comparison_df: pd.DataFrame,
     ):
 
         self.df = comparison_df.copy()
@@ -67,72 +107,95 @@ class LeaderboardEngine:
 
         self.opportunity_board = pd.DataFrame()
 
+        self.risk_board = pd.DataFrame()
+
         self.summary = pd.DataFrame()
 
+        self.diagnostic_report: Dict = {}
 
+        self.execution_time: float = 0.0
+
+    # ---------------------------------------------------------
+    # Validate Input
     # ---------------------------------------------------------
 
     def validate(self):
 
         """
-        Validate required columns.
+        Validate comparison dataframe.
         """
 
-        required = [
+        banner(
 
-            "Stock",
+            logger,
 
-            "Strategy",
+            "Validating Leaderboard Input",
 
-            "Composite Score",
+        )
 
-            "Expectancy",
+        require_columns(
 
-            "Profit Factor",
+            self.df,
 
-            "Reward Risk",
+            REQUIRED_COMPARISON_COLUMNS,
 
-            "Institution Rank",
+        )
 
-        ]
+        logger.info(
 
-        missing = [
+            "Validation successful."
 
-            c
+        )
 
-            for c in required
+        logger.info(
 
-            if c not in self.df.columns
+            "Rows       : %d",
 
-        ]
+            len(self.df),
 
-        if missing:
+        )
 
-            raise ValueError(
+        logger.info(
 
-                "Missing columns:\n"
+            "Stocks     : %d",
 
-                +
+            self.df["Stock"].nunique(),
 
-                "\n".join(missing)
+        )
 
-            )
+        logger.info(
+
+            "Strategies : %d",
+
+            self.df["Strategy"].nunique(),
+
+        )
+
+        logger.info(
+
+            "Average Composite : %.2f",
+
+            self.df[COMPOSITE_SCORE].mean(),
+
+        )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Overall Leaderboard
     # ---------------------------------------------------------
 
     def overall_leaderboard(
 
         self,
 
-        top_n=100
+        top_n: int = 100,
 
     ):
 
         """
-        Overall institutional ranking.
+        Generate the overall institutional
+        leaderboard.
         """
 
         self.overall = (
@@ -141,21 +204,21 @@ class LeaderboardEngine:
 
             .sort_values(
 
-                "Composite Score",
+                COMPOSITE_SCORE,
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                top_n
+                top_n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
@@ -171,21 +234,39 @@ class LeaderboardEngine:
 
                 1,
 
-                len(self.overall)+1
+                len(self.overall) + 1,
 
-            )
+            ),
+
+        )
+
+        self.overall = round_dataframe(
+
+            self.overall,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Overall leaderboard generated (%d records).",
+
+            len(self.overall),
 
         )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Stock Leaderboard
     # ---------------------------------------------------------
 
     def stock_leaderboard(self):
 
         """
-        Best strategy for every stock.
+        Generate the best strategy
+        for every stock.
         """
 
         idx = (
@@ -194,11 +275,11 @@ class LeaderboardEngine:
 
             .groupby(
 
-                "Stock"
+                "Stock",
 
             )[
 
-                "Composite Score"
+                COMPOSITE_SCORE
 
             ]
 
@@ -214,15 +295,15 @@ class LeaderboardEngine:
 
             .sort_values(
 
-                "Composite Score",
+                COMPOSITE_SCORE,
 
-                ascending=False
+                ascending=False,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
@@ -238,25 +319,37 @@ class LeaderboardEngine:
 
                 1,
 
-                len(
+                len(self.stock_board) + 1,
 
-                    self.stock_board
+            ),
 
-                )+1
+        )
 
-            )
+        self.stock_board = round_dataframe(
+
+            self.stock_board,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Stock leaderboard generated."
 
         )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Strategy Leaderboard
     # ---------------------------------------------------------
 
     def strategy_leaderboard(self):
 
         """
-        Average score by strategy.
+        Generate strategy leaderboard
+        using average institutional score.
         """
 
         self.strategy_board = (
@@ -267,7 +360,7 @@ class LeaderboardEngine:
 
                 "Strategy",
 
-                as_index=False
+                as_index=False,
 
             )
 
@@ -277,15 +370,15 @@ class LeaderboardEngine:
 
                     "Stock",
 
-                    "count"
+                    "count",
 
                 ),
 
                 Composite=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "mean"
+                    "mean",
 
                 ),
 
@@ -293,7 +386,7 @@ class LeaderboardEngine:
 
                     "Expectancy",
 
-                    "mean"
+                    "mean",
 
                 ),
 
@@ -301,7 +394,7 @@ class LeaderboardEngine:
 
                     "Profit Factor",
 
-                    "mean"
+                    "mean",
 
                 ),
 
@@ -309,9 +402,9 @@ class LeaderboardEngine:
 
                     "Reward Risk",
 
-                    "mean"
+                    "mean",
 
-                )
+                ),
 
             )
 
@@ -319,13 +412,13 @@ class LeaderboardEngine:
 
                 "Composite",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
@@ -341,34 +434,51 @@ class LeaderboardEngine:
 
                 1,
 
-                len(
+                len(self.strategy_board) + 1,
 
-                    self.strategy_board
+            ),
 
-                )+1
+        )
 
-            )
+        self.strategy_board = round_dataframe(
+
+            self.strategy_board,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Strategy leaderboard generated."
 
         )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Edge Leaderboard
     # ---------------------------------------------------------
 
     def edge_leaderboard(
 
         self,
 
-        top_n=50
+        top_n: int = 50,
 
     ):
 
         """
-        Highest edge score.
+        Generate Edge Score leaderboard.
         """
 
         if "Edge Score" not in self.df.columns:
+
+            logger.warning(
+
+                "Edge Score not available."
+
+            )
 
             return self
 
@@ -380,39 +490,54 @@ class LeaderboardEngine:
 
                 "Edge Score",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                top_n
+                top_n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
         )
 
+        self.edge_board = round_dataframe(
+
+            self.edge_board,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Edge leaderboard generated."
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Expectancy Leaderboard
     # ---------------------------------------------------------
 
     def expectancy_leaderboard(
 
         self,
 
-        top_n=50
+        top_n: int = 50,
 
     ):
 
         """
-        Highest expectancy.
+        Generate Expectancy leaderboard.
         """
 
         self.expectancy_board = (
@@ -423,39 +548,54 @@ class LeaderboardEngine:
 
                 "Expectancy",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                top_n
+                top_n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
         )
 
+        self.expectancy_board = round_dataframe(
+
+            self.expectancy_board,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Expectancy leaderboard generated."
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Profit Factor Leaderboard
     # ---------------------------------------------------------
 
     def profit_factor_leaderboard(
 
         self,
 
-        top_n=50
+        top_n: int = 50,
 
     ):
 
         """
-        Highest Profit Factor.
+        Generate Profit Factor leaderboard.
         """
 
         self.profit_board = (
@@ -466,42 +606,63 @@ class LeaderboardEngine:
 
                 "Profit Factor",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                top_n
+                top_n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
         )
 
+        self.profit_board = round_dataframe(
+
+            self.profit_board,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Profit Factor leaderboard generated."
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Efficiency Leaderboard
     # ---------------------------------------------------------
 
     def efficiency_leaderboard(
 
         self,
 
-        top_n=50
+        top_n: int = 50,
 
     ):
 
         """
-        Highest Efficiency Score.
+        Generate Efficiency Score leaderboard.
         """
 
         if "Efficiency Score" not in self.df.columns:
+
+            logger.warning(
+
+                "Efficiency Score not available."
+
+            )
 
             return self
 
@@ -513,41 +674,63 @@ class LeaderboardEngine:
 
                 "Efficiency Score",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                top_n
+                top_n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
+
+        )
+
+        self.efficiency_board = round_dataframe(
+
+            self.efficiency_board,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Efficiency leaderboard generated."
 
         )
 
         return self
     
     # ---------------------------------------------------------
+    # Reliability Leaderboard
+    # ---------------------------------------------------------
 
     def reliability_leaderboard(
 
         self,
 
-        top_n=50
+        top_n: int = 50,
 
     ):
 
         """
-        Highest Reliability Score.
+        Generate Reliability Score leaderboard.
         """
 
         if "Reliability Score" not in self.df.columns:
+
+            logger.warning(
+
+                "Reliability Score not available."
+
+            )
 
             return self
 
@@ -559,42 +742,63 @@ class LeaderboardEngine:
 
                 "Reliability Score",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                top_n
+                top_n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
         )
 
+        self.reliability_board = round_dataframe(
+
+            self.reliability_board,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Reliability leaderboard generated."
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Opportunity Leaderboard
     # ---------------------------------------------------------
 
     def opportunity_leaderboard(
 
         self,
 
-        top_n=50
+        top_n: int = 50,
 
     ):
 
         """
-        Highest Opportunity Score.
+        Generate Opportunity Score leaderboard.
         """
 
         if "Opportunity Score" not in self.df.columns:
+
+            logger.warning(
+
+                "Opportunity Score not available."
+
+            )
 
             return self
 
@@ -606,42 +810,63 @@ class LeaderboardEngine:
 
                 "Opportunity Score",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                top_n
+                top_n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
         )
 
+        self.opportunity_board = round_dataframe(
+
+            self.opportunity_board,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Opportunity leaderboard generated."
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Risk Leaderboard
     # ---------------------------------------------------------
 
     def risk_leaderboard(
 
         self,
 
-        top_n=50
+        top_n: int = 50,
 
     ):
 
         """
-        Highest Risk Score.
+        Generate Risk Score leaderboard.
         """
 
         if "Risk Score" not in self.df.columns:
+
+            logger.warning(
+
+                "Risk Score not available."
+
+            )
 
             return self
 
@@ -653,46 +878,62 @@ class LeaderboardEngine:
 
                 "Risk Score",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                top_n
+                top_n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
         )
 
+        self.risk_board = round_dataframe(
+
+            self.risk_board,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Risk leaderboard generated."
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Multi-Factor Leaderboard
     # ---------------------------------------------------------
 
     def multi_factor_leaderboard(
 
         self,
 
-        top_n=100
+        top_n: int = 100,
 
     ):
 
         """
-        Multi-factor institutional ranking.
+        Generate institutional multi-factor
+        leaderboard.
         """
 
         board = self.df.copy()
 
         metrics = [
 
-            "Composite Score",
+            COMPOSITE_SCORE,
 
             "Edge Score",
 
@@ -702,17 +943,17 @@ class LeaderboardEngine:
 
             "Opportunity Score",
 
-            "Risk Score"
+            "Risk Score",
 
         ]
 
         available = [
 
-            c
+            column
 
-            for c in metrics
+            for column in metrics
 
-            if c in board.columns
+            if column in board.columns
 
         ]
 
@@ -722,15 +963,17 @@ class LeaderboardEngine:
 
             .mean(
 
-                axis=1
+                axis=1,
 
             )
 
-            .round(
+        )
 
-                2
+        board = round_dataframe(
 
-            )
+            board,
+
+            decimals=2,
 
         )
 
@@ -742,19 +985,19 @@ class LeaderboardEngine:
 
                 "Institutional Rating",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                top_n
+                top_n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
@@ -764,36 +1007,77 @@ class LeaderboardEngine:
 
             0,
 
-            "Institutional Rank",
+            INSTITUTION_RANK,
 
             np.arange(
 
                 1,
 
-                len(board)+1
+                len(board) + 1,
+
+            ),
+
+        )
+
+        recommendation_df = assign_recommendations(
+
+            board[
+
+                [
+
+                    "Institutional Rating",
+
+                ]
+
+            ].rename(
+
+                columns={
+
+                    "Institutional Rating":
+
+                    COMPOSITE_SCORE,
+
+                }
 
             )
 
         )
 
+        board[
+
+            RECOMMENDATION
+
+        ] = recommendation_df[
+
+            RECOMMENDATION
+
+        ]
+
         self.overall = board
+
+        logger.info(
+
+            "Multi-factor leaderboard generated."
+
+        )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Executive Summary
     # ---------------------------------------------------------
 
     def summary_report(self):
 
         """
-        Executive Summary.
+        Generate executive summary.
         """
 
         self.summary = pd.DataFrame(
 
             {
 
-                "Metric":[
+                "Metric": [
 
                     "Total Records",
 
@@ -805,331 +1089,442 @@ class LeaderboardEngine:
 
                     "Maximum Composite",
 
-                    "Minimum Composite"
+                    "Minimum Composite",
 
                 ],
 
-                "Value":[
+                "Value": [
 
                     len(
 
-                        self.df
+                        self.df,
 
                     ),
 
-                    self.df["Stock"].nunique(),
+                    self.df[
 
-                    self.df["Strategy"].nunique(),
+                        "Stock"
+
+                    ].nunique(),
+
+                    self.df[
+
+                        "Strategy"
+
+                    ].nunique(),
 
                     round(
 
-                        self.df["Composite Score"].mean(),
+                        self.df[
 
-                        2
+                            COMPOSITE_SCORE
+
+                        ].mean(),
+
+                        2,
 
                     ),
 
                     round(
 
-                        self.df["Composite Score"].max(),
+                        self.df[
 
-                        2
+                            COMPOSITE_SCORE
+
+                        ].max(),
+
+                        2,
 
                     ),
 
                     round(
 
-                        self.df["Composite Score"].min(),
+                        self.df[
 
-                        2
+                            COMPOSITE_SCORE
 
-                    )
+                        ].min(),
 
-                ]
+                        2,
+
+                    ),
+
+                ],
 
             }
 
         )
 
+        logger.info(
+
+            "Executive summary generated."
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Diagnostics
     # ---------------------------------------------------------
 
     def diagnostics(self):
 
         """
-        Console diagnostics.
+        Generate execution diagnostics.
         """
 
-        print()
+        self.diagnostic_report = {
 
-        print("="*70)
+            "Records":
 
-        print("INSTITUTIONAL LEADERBOARD")
+                len(
 
-        print("="*70)
+                    self.df,
 
-        print(
+                ),
 
-            f"Records      : {len(self.df)}"
+            "Stocks":
+
+                self.df[
+
+                    "Stock"
+
+                ].nunique(),
+
+            "Strategies":
+
+                self.df[
+
+                    "Strategy"
+
+                ].nunique(),
+
+            "Average Composite":
+
+                round(
+
+                    self.df[
+
+                        COMPOSITE_SCORE
+
+                    ].mean(),
+
+                    2,
+
+                ),
+
+            "Highest Composite":
+
+                round(
+
+                    self.df[
+
+                        COMPOSITE_SCORE
+
+                    ].max(),
+
+                    2,
+
+                ),
+
+            "Lowest Composite":
+
+                round(
+
+                    self.df[
+
+                        COMPOSITE_SCORE
+
+                    ].min(),
+
+                    2,
+
+                ),
+
+            "Leaderboard Entries":
+
+                len(
+
+                    self.overall,
+
+                ),
+
+        }
+
+        logger.info(
+
+            "Diagnostics generated."
 
         )
-
-        print(
-
-            f"Stocks       : {self.df['Stock'].nunique()}"
-
-        )
-
-        print(
-
-            f"Strategies   : {self.df['Strategy'].nunique()}"
-
-        )
-
-        print(
-
-            f"Average Score: {self.df['Composite Score'].mean():.2f}"
-
-        )
-
-        print(
-
-            f"Highest Score: {self.df['Composite Score'].max():.2f}"
-
-        )
-
-        print(
-
-            f"Lowest Score : {self.df['Composite Score'].min():.2f}"
-
-        )
-
-        print("="*70)
-
-        print()
 
         return self
 
+    # ---------------------------------------------------------
+    # Execution Report
+    # ---------------------------------------------------------
 
+    def execution_report(self):
+
+        """
+        Log execution summary.
+        """
+
+        banner(
+
+            logger,
+
+            "Institutional Leaderboard Completed",
+
+        )
+
+        for key, value in self.diagnostic_report.items():
+
+            logger.info(
+
+                "%-30s : %s",
+
+                key,
+
+                value,
+
+            )
+
+        logger.info("")
+
+        logger.info(
+
+            "Leaderboard Engine completed successfully."
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Export Results
     # ---------------------------------------------------------
 
     def export(
 
         self,
 
-        output="Institutional_Leaderboard.xlsx"
+        output_file: str = "Institutional_Leaderboard.xlsx",
 
     ):
 
         """
-        Export leaderboard workbook.
+        Export all leaderboard reports.
         """
 
-        with pd.ExcelWriter(
+        from strategy_compare_v4.utils.io_utils import (
+            write_excel,
+        )
 
-            output,
+        sheets = {
 
-            engine="openpyxl"
+            "Overall":
 
-        ) as writer:
+                self.overall,
 
-            self.overall.to_excel(
+            "Stocks":
 
-                writer,
+                self.stock_board,
 
-                sheet_name="Overall",
+            "Strategies":
 
-                index=False
+                self.strategy_board,
 
-            )
+            "Expectancy":
 
-            self.stock_board.to_excel(
+                self.expectancy_board,
 
-                writer,
+            "Profit Factor":
 
-                sheet_name="Stocks",
+                self.profit_board,
 
-                index=False
+            "Edge":
 
-            )
+                self.edge_board,
 
-            self.strategy_board.to_excel(
+            "Reliability":
 
-                writer,
+                self.reliability_board,
 
-                sheet_name="Strategies",
+            "Efficiency":
 
-                index=False
+                self.efficiency_board,
 
-            )
+            "Opportunity":
 
-            self.expectancy_board.to_excel(
+                self.opportunity_board,
 
-                writer,
+            "Risk":
 
-                sheet_name="Expectancy",
+                self.risk_board,
 
-                index=False
+            "Summary":
 
-            )
+                self.summary,
 
-            self.profit_board.to_excel(
+        }
 
-                writer,
+        write_excel(
 
-                sheet_name="ProfitFactor",
+            sheets,
 
-                index=False
+            output_file,
 
-            )
+        )
 
-            self.edge_board.to_excel(
+        logger.info(
 
-                writer,
+            "Leaderboards exported -> %s",
 
-                sheet_name="Edge",
+            output_file,
 
-                index=False
-
-            )
-
-            self.reliability_board.to_excel(
-
-                writer,
-
-                sheet_name="Reliability",
-
-                index=False
-
-            )
-
-            self.efficiency_board.to_excel(
-
-                writer,
-
-                sheet_name="Efficiency",
-
-                index=False
-
-            )
-
-            self.opportunity_board.to_excel(
-
-                writer,
-
-                sheet_name="Opportunity",
-
-                index=False
-
-            )
-
-            if hasattr(
-
-                self,
-
-                "risk_board"
-
-            ):
-
-                self.risk_board.to_excel(
-
-                    writer,
-
-                    sheet_name="Risk",
-
-                    index=False
-
-                )
-
-            self.summary.to_excel(
-
-                writer,
-
-                sheet_name="Summary",
-
-                index=False
-
-            )
+        )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Execute Pipeline
     # ---------------------------------------------------------
 
     def run(self):
 
         """
-        Execute complete leaderboard engine.
+        Execute the complete
+        leaderboard pipeline.
         """
 
-        return (
+        start = time.perf_counter()
 
-            self
+        try:
 
-            .validate()
+            (
 
-            .overall_leaderboard()
+                self
 
-            .stock_leaderboard()
+                .validate()
 
-            .strategy_leaderboard()
+                .overall_leaderboard()
 
-            .edge_leaderboard()
+                .stock_leaderboard()
 
-            .expectancy_leaderboard()
+                .strategy_leaderboard()
 
-            .profit_factor_leaderboard()
+                .edge_leaderboard()
 
-            .efficiency_leaderboard()
+                .expectancy_leaderboard()
 
-            .reliability_leaderboard()
+                .profit_factor_leaderboard()
 
-            .opportunity_leaderboard()
+                .efficiency_leaderboard()
 
-            .risk_leaderboard()
+                .reliability_leaderboard()
 
-            .multi_factor_leaderboard()
+                .opportunity_leaderboard()
 
-            .summary_report()
+                .risk_leaderboard()
 
-            .diagnostics()
+                .multi_factor_leaderboard()
 
-        )
+                .summary_report()
 
+                .diagnostics()
 
+            )
+
+        except Exception as exc:
+
+            logger.exception(
+
+                "Leaderboard Engine failed."
+
+            )
+
+            raise RuntimeError(
+
+                f"Leaderboard Engine failed:\n{exc}"
+
+            ) from exc
+
+        finally:
+
+            self.execution_time = round(
+
+                time.perf_counter()
+
+                - start,
+
+                3,
+
+            )
+
+        self.diagnostic_report[
+
+            "Execution Time (s)"
+
+        ] = self.execution_time
+
+        self.execution_report()
+
+        return self
+
+    # ---------------------------------------------------------
+    # Get Results
     # ---------------------------------------------------------
 
     def get_results(self):
 
         """
-        Return all generated leaderboards.
+        Return every generated leaderboard.
         """
 
         return {
 
-            "overall": self.overall,
+            "overall":
 
-            "stocks": self.stock_board,
+                self.overall,
 
-            "strategies": self.strategy_board,
+            "stocks":
 
-            "edge": self.edge_board,
+                self.stock_board,
 
-            "expectancy": self.expectancy_board,
+            "strategies":
 
-            "profit_factor": self.profit_board,
+                self.strategy_board,
 
-            "efficiency": self.efficiency_board,
+            "edge":
 
-            "reliability": self.reliability_board,
+                self.edge_board,
 
-            "opportunity": self.opportunity_board,
+            "expectancy":
 
-            "risk": getattr(self, "risk_board", pd.DataFrame()),
+                self.expectancy_board,
 
-            "summary": self.summary
+            "profit_factor":
+
+                self.profit_board,
+
+            "efficiency":
+
+                self.efficiency_board,
+
+            "reliability":
+
+                self.reliability_board,
+
+            "opportunity":
+
+                self.opportunity_board,
+
+            "risk":
+
+                self.risk_board,
+
+            "summary":
+
+                self.summary,
 
         }
 
@@ -1140,17 +1535,22 @@ class LeaderboardEngine:
 
 def build_leaderboards(
 
-    comparison_df,
+    comparison_df: pd.DataFrame,
 
-    output_file="Institutional_Leaderboard.xlsx"
+    output_file: str = "Institutional_Leaderboard.xlsx",
 
-):
+) -> LeaderboardEngine:
+
+    """
+    Execute the institutional
+    leaderboard engine.
+    """
 
     engine = (
 
         LeaderboardEngine(
 
-            comparison_df
+            comparison_df,
 
         )
 
@@ -1160,7 +1560,7 @@ def build_leaderboards(
 
     engine.export(
 
-        output_file
+        output_file,
 
     )
 
@@ -1171,10 +1571,65 @@ def build_leaderboards(
 # Main
 # ============================================================
 
-if __name__ == "__main__":
+def main():
 
-    print(
+    import argparse
 
-        "Import build_leaderboards() from strategy_compare.py"
+    parser = argparse.ArgumentParser(
+
+        description=(
+
+            "Institutional "
+
+            "Leaderboard Engine V4"
+
+        )
 
     )
+
+    parser.add_argument(
+
+        "--input",
+
+        required=True,
+
+        help="Comparison workbook",
+
+    )
+
+    parser.add_argument(
+
+        "--output",
+
+        default="Institutional_Leaderboard.xlsx",
+
+        help="Output Excel workbook",
+
+    )
+
+    args = parser.parse_args()
+
+    from strategy_compare_v4.utils.io_utils import (
+
+        read_excel,
+
+    )
+
+    comparison_df = read_excel(
+
+        args.input,
+
+    )
+
+    build_leaderboards(
+
+        comparison_df=comparison_df,
+
+        output_file=args.output,
+
+    )
+
+
+if __name__ == "__main__":
+
+    main()

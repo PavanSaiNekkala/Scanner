@@ -2,43 +2,78 @@
 =============================================================
 Institutional Robustness Engine V4
 
-Module:
-    comparison/robustness.py
+Module
+------
+comparison/robustness.py
 
-Purpose:
-    Evaluate robustness and consistency of every
-    strategy using institutional-quality metrics.
+Purpose
+-------
+Evaluate robustness and consistency of every
+strategy using institutional-quality metrics.
 
 Outputs
-
-    • Stability Analysis
-    • Robustness Scores
-    • Consistency Scores
-    • Volatility Analysis
-    • Outlier Detection
-    • Robust Strategy Ranking
+-------
+• Stability Analysis
+• Robustness Scores
+• Consistency Scores
+• Volatility Analysis
+• Outlier Detection
+• Robust Strategy Ranking
 
 =============================================================
 """
 
 from __future__ import annotations
 
+import time
+from typing import Dict
+
 import numpy as np
 import pandas as pd
 
+from strategy_compare_v4.config.constants import (
+    REQUIRED_COMPARISON_COLUMNS,
+    COMPOSITE_SCORE,
+)
+
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
+
+from strategy_compare_v4.utils.math_utils import (
+    safe_divide,
+    round_dataframe,
+)
+
+from strategy_compare_v4.utils.logger import (
+    get_logger,
+    banner,
+)
+
+logger = get_logger(__name__)
+
+
+# ============================================================
+# Robustness Engine
+# ============================================================
 
 class RobustnessEngine:
-
     """
-    Institutional Robustness Engine
+    Institutional Robustness Engine.
+
+    Responsibilities
+    ----------------
+    • Evaluate strategy robustness
+    • Measure statistical stability
+    • Calculate consistency metrics
+    • Perform volatility analysis
+    • Detect outliers
+    • Rank strategies by robustness
     """
 
     def __init__(
-
         self,
-
-        comparison_df: pd.DataFrame
-
+        comparison_df: pd.DataFrame,
     ):
 
         self.df = comparison_df.copy()
@@ -53,72 +88,96 @@ class RobustnessEngine:
 
         self.summary = pd.DataFrame()
 
+        self.diagnostic_report: Dict = {}
 
+        self.execution_time: float = 0.0
+
+    # ---------------------------------------------------------
+    # Validate Input
     # ---------------------------------------------------------
 
     def validate(self):
 
         """
-        Validate required columns.
+        Validate comparison dataframe.
         """
 
-        required = [
+        banner(
 
-            "Stock",
+            logger,
 
-            "Strategy",
+            "Validating Robustness Input",
 
-            "Composite Score",
+        )
 
-            "Expectancy",
+        require_columns(
 
-            "Profit Factor",
+            self.df,
 
-            "Reward Risk"
+            REQUIRED_COMPARISON_COLUMNS,
 
-        ]
+        )
 
-        missing = [
+        logger.info(
 
-            c
+            "Validation successful."
 
-            for c in required
+        )
 
-            if c not in self.df.columns
+        logger.info(
 
-        ]
+            "Rows       : %d",
 
-        if missing:
+            len(self.df),
 
-            raise ValueError(
+        )
 
-                "Missing columns:\n"
+        logger.info(
 
-                +
+            "Stocks     : %d",
 
-                "\n".join(missing)
+            self.df["Stock"].nunique(),
 
-            )
+        )
+
+        logger.info(
+
+            "Strategies : %d",
+
+            self.df["Strategy"].nunique(),
+
+        )
+
+        logger.info(
+
+            "Average Composite : %.2f",
+
+            self.df[COMPOSITE_SCORE].mean(),
+
+        )
 
         return self
-
-
+    
+    # ---------------------------------------------------------
+    # Coefficient of Variation
     # ---------------------------------------------------------
 
     def coefficient_of_variation(self):
 
         """
-        Calculate Coefficient of Variation
+        Calculate the Coefficient of Variation
         for every strategy.
         """
 
-        cv = (
+        self.robustness = (
 
             self.df
 
             .groupby(
 
-                "Strategy"
+                "Strategy",
+
+                as_index=False,
 
             )
 
@@ -126,58 +185,59 @@ class RobustnessEngine:
 
                 MeanComposite=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "mean"
+                    "mean",
 
                 ),
 
                 StdComposite=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "std"
+                    "std",
 
-                )
+                ),
 
             )
 
-            .reset_index()
+        )
+
+        self.robustness["Coefficient of Variation"] = safe_divide(
+
+            self.robustness["StdComposite"],
+
+            self.robustness["MeanComposite"],
 
         )
 
-        cv["Coefficient of Variation"] = (
+        self.robustness = round_dataframe(
 
-            cv["StdComposite"]
+            self.robustness,
 
-            /
-
-            cv["MeanComposite"]
-
-        ).replace(
-
-            [np.inf, -np.inf],
-
-            np.nan
-
-        ).fillna(
-
-            0
+            decimals=2,
 
         )
 
-        self.robustness = cv
+        logger.info(
+
+            "Coefficient of Variation calculated."
+
+        )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Stability Score
     # ---------------------------------------------------------
 
     def stability_score(self):
 
         """
-        Higher stability
-        means lower variation.
+        Calculate Stability Score.
+
+        Higher stability implies
+        lower variation.
         """
 
         self.robustness[
@@ -198,9 +258,7 @@ class RobustnessEngine:
 
                 ]
 
-                *
-
-                100
+                * 100
 
             )
 
@@ -208,28 +266,45 @@ class RobustnessEngine:
 
             lower=0,
 
-            upper=100
+            upper=100,
+
+        )
+
+        self.robustness = round_dataframe(
+
+            self.robustness,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Stability scores calculated."
 
         )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Expectancy Stability
     # ---------------------------------------------------------
 
     def expectancy_stability(self):
 
         """
-        Stability of Expectancy.
+        Calculate Expectancy Stability.
         """
 
-        exp = (
+        expectancy = (
 
             self.df
 
             .groupby(
 
-                "Strategy"
+                "Strategy",
+
+                as_index=False,
 
             )
 
@@ -239,7 +314,7 @@ class RobustnessEngine:
 
                     "Expectancy",
 
-                    "mean"
+                    "mean",
 
                 ),
 
@@ -247,17 +322,15 @@ class RobustnessEngine:
 
                     "Expectancy",
 
-                    "std"
+                    "std",
 
-                )
+                ),
 
             )
 
-            .reset_index()
-
         )
 
-        exp["Expectancy Stability"] = (
+        expectancy["Expectancy Stability"] = (
 
             100
 
@@ -265,78 +338,87 @@ class RobustnessEngine:
 
             (
 
-                exp["Std"]
+                safe_divide(
 
-                /
+                    expectancy["Std"],
 
-                exp["Mean"]
+                    expectancy["Mean"],
 
-            )
+                )
 
-            .replace(
-
-                [np.inf, -np.inf],
-
-                np.nan
+                * 100
 
             )
-
-            .fillna(
-
-                0
-
-            )
-
-            *
-
-            100
 
         ).clip(
 
-            0,
+            lower=0,
 
-            100
+            upper=100,
 
         )
 
-        self.robustness = self.robustness.merge(
+        self.robustness = (
 
-            exp[
+            self.robustness
 
-                [
+            .merge(
 
-                    "Strategy",
+                expectancy[
 
-                    "Expectancy Stability"
+                    [
 
-                ]
+                        "Strategy",
 
-            ],
+                        "Expectancy Stability",
 
-            on="Strategy",
+                    ]
 
-            how="left"
+                ],
+
+                on="Strategy",
+
+                how="left",
+
+            )
+
+        )
+
+        self.robustness = round_dataframe(
+
+            self.robustness,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Expectancy stability calculated."
 
         )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Profit Factor Stability
     # ---------------------------------------------------------
 
     def profit_factor_stability(self):
 
         """
-        Stability of Profit Factor.
+        Calculate Profit Factor Stability.
         """
 
-        pf = (
+        profit = (
 
             self.df
 
             .groupby(
 
-                "Strategy"
+                "Strategy",
+
+                as_index=False,
 
             )
 
@@ -346,7 +428,7 @@ class RobustnessEngine:
 
                     "Profit Factor",
 
-                    "mean"
+                    "mean",
 
                 ),
 
@@ -354,17 +436,15 @@ class RobustnessEngine:
 
                     "Profit Factor",
 
-                    "std"
+                    "std",
 
-                )
+                ),
 
             )
 
-            .reset_index()
-
         )
 
-        pf["Profit Stability"] = (
+        profit["Profit Stability"] = (
 
             100
 
@@ -372,78 +452,87 @@ class RobustnessEngine:
 
             (
 
-                pf["Std"]
+                safe_divide(
 
-                /
+                    profit["Std"],
 
-                pf["Mean"]
+                    profit["Mean"],
 
-            )
+                )
 
-            .replace(
-
-                [np.inf, -np.inf],
-
-                np.nan
+                * 100
 
             )
-
-            .fillna(
-
-                0
-
-            )
-
-            *
-
-            100
 
         ).clip(
 
-            0,
+            lower=0,
 
-            100
+            upper=100,
 
         )
 
-        self.robustness = self.robustness.merge(
+        self.robustness = (
 
-            pf[
+            self.robustness
 
-                [
+            .merge(
 
-                    "Strategy",
+                profit[
 
-                    "Profit Stability"
+                    [
 
-                ]
+                        "Strategy",
 
-            ],
+                        "Profit Stability",
 
-            on="Strategy",
+                    ]
 
-            how="left"
+                ],
+
+                on="Strategy",
+
+                how="left",
+
+            )
+
+        )
+
+        self.robustness = round_dataframe(
+
+            self.robustness,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Profit Factor stability calculated."
 
         )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Reward Risk Stability
     # ---------------------------------------------------------
 
     def reward_risk_stability(self):
 
         """
-        Stability of Reward Risk.
+        Calculate Reward Risk Stability.
         """
 
-        rr = (
+        reward = (
 
             self.df
 
             .groupby(
 
-                "Strategy"
+                "Strategy",
+
+                as_index=False,
 
             )
 
@@ -453,7 +542,7 @@ class RobustnessEngine:
 
                     "Reward Risk",
 
-                    "mean"
+                    "mean",
 
                 ),
 
@@ -461,17 +550,15 @@ class RobustnessEngine:
 
                     "Reward Risk",
 
-                    "std"
+                    "std",
 
-                )
+                ),
 
             )
 
-            .reset_index()
-
         )
 
-        rr["RewardRisk Stability"] = (
+        reward["RewardRisk Stability"] = (
 
             100
 
@@ -479,79 +566,88 @@ class RobustnessEngine:
 
             (
 
-                rr["Std"]
+                safe_divide(
 
-                /
+                    reward["Std"],
 
-                rr["Mean"]
+                    reward["Mean"],
 
-            )
+                )
 
-            .replace(
-
-                [np.inf, -np.inf],
-
-                np.nan
+                * 100
 
             )
-
-            .fillna(
-
-                0
-
-            )
-
-            *
-
-            100
 
         ).clip(
 
-            0,
+            lower=0,
 
-            100
+            upper=100,
 
         )
 
-        self.robustness = self.robustness.merge(
+        self.robustness = (
 
-            rr[
+            self.robustness
 
-                [
+            .merge(
 
-                    "Strategy",
+                reward[
 
-                    "RewardRisk Stability"
+                    [
 
-                ]
+                        "Strategy",
 
-            ],
+                        "RewardRisk Stability",
 
-            on="Strategy",
+                    ]
 
-            how="left"
+                ],
+
+                on="Strategy",
+
+                how="left",
+
+            )
+
+        )
+
+        self.robustness = round_dataframe(
+
+            self.robustness,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Reward Risk stability calculated."
 
         )
 
         return self
-
-
+    
+    # ---------------------------------------------------------
+    # Composite Consistency
     # ---------------------------------------------------------
 
     def composite_consistency(self):
 
         """
-        Composite consistency
-        across stocks.
+        Calculate Composite Score
+        consistency across stocks.
         """
 
-        consistency = (
+        self.consistency = (
 
             self.df
 
             .groupby(
 
-                "Strategy"
+                "Strategy",
+
+                as_index=False,
 
             )
 
@@ -559,61 +655,85 @@ class RobustnessEngine:
 
                 Average=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "mean"
+                    "mean",
 
                 ),
 
                 Median=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "median"
+                    "median",
 
                 ),
 
                 Std=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "std"
+                    "std",
 
-                )
+                ),
 
             )
 
-            .reset_index()
-
         )
 
-        consistency["Consistency Score"] = (
+        self.consistency[
+
+            "Consistency Score"
+
+        ] = (
 
             100
 
             -
 
-            consistency["Std"]
+            self.consistency[
+
+                "Std"
+
+            ].fillna(
+
+                0
+
+            )
 
         ).clip(
 
-            0,
+            lower=0,
 
-            100
+            upper=100,
 
         )
 
-        self.consistency = consistency
+        self.consistency = round_dataframe(
+
+            self.consistency,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Composite consistency calculated."
+
+        )
 
         return self
 
+    # ---------------------------------------------------------
+    # Volatility Analysis
     # ---------------------------------------------------------
 
     def volatility_analysis(self):
 
         """
-        Volatility analysis for
-        every strategy.
+        Calculate volatility metrics
+        for every strategy.
         """
 
         self.volatility = (
@@ -622,7 +742,9 @@ class RobustnessEngine:
 
             .groupby(
 
-                "Strategy"
+                "Strategy",
+
+                as_index=False,
 
             )
 
@@ -630,9 +752,9 @@ class RobustnessEngine:
 
                 CompositeStd=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "std"
+                    "std",
 
                 ),
 
@@ -640,7 +762,7 @@ class RobustnessEngine:
 
                     "Expectancy",
 
-                    "std"
+                    "std",
 
                 ),
 
@@ -648,7 +770,7 @@ class RobustnessEngine:
 
                     "Profit Factor",
 
-                    "std"
+                    "std",
 
                 ),
 
@@ -656,17 +778,19 @@ class RobustnessEngine:
 
                     "Reward Risk",
 
-                    "std"
+                    "std",
 
-                )
+                ),
 
             )
 
-            .reset_index()
-
         )
 
-        self.volatility["Volatility Score"] = (
+        self.volatility[
+
+            "Volatility Score"
+
+        ] = (
 
             100
 
@@ -676,42 +800,78 @@ class RobustnessEngine:
 
                 "CompositeStd"
 
-            ]
+            ].fillna(
+
+                0
+
+            )
 
         ).clip(
 
-            0,
+            lower=0,
 
-            100
+            upper=100,
+
+        )
+
+        self.volatility = round_dataframe(
+
+            self.volatility,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Volatility analysis completed."
 
         )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Detect Outliers
     # ---------------------------------------------------------
 
     def detect_outliers(self):
 
         """
-        Detect outliers using Z-score.
+        Detect Composite Score
+        outliers using Z-score.
         """
 
         temp = self.df.copy()
 
-        temp["ZScore"] = (
+        std = temp[
 
-            temp["Composite Score"]
+            COMPOSITE_SCORE
 
-            -
+        ].std()
 
-            temp["Composite Score"].mean()
+        if std == 0 or pd.isna(std):
 
-        ) / (
+            temp["ZScore"] = 0
 
-            temp["Composite Score"].std()
+        else:
 
-        )
+            temp["ZScore"] = (
+
+                temp[
+
+                    COMPOSITE_SCORE
+
+                ]
+
+                -
+
+                temp[
+
+                    COMPOSITE_SCORE
+
+                ].mean()
+
+            ) / std
 
         self.outliers = (
 
@@ -725,21 +885,42 @@ class RobustnessEngine:
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
         )
 
+        self.outliers = round_dataframe(
+
+            self.outliers,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Detected %d outliers.",
+
+            len(
+
+                self.outliers
+
+            ),
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Robustness Score
     # ---------------------------------------------------------
 
     def robustness_score(self):
 
         """
-        Final institutional
+        Calculate final institutional
         robustness score.
         """
 
@@ -755,7 +936,7 @@ class RobustnessEngine:
 
                         "Strategy",
 
-                        "Consistency Score"
+                        "Consistency Score",
 
                     ]
 
@@ -763,7 +944,7 @@ class RobustnessEngine:
 
                 on="Strategy",
 
-                how="left"
+                how="left",
 
             )
 
@@ -775,7 +956,7 @@ class RobustnessEngine:
 
                         "Strategy",
 
-                        "Volatility Score"
+                        "Volatility Score",
 
                     ]
 
@@ -783,58 +964,73 @@ class RobustnessEngine:
 
                 on="Strategy",
 
-                how="left"
+                how="left",
 
             )
 
         )
 
-        self.robustness["Robustness Score"] = (
+        score_columns = [
+
+            "Stability Score",
+
+            "Expectancy Stability",
+
+            "Profit Stability",
+
+            "RewardRisk Stability",
+
+            "Consistency Score",
+
+            "Volatility Score",
+
+        ]
+
+        self.robustness[
+
+            "Robustness Score"
+
+        ] = (
 
             self.robustness[
 
-                [
-
-                    "Stability Score",
-
-                    "Expectancy Stability",
-
-                    "Profit Stability",
-
-                    "RewardRisk Stability",
-
-                    "Consistency Score",
-
-                    "Volatility Score"
-
-                ]
+                score_columns
 
             ]
 
             .mean(
 
-                axis=1
-
-            )
-
-            .round(
-
-                2
+                axis=1,
 
             )
 
         )
 
+        self.robustness = round_dataframe(
+
+            self.robustness,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Robustness scores calculated."
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Rank Strategies
     # ---------------------------------------------------------
 
     def rank_strategies(self):
 
         """
-        Rank strategies by
-        robustness.
+        Rank strategies using
+        robustness score.
         """
 
         self.robustness = (
@@ -845,13 +1041,13 @@ class RobustnessEngine:
 
                 "Robustness Score",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
@@ -871,28 +1067,43 @@ class RobustnessEngine:
 
                     self.robustness
 
-                ) + 1
+                ) + 1,
 
-            )
+            ),
+
+        )
+
+        self.robustness = round_dataframe(
+
+            self.robustness,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Strategies ranked by robustness."
 
         )
 
         return self
-
-
+    
+    # ---------------------------------------------------------
+    # Summary Report
     # ---------------------------------------------------------
 
     def summary_report(self):
 
         """
-        Executive summary.
+        Generate executive summary.
         """
 
         self.summary = pd.DataFrame(
 
             {
 
-                "Metric":[
+                "Metric": [
 
                     "Strategies",
 
@@ -904,15 +1115,23 @@ class RobustnessEngine:
 
                     "Minimum Robustness",
 
-                    "Outliers"
+                    "Outliers",
 
                 ],
 
-                "Value":[
+                "Value": [
 
-                    self.df["Strategy"].nunique(),
+                    self.df[
 
-                    self.df["Stock"].nunique(),
+                        "Strategy"
+
+                    ].nunique(),
+
+                    self.df[
+
+                        "Stock"
+
+                    ].nunique(),
 
                     round(
 
@@ -922,7 +1141,7 @@ class RobustnessEngine:
 
                         ].mean(),
 
-                        2
+                        2,
 
                     ),
 
@@ -934,7 +1153,7 @@ class RobustnessEngine:
 
                         ].max(),
 
-                        2
+                        2,
 
                     ),
 
@@ -946,157 +1165,224 @@ class RobustnessEngine:
 
                         ].min(),
 
-                        2
+                        2,
 
                     ),
 
                     len(
 
-                        self.outliers
+                        self.outliers,
 
-                    )
+                    ),
 
-                ]
+                ],
 
             }
 
         )
 
+        logger.info(
+
+            "Executive summary generated."
+
+        )
+
         return self
 
-
+    # ---------------------------------------------------------
+    # Diagnostics
     # ---------------------------------------------------------
 
     def diagnostics(self):
 
         """
-        Console diagnostics.
+        Generate execution diagnostics.
         """
 
-        print()
+        self.diagnostic_report = {
 
-        print("=" * 70)
+            "Strategies":
 
-        print("INSTITUTIONAL ROBUSTNESS ENGINE")
+                self.df[
 
-        print("=" * 70)
+                    "Strategy"
 
-        print(
+                ].nunique(),
 
-            f"Strategies : {self.df['Strategy'].nunique()}"
+            "Stocks":
+
+                self.df[
+
+                    "Stock"
+
+                ].nunique(),
+
+            "Average Robustness":
+
+                round(
+
+                    self.robustness[
+
+                        "Robustness Score"
+
+                    ].mean(),
+
+                    2,
+
+                ),
+
+            "Maximum Robustness":
+
+                round(
+
+                    self.robustness[
+
+                        "Robustness Score"
+
+                    ].max(),
+
+                    2,
+
+                ),
+
+            "Minimum Robustness":
+
+                round(
+
+                    self.robustness[
+
+                        "Robustness Score"
+
+                    ].min(),
+
+                    2,
+
+                ),
+
+            "Outliers":
+
+                len(
+
+                    self.outliers,
+
+                ),
+
+        }
+
+        logger.info(
+
+            "Diagnostics generated."
 
         )
-
-        print(
-
-            f"Stocks     : {self.df['Stock'].nunique()}"
-
-        )
-
-        print(
-
-            f"Average Robustness : "
-
-            f"{self.robustness['Robustness Score'].mean():.2f}"
-
-        )
-
-        print(
-
-            f"Maximum Robustness : "
-
-            f"{self.robustness['Robustness Score'].max():.2f}"
-
-        )
-
-        print(
-
-            f"Outliers : {len(self.outliers)}"
-
-        )
-
-        print("=" * 70)
-
-        print()
 
         return self
 
+    # ---------------------------------------------------------
+    # Execution Report
+    # ---------------------------------------------------------
 
+    def execution_report(self):
+
+        """
+        Log execution summary.
+        """
+
+        banner(
+
+            logger,
+
+            "Institutional Robustness Completed",
+
+        )
+
+        for key, value in self.diagnostic_report.items():
+
+            logger.info(
+
+                "%-30s : %s",
+
+                key,
+
+                value,
+
+            )
+
+        logger.info(
+
+            "Execution Time (s)           : %.3f",
+
+            self.execution_time,
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Export
     # ---------------------------------------------------------
 
     def export(
 
         self,
 
-        output="Institutional_Robustness.xlsx"
+        output_file: str = "Institutional_Robustness.xlsx",
 
     ):
 
         """
-        Export workbook.
+        Export all generated reports.
         """
 
-        with pd.ExcelWriter(
+        from strategy_compare_v4.utils.io_utils import (
 
-            output,
+            write_excel,
 
-            engine="openpyxl"
+        )
 
-        ) as writer:
+        sheets = {
 
-            self.robustness.to_excel(
+            "Robustness":
 
-                writer,
+                self.robustness,
 
-                sheet_name="Robustness",
+            "Consistency":
 
-                index=False
+                self.consistency,
 
-            )
+            "Volatility":
 
-            self.consistency.to_excel(
+                self.volatility,
 
-                writer,
+            "Outliers":
 
-                sheet_name="Consistency",
+                self.outliers,
 
-                index=False
+            "Summary":
 
-            )
+                self.summary,
 
-            self.volatility.to_excel(
+        }
 
-                writer,
+        write_excel(
 
-                sheet_name="Volatility",
+            sheets,
 
-                index=False
+            output_file,
 
-            )
+        )
 
-            self.outliers.to_excel(
+        logger.info(
 
-                writer,
+            "Robustness workbook exported -> %s",
 
-                sheet_name="Outliers",
+            output_file,
 
-                index=False
-
-            )
-
-            self.summary.to_excel(
-
-                writer,
-
-                sheet_name="Summary",
-
-                index=False
-
-            )
+        )
 
         return self
 
-
+    # ---------------------------------------------------------
+    # Get Results
     # ---------------------------------------------------------
 
     def get_results(self):
@@ -1107,19 +1393,30 @@ class RobustnessEngine:
 
         return {
 
-            "robustness": self.robustness,
+            "robustness":
 
-            "consistency": self.consistency,
+                self.robustness,
 
-            "volatility": self.volatility,
+            "consistency":
 
-            "outliers": self.outliers,
+                self.consistency,
 
-            "summary": self.summary
+            "volatility":
+
+                self.volatility,
+
+            "outliers":
+
+                self.outliers,
+
+            "summary":
+
+                self.summary,
 
         }
 
-
+    # ---------------------------------------------------------
+    # Execute Pipeline
     # ---------------------------------------------------------
 
     def run(self):
@@ -1128,56 +1425,95 @@ class RobustnessEngine:
         Execute complete robustness pipeline.
         """
 
-        return (
+        start = time.perf_counter()
 
-            self
+        try:
 
-            .validate()
+            (
 
-            .coefficient_of_variation()
+                self
 
-            .stability_score()
+                .validate()
 
-            .expectancy_stability()
+                .coefficient_of_variation()
 
-            .profit_factor_stability()
+                .stability_score()
 
-            .reward_risk_stability()
+                .expectancy_stability()
 
-            .composite_consistency()
+                .profit_factor_stability()
 
-            .volatility_analysis()
+                .reward_risk_stability()
 
-            .detect_outliers()
+                .composite_consistency()
 
-            .robustness_score()
+                .volatility_analysis()
 
-            .rank_strategies()
+                .detect_outliers()
 
-            .summary_report()
+                .robustness_score()
 
-            .diagnostics()
+                .rank_strategies()
 
-        )
+                .summary_report()
+
+                .diagnostics()
+
+            )
+
+        except Exception as exc:
+
+            logger.exception(
+
+                "Robustness Engine failed."
+
+            )
+
+            raise RuntimeError(
+
+                f"Robustness Engine failed:\n{exc}"
+
+            ) from exc
+
+        finally:
+
+            self.execution_time = round(
+
+                time.perf_counter()
+
+                - start,
+
+                3,
+
+            )
+
+        self.execution_report()
+
+        return self
 
 
-# ==========================================================
+# ============================================================
 # Convenience Function
-# ==========================================================
+# ============================================================
 
 def analyze_robustness(
 
-    comparison_df,
+    comparison_df: pd.DataFrame,
 
-    output_file="Institutional_Robustness.xlsx"
+    output_file: str = "Institutional_Robustness.xlsx",
 
-):
+) -> RobustnessEngine:
+
+    """
+    Execute the institutional
+    robustness engine.
+    """
 
     engine = (
 
         RobustnessEngine(
 
-            comparison_df
+            comparison_df,
 
         )
 
@@ -1187,21 +1523,76 @@ def analyze_robustness(
 
     engine.export(
 
-        output_file
+        output_file,
 
     )
 
     return engine
 
 
-# ==========================================================
+# ============================================================
 # Main
-# ==========================================================
+# ============================================================
+
+def main():
+
+    import argparse
+
+    parser = argparse.ArgumentParser(
+
+        description=(
+
+            "Institutional "
+
+            "Robustness Engine V4"
+
+        )
+
+    )
+
+    parser.add_argument(
+
+        "--input",
+
+        required=True,
+
+        help="Comparison workbook",
+
+    )
+
+    parser.add_argument(
+
+        "--output",
+
+        default="Institutional_Robustness.xlsx",
+
+        help="Output workbook",
+
+    )
+
+    args = parser.parse_args()
+
+    from strategy_compare_v4.utils.io_utils import (
+
+        read_excel,
+
+    )
+
+    comparison_df = read_excel(
+
+        args.input,
+
+    )
+
+    analyze_robustness(
+
+        comparison_df,
+
+        args.output,
+
+    )
+
 
 if __name__ == "__main__":
 
-    print(
-
-        "Import analyze_robustness() from strategy_compare.py"
-
-    )
+    main()

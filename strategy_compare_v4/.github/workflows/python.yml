@@ -1,0 +1,183 @@
+name: Python CI
+
+on:
+
+  push:
+
+    branches:
+      - main
+      - master
+      - develop
+
+  pull_request:
+
+    branches:
+      - main
+      - master
+      - develop
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  test:
+
+    name: Python ${{ matrix.python-version }}
+
+    runs-on: ubuntu-latest
+
+    strategy:
+
+      fail-fast: false
+
+      matrix:
+
+        python-version:
+          - "3.11"
+          - "3.12"
+
+    steps:
+
+      # ------------------------------------------------------
+      # Checkout
+      # ------------------------------------------------------
+
+      - name: Checkout Repository
+
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------
+      # Python
+      # ------------------------------------------------------
+
+      - name: Set up Python
+
+        uses: actions/setup-python@v5
+
+        with:
+
+          python-version: ${{ matrix.python-version }}
+
+          cache: "pip"
+
+      # ------------------------------------------------------
+      # Install
+      # ------------------------------------------------------
+
+      - name: Upgrade pip
+
+        run: |
+
+          python -m pip install --upgrade pip
+
+      - name: Install Package
+
+        run: |
+
+          pip install -e .[dev]
+
+      # ------------------------------------------------------
+      # Show Versions
+      # ------------------------------------------------------
+
+      - name: Environment
+
+        run: |
+
+          python --version
+
+          pip --version
+
+          black --version
+
+          ruff --version
+
+          pytest --version
+
+          mypy --version
+
+      # ------------------------------------------------------
+      # Ruff
+      # ------------------------------------------------------
+
+      - name: Ruff
+
+        run: |
+
+          ruff check .
+
+      # ------------------------------------------------------
+      # Black
+      # ------------------------------------------------------
+
+      - name: Black
+
+        run: |
+
+          black --check .
+
+      # ------------------------------------------------------
+      # MyPy
+      # ------------------------------------------------------
+
+      - name: MyPy
+
+        run: |
+
+          mypy .
+
+      # ------------------------------------------------------
+      # PyTest
+      # ------------------------------------------------------
+
+      - name: Run Tests
+
+        run: |
+
+          pytest \
+          --cov=comparison \
+          --cov=derived_metrics \
+          --cov=portfolio \
+          --cov=reports \
+          --cov=utils \
+          --cov-report=xml \
+          --cov-report=term
+
+      # ------------------------------------------------------
+      # Upload Coverage
+      # ------------------------------------------------------
+
+      - name: Upload Coverage
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: coverage-report-python-${{ matrix.python-version }}
+
+          path: |
+
+            coverage.xml
+
+            htmlcov/
+
+      # ------------------------------------------------------
+      # Upload Test Results
+      # ------------------------------------------------------
+
+      - name: Upload PyTest Cache
+
+        if: always()
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: pytest-cache-${{ matrix.python-version }}
+
+          path: |
+
+            .pytest_cache/

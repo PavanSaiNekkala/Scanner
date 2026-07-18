@@ -2,11 +2,22 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    utils/helpers.py
+Module
+------
+utils/helpers.py
 
-Purpose:
-    Common helper functions used across the platform.
+Purpose
+-------
+Common helper utilities shared across the
+Institutional Strategy Comparison Platform.
+
+Provides
+--------
+• DataFrame validation
+• Safe DataFrame manipulation
+• Directory management
+• Column utilities
+• Dataset summary
 
 =============================================================
 """
@@ -14,286 +25,200 @@ Purpose:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Iterable
 
 import pandas as pd
 
 
-###############################################################################
+# ============================================================
 # Column Validation
-###############################################################################
+# ============================================================
 
 def require_columns(
-
     df: pd.DataFrame,
-
-    required_columns
-
-):
-
+    required_columns: Iterable[str],
+) -> None:
     """
-    Validate required dataframe columns.
+    Validate that a DataFrame contains all required columns.
+
+    Raises
+    ------
+    ValueError
+        If one or more required columns are missing.
     """
 
     missing = [
-
-        col
-
-        for col in required_columns
-
-        if col not in df.columns
-
+        column
+        for column in required_columns
+        if column not in df.columns
     ]
 
     if missing:
-
         raise ValueError(
-
             "Missing required columns:\n"
-
-            +
-
-            "\n".join(missing)
-
+            + "\n".join(sorted(missing))
         )
 
 
-###############################################################################
+# ============================================================
 # DataFrame Copy
-###############################################################################
+# ============================================================
 
 def copy_dataframe(
-
-    df: pd.DataFrame
-
-):
-
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Return defensive copy.
+    Return a deep defensive copy.
     """
 
     return df.copy(deep=True)
 
 
-###############################################################################
+# ============================================================
 # Empty DataFrame
-###############################################################################
+# ============================================================
 
 def is_empty(
-
-    df: pd.DataFrame
-
-):
-
+    df: pd.DataFrame | None,
+) -> bool:
     """
-    Check dataframe is empty.
+    Check whether a DataFrame is None or empty.
     """
 
-    return (
-
-        df is None
-
-        or
-
-        df.empty
-
-    )
+    return df is None or df.empty
 
 
-###############################################################################
-# Ensure Output Directory
-###############################################################################
+# ============================================================
+# Ensure Directory
+# ============================================================
 
 def ensure_directory(
-
-    directory
-
-):
-
+    directory: str | Path,
+) -> Path:
     """
-    Create directory if needed.
+    Create a directory if it does not exist.
     """
 
     path = Path(directory)
 
     path.mkdir(
-
         parents=True,
-
-        exist_ok=True
-
+        exist_ok=True,
     )
 
     return path
 
 
-###############################################################################
-# Sort DataFrame
-###############################################################################
+# ============================================================
+# Safe Sorting
+# ============================================================
 
 def sort_dataframe(
-
-    df,
-
-    column,
-
-    ascending=False
-
-):
-
+    df: pd.DataFrame,
+    column: str,
+    ascending: bool = False,
+) -> pd.DataFrame:
     """
-    Safe dataframe sorting.
+    Safely sort a DataFrame.
+
+    Returns the original DataFrame if the
+    requested column does not exist.
     """
 
     if column not in df.columns:
-
         return df
 
     return (
-
-        df
-
-        .sort_values(
-
-            column,
-
-            ascending=ascending
-
+        df.sort_values(
+            by=column,
+            ascending=ascending,
         )
-
-        .reset_index(
-
-            drop=True
-
-        )
-
+        .reset_index(drop=True)
     )
 
 
-###############################################################################
+# ============================================================
 # Move Column
-###############################################################################
+# ============================================================
 
 def move_column(
-
-    df,
-
-    column,
-
-    position
-
-):
-
+    df: pd.DataFrame,
+    column: str,
+    position: int,
+) -> pd.DataFrame:
     """
-    Move column to desired position.
+    Move a column to a specified position.
     """
 
     if column not in df.columns:
-
         return df
 
     columns = list(df.columns)
 
     columns.remove(column)
 
-    columns.insert(
+    columns.insert(position, column)
 
-        position,
-
-        column
-
-    )
-
-    return df[columns]
+    return df.loc[:, columns]
 
 
-###############################################################################
-# First Available Column
-###############################################################################
+# ============================================================
+# First Existing Column
+# ============================================================
 
 def first_existing_column(
-
-    df,
-
-    candidates
-
-):
-
+    df: pd.DataFrame,
+    candidates: Iterable[str],
+) -> str | None:
     """
-    Return first matching column.
+    Return the first matching column.
     """
 
-    for column in candidates:
-
-        if column in df.columns:
-
-            return column
-
-    return None
-
-
-###############################################################################
-# Safe Rename
-###############################################################################
-
-def safe_rename(
-
-    df,
-
-    mapping
-
-):
-
-    """
-    Rename only existing columns.
-    """
-
-    mapping = {
-
-        old: new
-
-        for old, new in mapping.items()
-
-        if old in df.columns
-
-    }
-
-    return df.rename(
-
-        columns=mapping
-
+    return next(
+        (
+            column
+            for column in candidates
+            if column in df.columns
+        ),
+        None,
     )
 
 
-###############################################################################
+# ============================================================
+# Safe Rename
+# ============================================================
+
+def safe_rename(
+    df: pd.DataFrame,
+    mapping: dict[str, str],
+) -> pd.DataFrame:
+    """
+    Rename only columns that exist.
+    """
+
+    valid_mapping = {
+        old: new
+        for old, new in mapping.items()
+        if old in df.columns
+    }
+
+    return df.rename(columns=valid_mapping)
+
+
+# ============================================================
 # DataFrame Summary
-###############################################################################
+# ============================================================
 
 def dataframe_summary(
-
-    df
-
-):
-
+    df: pd.DataFrame,
+) -> dict[str, Any]:
     """
-    Basic dataframe summary.
+    Return a basic DataFrame summary.
     """
 
     return {
-
-        "Rows": len(df),
-
-        "Columns": len(df.columns),
-
-        "Missing Values": int(
-
-            df.isna().sum().sum()
-
-        ),
-
-        "Duplicate Rows": int(
-
-            df.duplicated().sum()
-
-        )
-
+        "Rows": int(len(df)),
+        "Columns": int(df.shape[1]),
+        "Missing Values": int(df.isna().sum().sum()),
+        "Duplicate Rows": int(df.duplicated().sum()),
     }

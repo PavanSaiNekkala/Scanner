@@ -2,11 +2,21 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    utils/io_utils.py
+Module
+------
+utils/io_utils.py
 
-Purpose:
-    Common input/output utilities.
+Purpose
+-------
+Common file and directory utilities used across the
+Institutional Strategy Comparison Platform.
+
+Provides
+--------
+• Directory management
+• File discovery
+• CSV / Excel I/O
+• Path utilities
 
 =============================================================
 """
@@ -14,359 +24,229 @@ Purpose:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
 
-###############################################################################
-# Directory
-###############################################################################
+# ============================================================
+# Directory Utilities
+# ============================================================
 
-def ensure_directory(path):
+def ensure_directory(
+    path: str | Path,
+) -> Path:
     """
-    Create directory if it does not exist.
+    Create a directory if it does not already exist.
     """
 
-    path = Path(path)
+    directory = Path(path)
 
-    path.mkdir(
-
+    directory.mkdir(
         parents=True,
-
-        exist_ok=True
-
+        exist_ok=True,
     )
 
-    return path
+    return directory
 
 
-###############################################################################
-# File Exists
-###############################################################################
-
-def file_exists(path):
+def file_exists(
+    path: str | Path,
+) -> bool:
     """
-    Check whether file exists.
+    Return True if the file exists.
     """
 
     return Path(path).is_file()
 
 
-###############################################################################
-# Directory Exists
-###############################################################################
-
-def directory_exists(path):
+def directory_exists(
+    path: str | Path,
+) -> bool:
     """
-    Check whether directory exists.
+    Return True if the directory exists.
     """
 
     return Path(path).is_dir()
 
 
-###############################################################################
-# Read CSV
-###############################################################################
+# ============================================================
+# Reading Files
+# ============================================================
 
 def read_csv(
-
-    file_path,
-
-    **kwargs
-
-):
+    file_path: str | Path,
+    **kwargs: Any,
+) -> pd.DataFrame:
     """
-    Read CSV file.
+    Read a CSV file.
     """
 
-    return pd.read_csv(
+    return pd.read_csv(file_path, **kwargs)
 
-        file_path,
-
-        **kwargs
-
-    )
-
-
-###############################################################################
-# Read Excel
-###############################################################################
 
 def read_excel(
-
-    file_path,
-
-    sheet_name=0,
-
-    **kwargs
-
-):
+    file_path: str | Path,
+    sheet_name: str | int = 0,
+    **kwargs: Any,
+) -> pd.DataFrame:
     """
-    Read Excel worksheet.
+    Read an Excel worksheet.
     """
 
     return pd.read_excel(
-
         file_path,
-
         sheet_name=sheet_name,
-
-        **kwargs
-
+        **kwargs,
     )
 
 
-###############################################################################
-# Write CSV
-###############################################################################
+# ============================================================
+# Writing Files
+# ============================================================
 
 def write_csv(
-
-    df,
-
-    file_path,
-
-    index=False,
-
-    **kwargs
-
-):
+    df: pd.DataFrame,
+    file_path: str | Path,
+    index: bool = False,
+    **kwargs: Any,
+) -> None:
     """
-    Export dataframe to CSV.
+    Export a DataFrame to CSV.
     """
+
+    file_path = Path(file_path)
+
+    ensure_directory(file_path.parent)
 
     df.to_csv(
-
         file_path,
-
         index=index,
-
-        **kwargs
-
+        **kwargs,
     )
 
 
-###############################################################################
-# Write Excel
-###############################################################################
-
 def write_excel(
-
-    df,
-
-    file_path,
-
-    sheet_name="Sheet1",
-
-    index=False,
-
-    **kwargs
-
-):
+    df: pd.DataFrame,
+    file_path: str | Path,
+    sheet_name: str = "Sheet1",
+    index: bool = False,
+    **kwargs: Any,
+) -> None:
     """
-    Export dataframe to Excel.
+    Export a DataFrame to an Excel workbook.
     """
+
+    file_path = Path(file_path)
+
+    ensure_directory(file_path.parent)
 
     with pd.ExcelWriter(
-
         file_path,
-
-        engine="openpyxl"
-
+        engine="openpyxl",
     ) as writer:
 
         df.to_excel(
-
             writer,
-
             sheet_name=sheet_name,
-
             index=index,
-
-            **kwargs
-
+            **kwargs,
         )
 
 
-###############################################################################
-# List Files
-###############################################################################
+# ============================================================
+# File Discovery
+# ============================================================
 
 def list_files(
-
-    directory,
-
-    pattern="*"
-
-):
+    directory: str | Path,
+    pattern: str = "*",
+) -> list[Path]:
     """
-    List files matching pattern.
+    Return files matching a pattern.
     """
 
-    return sorted(
+    return sorted(Path(directory).glob(pattern))
 
-        Path(directory).glob(pattern)
-
-    )
-
-
-###############################################################################
-# List Directories
-###############################################################################
 
 def list_directories(
-
-    directory
-
-):
+    directory: str | Path,
+) -> list[Path]:
     """
-    Return sub-directories.
+    Return all immediate sub-directories.
     """
 
     return sorted(
-
-        [
-
-            p
-
-            for p in Path(directory).iterdir()
-
-            if p.is_dir()
-
-        ]
-
+        path
+        for path in Path(directory).iterdir()
+        if path.is_dir()
     )
 
-
-###############################################################################
-# Find Statistics Files
-###############################################################################
 
 def find_statistics_files(
-
-    directory
-
-):
+    directory: str | Path,
+) -> list[Path]:
     """
-    Find strategy statistics workbooks.
+    Return all statistics workbooks.
     """
 
     return sorted(
-
-        Path(directory).glob(
-
-            "**/*Statistics.xlsx"
-
-        )
-
+        Path(directory).glob("**/*Statistics.xlsx")
     )
 
-
-###############################################################################
-# Find Backtest CSV Files
-###############################################################################
 
 def find_backtest_files(
-
-    directory
-
-):
+    directory: str | Path,
+) -> list[Path]:
     """
-    Find all backtest CSV files.
+    Return all backtest CSV files.
     """
 
     return sorted(
-
-        Path(directory).glob(
-
-            "**/*.csv"
-
-        )
-
+        Path(directory).glob("**/*.csv")
     )
 
 
-###############################################################################
-# File Stem
-###############################################################################
+# ============================================================
+# Path Utilities
+# ============================================================
 
 def file_stem(
-
-    file_path
-
-):
+    file_path: str | Path,
+) -> str:
     """
-    Filename without extension.
+    Return filename without extension.
     """
 
-    return Path(
+    return Path(file_path).stem
 
-        file_path
-
-    ).stem
-
-
-###############################################################################
-# File Name
-###############################################################################
 
 def file_name(
-
-    file_path
-
-):
+    file_path: str | Path,
+) -> str:
     """
-    Filename with extension.
+    Return filename including extension.
     """
 
-    return Path(
+    return Path(file_path).name
 
-        file_path
-
-    ).name
-
-
-###############################################################################
-# Resolve Path
-###############################################################################
 
 def resolve_path(
-
-    *parts
-
-):
+    *parts: str | Path,
+) -> Path:
     """
-    Build absolute path.
+    Build an absolute path.
     """
 
-    return Path(
+    return Path(*parts).resolve()
 
-        *parts
-
-    ).resolve()
-
-
-###############################################################################
-# Relative Path
-###############################################################################
 
 def relative_path(
-
-    path,
-
-    start="."
-
-):
+    path: str | Path,
+    start: str | Path = ".",
+) -> Path:
     """
-    Return relative path.
+    Return the relative path.
     """
 
-    return Path(
-
-        path
-
-    ).relative_to(
-
-        Path(start)
-
-    )
+    return Path(path).relative_to(Path(start))

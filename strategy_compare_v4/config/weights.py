@@ -2,117 +2,148 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    config/weights.py
+Module
+------
+config/weights.py
 
-Purpose:
-    Centralized scoring weights used across the
-    institutional ranking engine.
+Purpose
+-------
+Centralized scoring weights used throughout the
+Institutional Strategy Comparison Platform.
+
+Guidelines
+----------
+• Composite Score
+• Edge Score
+• Reliability Score
+• Efficiency Score
+• Portfolio Allocation
+• Leaderboard Ranking
+• Robustness Analysis
+• Correlation Analysis
 
 =============================================================
 """
 
-###############################################################################
+from __future__ import annotations
+
+from config.constants import (
+    COMPOSITE_SCORE,
+    EDGE_SCORE,
+    RELIABILITY_SCORE,
+    EFFICIENCY_SCORE,
+    PROFIT_VELOCITY,
+    SIGNAL_QUALITY,
+    HOLDING_EFFICIENCY,
+    EXPECTANCY,
+    PROFIT_FACTOR,
+    REWARD_RISK,
+    TRADES_PER_YEAR,
+    WINNING_EXIT,
+    LOSING_EXIT,
+)
+
+# ============================================================
 # Composite Score
-###############################################################################
+# ============================================================
 
 COMPOSITE_WEIGHTS = {
 
-    "Edge Score": 0.30,
+    EDGE_SCORE: 0.30,
 
-    "Reliability Score": 0.25,
+    RELIABILITY_SCORE: 0.25,
 
-    "Efficiency Score": 0.20,
+    EFFICIENCY_SCORE: 0.20,
 
-    "Profit Velocity": 0.10,
+    PROFIT_VELOCITY: 0.10,
 
-    "Signal Quality": 0.05,
+    SIGNAL_QUALITY: 0.05,
 
-    "Holding Efficiency": 0.05,
+    HOLDING_EFFICIENCY: 0.05,
 
-    "Expectancy": 0.05
+    EXPECTANCY: 0.05,
 
 }
 
-###############################################################################
+# ============================================================
 # Edge Score
-###############################################################################
+# ============================================================
 
 EDGE_WEIGHTS = {
 
-    "Expectancy": 0.35,
+    EXPECTANCY: 0.35,
 
-    "Profit Factor": 0.30,
+    PROFIT_FACTOR: 0.30,
 
-    "Reward Risk": 0.20,
+    REWARD_RISK: 0.20,
 
-    "Profit Velocity": 0.15
+    PROFIT_VELOCITY: 0.15,
 
 }
 
-###############################################################################
+# ============================================================
 # Reliability Score
-###############################################################################
+# ============================================================
 
 RELIABILITY_WEIGHTS = {
 
-    "Trades / Year": 0.30,
+    TRADES_PER_YEAR: 0.30,
 
-    "Winning Exit %": 0.25,
+    WINNING_EXIT: 0.25,
 
-    "Losing Exit %": 0.20,
+    LOSING_EXIT: 0.20,
 
-    "Signal Quality": 0.25
+    SIGNAL_QUALITY: 0.25,
 
 }
 
-###############################################################################
+# ============================================================
 # Efficiency Score
-###############################################################################
+# ============================================================
 
 EFFICIENCY_WEIGHTS = {
 
-    "Holding Efficiency": 0.40,
+    HOLDING_EFFICIENCY: 0.40,
 
-    "Profit Velocity": 0.30,
+    PROFIT_VELOCITY: 0.30,
 
-    "Expectancy": 0.30
+    EXPECTANCY: 0.30,
 
 }
 
-###############################################################################
+# ============================================================
 # Portfolio Allocation
-###############################################################################
+# ============================================================
 
 PORTFOLIO_WEIGHTS = {
 
-    "Composite Score": 0.60,
+    COMPOSITE_SCORE: 0.60,
 
-    "Reliability Score": 0.20,
+    RELIABILITY_SCORE: 0.20,
 
-    "Edge Score": 0.20
+    EDGE_SCORE: 0.20,
 
 }
 
-###############################################################################
+# ============================================================
 # Leaderboard Ranking
-###############################################################################
+# ============================================================
 
 LEADERBOARD_WEIGHTS = {
 
-    "Composite Score": 0.50,
+    COMPOSITE_SCORE: 0.50,
 
-    "Edge Score": 0.20,
+    EDGE_SCORE: 0.20,
 
-    "Reliability Score": 0.15,
+    RELIABILITY_SCORE: 0.15,
 
-    "Efficiency Score": 0.15
+    EFFICIENCY_SCORE: 0.15,
 
 }
 
-###############################################################################
+# ============================================================
 # Robustness Analysis
-###############################################################################
+# ============================================================
 
 ROBUSTNESS_WEIGHTS = {
 
@@ -122,13 +153,13 @@ ROBUSTNESS_WEIGHTS = {
 
     "Profit Factor Stability": 0.20,
 
-    "Reward Risk Stability": 0.20
+    "Reward Risk Stability": 0.20,
 
 }
 
-###############################################################################
+# ============================================================
 # Correlation Analysis
-###############################################################################
+# ============================================================
 
 CORRELATION_WEIGHTS = {
 
@@ -136,6 +167,6 @@ CORRELATION_WEIGHTS = {
 
     "Spearman": 0.30,
 
-    "Kendall": 0.20
+    "Kendall": 0.20,
 
 }

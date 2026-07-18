@@ -2,19 +2,34 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    config/thresholds.py
+Module
+------
+config/thresholds.py
 
-Purpose:
-    Centralized thresholds used throughout the
-    institutional strategy comparison platform.
+Purpose
+-------
+Centralized threshold values used throughout the
+Institutional Strategy Comparison Platform.
+
+Guidelines
+----------
+• Strategy Eligibility
+• Portfolio Filters
+• Portfolio Constraints
+• Robustness
+• Correlation
+• Quality Classification
+• Data Validation
+• Reporting
 
 =============================================================
 """
 
-###############################################################################
+from __future__ import annotations
+
+# ============================================================
 # Strategy Eligibility
-###############################################################################
+# ============================================================
 
 MIN_EXPECTANCY = 0.00
 
@@ -26,9 +41,9 @@ MIN_TRADES = 20
 
 MIN_TRADES_PER_YEAR = 10
 
-###############################################################################
-# Portfolio Filters
-###############################################################################
+# ============================================================
+# Institutional Score Filters
+# ============================================================
 
 MIN_COMPOSITE_SCORE = 60
 
@@ -38,19 +53,19 @@ MIN_RELIABILITY_SCORE = 50
 
 MIN_EFFICIENCY_SCORE = 50
 
-###############################################################################
-# Portfolio Constraints
-###############################################################################
+# ============================================================
+# Portfolio Construction
+# ============================================================
+
+TOP_STOCKS = 25
 
 MAX_POSITION_WEIGHT = 10.0
 
 MIN_POSITION_WEIGHT = 1.0
 
-TOP_STOCKS = 25
-
-###############################################################################
-# Robustness Thresholds
-###############################################################################
+# ============================================================
+# Robustness Analysis
+# ============================================================
 
 MAX_EXPECTANCY_CV = 0.50
 
@@ -60,9 +75,9 @@ MAX_REWARD_RISK_CV = 0.50
 
 MIN_ROBUSTNESS_SCORE = 60
 
-###############################################################################
-# Correlation Thresholds
-###############################################################################
+# ============================================================
+# Correlation Analysis
+# ============================================================
 
 LOW_CORRELATION = 0.30
 
@@ -70,48 +85,54 @@ MEDIUM_CORRELATION = 0.60
 
 HIGH_CORRELATION = 0.80
 
-###############################################################################
-# Signal Quality
-###############################################################################
+# Diversification guidance
+
+MAX_PORTFOLIO_CORRELATION = 0.70
+
+# ============================================================
+# Quality Classification
+# ============================================================
 
 HIGH_SIGNAL_QUALITY = 80
-
 MEDIUM_SIGNAL_QUALITY = 60
-
 LOW_SIGNAL_QUALITY = 40
 
-###############################################################################
-# Holding Efficiency
-###############################################################################
-
 HIGH_HOLDING_EFFICIENCY = 80
-
 MEDIUM_HOLDING_EFFICIENCY = 60
-
 LOW_HOLDING_EFFICIENCY = 40
 
-###############################################################################
-# Profit Velocity
-###############################################################################
-
 HIGH_PROFIT_VELOCITY = 80
-
 MEDIUM_PROFIT_VELOCITY = 60
-
 LOW_PROFIT_VELOCITY = 40
 
-###############################################################################
+# Institutional score interpretation
+
+EXCELLENT_SCORE = 90
+
+GOOD_SCORE = 75
+
+ACCEPTABLE_SCORE = 60
+
+POOR_SCORE = 40
+
+# ============================================================
 # Data Quality
-###############################################################################
+# ============================================================
 
 MAX_MISSING_PERCENT = 5
 
 MIN_SAMPLE_SIZE = 30
 
-###############################################################################
+MIN_STOCKS_FOR_COMPARISON = 5
+
+MIN_STRATEGIES_FOR_COMPARISON = 2
+
+# ============================================================
 # Excel Reporting
-###############################################################################
+# ============================================================
 
 TOP_LEADERBOARD_ROWS = 20
 
 TOP_PORTFOLIO_ROWS = 25
+
+TOP_STRATEGY_ROWS = 10

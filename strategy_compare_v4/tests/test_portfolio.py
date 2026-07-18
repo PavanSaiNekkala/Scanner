@@ -2,447 +2,307 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    tests/test_portfolio.py
+Module
+------
+tests/test_portfolio.py
 
-Purpose:
-    Unit tests for portfolio modules.
+Purpose
+-------
+Unit tests for portfolio allocation and
+risk filtering modules.
 
 =============================================================
 """
 
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
+import pytest
 
 from portfolio.allocation import (
-    equal_weight,
-    score_weight,
-    edge_weight,
-    reliability_weight,
-    blended_weight,
     allocate_portfolio,
+    blended_weight,
+    edge_weight,
+    equal_weight,
+    reliability_weight,
+    score_weight,
 )
 
 from portfolio.risk_filter import (
     apply_risk_filters,
 )
 
-
-###############################################################################
-# Sample Data
-###############################################################################
-
-def sample_dataframe():
-
-    return pd.DataFrame({
-
-        "Stock": [
-
-            "ABC",
-
-            "XYZ",
-
-            "PQR",
-
-            "DEF",
-
-            "LMN"
-
-        ],
-
-        "Composite Score": [
-
-            95,
-
-            82,
-
-            71,
-
-            64,
-
-            45
-
-        ],
-
-        "Edge Score": [
-
-            93,
-
-            80,
-
-            70,
-
-            60,
-
-            35
-
-        ],
-
-        "Reliability Score": [
-
-            90,
-
-            79,
-
-            73,
-
-            62,
-
-            40
-
-        ],
-
-        "Efficiency Score": [
-
-            88,
-
-            76,
-
-            70,
-
-            61,
-
-            42
-
-        ],
-
-        "Expectancy": [
-
-            4.2,
-
-            2.6,
-
-            1.9,
-
-            0.8,
-
-            -0.5
-
-        ],
-
-        "Profit Factor": [
-
-            2.3,
-
-            1.8,
-
-            1.5,
-
-            1.2,
-
-            0.8
-
-        ],
-
-        "Reward Risk": [
-
-            2.8,
-
-            2.2,
-
-            1.7,
-
-            1.3,
-
-            0.9
-
-        ],
-
-        "Trades": [
-
-            150,
-
-            120,
-
-            80,
-
-            50,
-
-            12
-
-        ]
-
-    })
-
-
-###############################################################################
-# Equal Weight
-###############################################################################
-
-def test_equal_weight():
-
-    df = equal_weight(
-
-        sample_dataframe()
-
-    )
-
-    assert round(
-
-        df["Weight"].sum(),
-
-        2
-
-    ) == 100.00
-
-
-###############################################################################
-# Composite Allocation
-###############################################################################
-
-def test_score_weight():
-
-    df = score_weight(
-
-        sample_dataframe()
-
-    )
-
-    assert np.isclose(
-
-        df["Weight"].sum(),
-
-        100.0
-
+TOTAL_WEIGHT = 100.0
+
+
+# ============================================================
+# Fixtures
+# ============================================================
+
+@pytest.fixture
+def sample_dataframe() -> pd.DataFrame:
+    """
+    Sample portfolio used across all tests.
+    """
+
+    return pd.DataFrame(
+        {
+            "Stock": [
+                "ABC",
+                "XYZ",
+                "PQR",
+                "DEF",
+                "LMN",
+            ],
+            "Composite Score": [
+                95,
+                82,
+                71,
+                64,
+                45,
+            ],
+            "Edge Score": [
+                93,
+                80,
+                70,
+                60,
+                35,
+            ],
+            "Reliability Score": [
+                90,
+                79,
+                73,
+                62,
+                40,
+            ],
+            "Efficiency Score": [
+                88,
+                76,
+                70,
+                61,
+                42,
+            ],
+            "Expectancy": [
+                4.2,
+                2.6,
+                1.9,
+                0.8,
+                -0.5,
+            ],
+            "Profit Factor": [
+                2.3,
+                1.8,
+                1.5,
+                1.2,
+                0.8,
+            ],
+            "Reward Risk": [
+                2.8,
+                2.2,
+                1.7,
+                1.3,
+                0.9,
+            ],
+            "Trades": [
+                150,
+                120,
+                80,
+                50,
+                12,
+            ],
+        }
     )
 
 
-###############################################################################
-# Edge Allocation
-###############################################################################
+# ============================================================
+# Allocation Methods
+# ============================================================
 
-def test_edge_weight():
+@pytest.mark.parametrize(
+    "allocator",
+    [
+        equal_weight,
+        score_weight,
+        edge_weight,
+        reliability_weight,
+        blended_weight,
+    ],
+)
+def test_allocation_methods(
+    allocator,
+    sample_dataframe: pd.DataFrame,
+) -> None:
+    """
+    Every allocation method must
+    produce valid portfolio weights.
+    """
 
-    df = edge_weight(
+    df = allocator(sample_dataframe)
 
-        sample_dataframe()
-
+    assert df["Weight"].sum() == pytest.approx(
+        TOTAL_WEIGHT
     )
 
-    assert np.isclose(
+    assert (df["Weight"] > 0).all()
 
-        df["Weight"].sum(),
-
-        100.0
-
-    )
+    assert not df["Weight"].isna().any()
 
 
-###############################################################################
-# Reliability Allocation
-###############################################################################
-
-def test_reliability_weight():
-
-    df = reliability_weight(
-
-        sample_dataframe()
-
-    )
-
-    assert np.isclose(
-
-        df["Weight"].sum(),
-
-        100.0
-
-    )
-
-
-###############################################################################
-# Blended Allocation
-###############################################################################
-
-def test_blended_weight():
-
-    df = blended_weight(
-
-        sample_dataframe()
-
-    )
-
-    assert np.isclose(
-
-        df["Weight"].sum(),
-
-        100.0
-
-    )
-
-
-###############################################################################
+# ============================================================
 # Allocation Dispatcher
-###############################################################################
+# ============================================================
 
-def test_allocate_portfolio():
+def test_allocate_portfolio(
+    sample_dataframe: pd.DataFrame,
+) -> None:
+    """
+    Dispatcher should allocate
+    valid portfolio weights.
+    """
 
-    df = allocate_portfolio(
+    df = allocate_portfolio(sample_dataframe)
 
-        sample_dataframe()
-
+    assert df["Weight"].sum() == pytest.approx(
+        TOTAL_WEIGHT
     )
 
-    assert np.isclose(
+    assert (df["Weight"] > 0).all()
 
-        df["Weight"].sum(),
-
-        100.0
-
-    )
+    assert not df["Weight"].isna().any()
 
 
-###############################################################################
-# Risk Filter
-###############################################################################
+# ============================================================
+# Risk Filters
+# ============================================================
 
-def test_apply_risk_filters():
+def test_apply_risk_filters(
+    sample_dataframe: pd.DataFrame,
+) -> None:
+    """
+    Risk filter should return
+    a non-empty portfolio.
+    """
 
-    df = apply_risk_filters(
-
-        sample_dataframe()
-
-    )
+    df = apply_risk_filters(sample_dataframe)
 
     assert len(df) > 0
 
 
-###############################################################################
-# Remove Negative Expectancy
-###############################################################################
+def test_negative_expectancy_removed(
+    sample_dataframe: pd.DataFrame,
+) -> None:
+    """
+    Negative expectancy strategies
+    should be removed.
+    """
 
-def test_negative_expectancy_removed():
+    df = apply_risk_filters(sample_dataframe)
 
-    df = apply_risk_filters(
-
-        sample_dataframe()
-
-    )
-
-    assert (
-
-        df["Expectancy"] >= 0
-
-    ).all()
+    assert (df["Expectancy"] >= 0).all()
 
 
-###############################################################################
-# Minimum Profit Factor
-###############################################################################
+def test_profit_factor_filter(
+    sample_dataframe: pd.DataFrame,
+) -> None:
+    """
+    Profit Factor filter.
+    """
 
-def test_profit_factor_filter():
+    df = apply_risk_filters(sample_dataframe)
 
-    df = apply_risk_filters(
-
-        sample_dataframe()
-
-    )
-
-    assert (
-
-        df["Profit Factor"] >= 1
-
-    ).all()
+    assert (df["Profit Factor"] >= 1).all()
 
 
-###############################################################################
-# Duplicate Stocks
-###############################################################################
+def test_duplicate_stocks_removed(
+    sample_dataframe: pd.DataFrame,
+) -> None:
+    """
+    Duplicate stocks should be removed.
+    """
 
-def test_duplicate_stocks_removed():
-
-    df = sample_dataframe()
-
-    duplicate = df.iloc[[0]].copy()
+    duplicate = sample_dataframe.iloc[[0]].copy()
 
     df = pd.concat(
-
         [
-
-            df,
-
-            duplicate
-
+            sample_dataframe,
+            duplicate,
         ],
-
-        ignore_index=True
-
+        ignore_index=True,
     )
 
     filtered = apply_risk_filters(df)
 
     assert (
-
         filtered["Stock"]
-
         .duplicated()
-
         .sum()
-
         == 0
-
     )
 
 
-###############################################################################
-# Portfolio Total Weight
-###############################################################################
+# ============================================================
+# Edge Cases
+# ============================================================
 
-def test_total_weight():
+def test_single_stock_allocation(
+    sample_dataframe: pd.DataFrame,
+) -> None:
+    """
+    Single stock should receive
+    100% allocation.
+    """
 
-    df = allocate_portfolio(
+    df = sample_dataframe.head(1)
 
-        sample_dataframe()
+    result = allocate_portfolio(df)
 
+    assert result["Weight"].iloc[0] == pytest.approx(
+        TOTAL_WEIGHT
     )
 
-    assert round(
 
-        df["Weight"].sum(),
+def test_zero_composite_scores(
+    sample_dataframe: pd.DataFrame,
+) -> None:
+    """
+    Allocation should handle
+    zero composite scores.
+    """
 
-        2
+    df = sample_dataframe.copy()
 
-    ) == 100.00
+    df["Composite Score"] = 0
+
+    result = score_weight(df)
+
+    assert not result["Weight"].isna().any()
 
 
-###############################################################################
-# Positive Weights
-###############################################################################
+def test_empty_dataframe() -> None:
+    """
+    Empty DataFrame should raise.
+    """
 
-def test_positive_weights():
+    with pytest.raises(Exception):
 
-    df = allocate_portfolio(
+        allocate_portfolio(
+            pd.DataFrame()
+        )
 
-        sample_dataframe()
 
+def test_missing_columns() -> None:
+    """
+    Missing required columns
+    should raise an exception.
+    """
+
+    df = pd.DataFrame(
+        {
+            "Stock": ["ABC"],
+        }
     )
 
-    assert (
+    with pytest.raises(Exception):
 
-        df["Weight"] > 0
-
-    ).all()
-
-
-###############################################################################
-# No Missing Weights
-###############################################################################
-
-def test_no_missing_weights():
-
-    df = allocate_portfolio(
-
-        sample_dataframe()
-
-    )
-
-    assert (
-
-        df["Weight"]
-
-        .isna()
-
-        .sum()
-
-        == 0
-
-    )
+        allocate_portfolio(df)

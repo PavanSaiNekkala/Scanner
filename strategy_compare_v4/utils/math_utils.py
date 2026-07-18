@@ -2,83 +2,89 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    utils/math_utils.py
+Module
+------
+utils/math_utils.py
 
-Purpose:
-    Mathematical helper functions used throughout
-    the institutional strategy comparison platform.
+Purpose
+-------
+Mathematical helper functions shared across the
+Institutional Strategy Comparison Platform.
+
+Provides
+--------
+• Numeric conversion
+• Safe arithmetic
+• Normalization
+• Statistical utilities
+• Weighted calculations
+• Financial calculations
 
 =============================================================
 """
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
 
-###############################################################################
+# ============================================================
 # Numeric Conversion
-###############################################################################
+# ============================================================
 
-def numeric(series):
+def numeric(
+    series: pd.Series | Any,
+) -> pd.Series:
     """
-    Convert series to numeric.
+    Convert a Series to numeric values.
+    Invalid entries become NaN.
     """
 
     return pd.to_numeric(
-
         series,
-
-        errors="coerce"
-
+        errors="coerce",
     )
 
 
-###############################################################################
+# ============================================================
 # Safe Division
-###############################################################################
+# ============================================================
 
 def safe_divide(
-
-    numerator,
-
-    denominator,
-
-    default=0
-
-):
+    numerator: Any,
+    denominator: Any,
+    default: float = 0.0,
+) -> np.ndarray:
     """
-    Safe division avoiding divide-by-zero.
+    Divide safely while avoiding divide-by-zero.
     """
 
-    numerator = np.asarray(numerator)
+    numerator = np.asarray(numerator, dtype=float)
 
-    denominator = np.asarray(denominator)
+    denominator = np.asarray(
+        denominator,
+        dtype=float,
+    )
 
     return np.where(
-
         denominator != 0,
-
         numerator / denominator,
-
-        default
-
+        default,
     )
 
 
-###############################################################################
+# ============================================================
 # Min-Max Normalization
-###############################################################################
+# ============================================================
 
 def normalize(
-
-    series
-
-):
+    series: pd.Series,
+) -> pd.Series:
     """
-    Normalize values to 0-100.
+    Scale values between 0 and 100.
     """
 
     series = numeric(series)
@@ -88,165 +94,118 @@ def normalize(
     maximum = series.max()
 
     if pd.isna(minimum) or pd.isna(maximum):
-
         return pd.Series(
-
-            0,
-
-            index=series.index
-
+            0.0,
+            index=series.index,
         )
 
     if maximum == minimum:
-
         return pd.Series(
-
-            100,
-
-            index=series.index
-
+            100.0,
+            index=series.index,
         )
 
     return (
-
         (series - minimum)
-
         /
-
         (maximum - minimum)
-
-        *
-
-        100
-
+        * 100
     )
 
 
-###############################################################################
+# ============================================================
 # Reverse Normalization
-###############################################################################
+# ============================================================
 
 def reverse_normalize(
-
-    series
-
-):
+    series: pd.Series,
+) -> pd.Series:
     """
-    Normalize where lower is better.
+    Reverse normalization where
+    lower values are better.
     """
 
     return 100 - normalize(series)
 
 
-###############################################################################
+# ============================================================
 # Percentile Rank
-###############################################################################
+# ============================================================
 
 def percentile_rank(
-
-    series
-
-):
+    series: pd.Series,
+) -> pd.Series:
     """
     Percentile ranking (0-100).
     """
 
     return (
-
         numeric(series)
-
-        .rank(
-
-            pct=True
-
-        )
-
+        .rank(pct=True)
         * 100
-
     )
 
 
-###############################################################################
+# ============================================================
 # Z-Score
-###############################################################################
+# ============================================================
 
 def z_score(
-
-    series
-
-):
+    series: pd.Series,
+) -> pd.Series:
     """
-    Standard score.
+    Compute standard score.
     """
 
     series = numeric(series)
 
     std = series.std()
 
-    if std == 0:
-
+    if std == 0 or pd.isna(std):
         return pd.Series(
-
-            0,
-
-            index=series.index
-
+            0.0,
+            index=series.index,
         )
 
     return (
-
         series - series.mean()
-
     ) / std
 
 
-###############################################################################
+# ============================================================
 # Coefficient of Variation
-###############################################################################
+# ============================================================
 
 def coefficient_of_variation(
-
-    series
-
-):
+    series: pd.Series,
+) -> float:
     """
-    Coefficient of variation.
+    Compute coefficient of variation.
     """
 
     series = numeric(series)
 
     mean = series.mean()
 
-    if mean == 0:
-
+    if mean == 0 or pd.isna(mean):
         return np.nan
 
-    return (
-
-        series.std()
-
-        /
-
-        mean
-
+    return float(
+        series.std() / mean
     )
 
 
-###############################################################################
-# Winsorize
-###############################################################################
+# ============================================================
+# Winsorization
+# ============================================================
 
 def winsorize(
-
-    series,
-
-    lower=0.05,
-
-    upper=0.95
-
-):
+    series: pd.Series,
+    lower: float = 0.05,
+    upper: float = 0.95,
+) -> pd.Series:
     """
-    Cap outliers.
+    Cap extreme outliers.
     """
 
     lower_bound = series.quantile(lower)
@@ -254,147 +213,110 @@ def winsorize(
     upper_bound = series.quantile(upper)
 
     return series.clip(
-
-        lower_bound,
-
-        upper_bound
-
+        lower=lower_bound,
+        upper=upper_bound,
     )
 
 
-###############################################################################
+# ============================================================
 # Clamp
-###############################################################################
+# ============================================================
 
 def clamp(
-
-    series,
-
-    minimum=0,
-
-    maximum=100
-
-):
+    series: pd.Series,
+    minimum: float = 0.0,
+    maximum: float = 100.0,
+) -> pd.Series:
     """
-    Clamp values to range.
+    Restrict values to a range.
     """
 
     return series.clip(
-
         lower=minimum,
-
-        upper=maximum
-
+        upper=maximum,
     )
 
 
-###############################################################################
+# ============================================================
 # Weighted Average
-###############################################################################
+# ============================================================
 
 def weighted_average(
-
-    values,
-
-    weights
-
-):
+    values: Any,
+    weights: Any,
+) -> float:
     """
     Compute weighted average.
     """
 
-    values = np.asarray(values)
+    values = np.asarray(values, dtype=float)
 
-    weights = np.asarray(weights)
+    weights = np.asarray(
+        weights,
+        dtype=float,
+    )
 
     total = weights.sum()
 
     if total == 0:
+        return 0.0
 
-        return 0
-
-    return np.average(
-
-        values,
-
-        weights=weights
-
+    return float(
+        np.average(
+            values,
+            weights=weights,
+        )
     )
 
 
-###############################################################################
+# ============================================================
 # CAGR
-###############################################################################
+# ============================================================
 
 def cagr(
-
-    beginning,
-
-    ending,
-
-    years
-
-):
+    beginning: float,
+    ending: float,
+    years: float,
+) -> float:
     """
-    Compound Annual Growth Rate.
+    Compute Compound Annual Growth Rate.
     """
 
     if (
-
         beginning <= 0
-
-        or
-
-        ending <= 0
-
-        or
-
-        years <= 0
-
+        or ending <= 0
+        or years <= 0
     ):
-
         return np.nan
 
     return (
-
         (ending / beginning)
-
         ** (1 / years)
-
         - 1
-
     )
 
 
-###############################################################################
+# ============================================================
 # Round DataFrame
-###############################################################################
+# ============================================================
 
 def round_dataframe(
-
-    df,
-
-    decimals=2
-
-):
+    df: pd.DataFrame,
+    decimals: int = 2,
+) -> pd.DataFrame:
     """
     Round numeric columns.
     """
 
-    numeric_cols = df.select_dtypes(
-
-        include="number"
-
-    ).columns
-
     df = df.copy()
 
-    df[numeric_cols] = (
+    numeric_columns = df.select_dtypes(
+        include="number",
+    ).columns
 
-        df[numeric_cols]
-
+    df[numeric_columns] = (
+        df[numeric_columns]
         .round(decimals)
-
     )
 
     return df

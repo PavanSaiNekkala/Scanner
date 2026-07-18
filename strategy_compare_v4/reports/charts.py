@@ -2,11 +2,24 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    reports/charts.py
+Module
+------
+reports/charts.py
 
-Purpose:
-    Chart generation for reports and dashboard.
+Purpose
+-------
+Institutional chart generation for reports,
+dashboard visualization, and analytics.
+
+Features
+--------
+• Composite Score Charts
+• Edge Score Charts
+• Recommendation Distribution
+• Scatter Charts
+• Histograms
+• Correlation Heatmap
+• Portfolio Allocation
 
 =============================================================
 """
@@ -18,31 +31,61 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from strategy_compare_v4.config.constants import (
+    COMPOSITE_SCORE,
+    EDGE_SCORE,
+    EXPECTANCY,
+    PROFIT_FACTOR,
+    RELIABILITY_SCORE,
+    EFFICIENCY_SCORE,
+    RECOMMENDATION,
+    WEIGHT,
+)
 
-###############################################################################
-# Common Save
-###############################################################################
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
+
+from strategy_compare_v4.utils.logger import (
+    banner,
+    get_logger,
+)
+
+logger = get_logger(__name__)
+
+
+# ============================================================
+# Save Chart
+# ============================================================
 
 def save_chart(
-
     figure,
-
-    output_path,
-
-    dpi=300
-
+    output_path: str | Path,
+    dpi: int = 300,
 ):
     """
     Save chart to disk.
     """
 
-    output_path = Path(output_path)
+    banner(
+
+        logger,
+
+        "Saving Chart",
+
+    )
+
+    output_path = Path(
+
+        output_path,
+
+    )
 
     output_path.parent.mkdir(
 
         parents=True,
 
-        exist_ok=True
+        exist_ok=True,
 
     )
 
@@ -52,27 +95,56 @@ def save_chart(
 
         dpi=dpi,
 
-        bbox_inches="tight"
+        bbox_inches="tight",
 
     )
 
-    plt.close(figure)
+    plt.close(
+
+        figure,
+
+    )
+
+    logger.info(
+
+        "Chart saved : %s",
+
+        output_path,
+
+    )
 
 
-###############################################################################
-# Top Composite Scores
-###############################################################################
+# ============================================================
+# Composite Score Chart
+# ============================================================
 
 def composite_score_chart(
-
-    df,
-
-    top_n=20
-
+    df: pd.DataFrame,
+    top_n: int = 20,
 ):
     """
-    Composite Score bar chart.
+    Top Composite Score chart.
     """
+
+    require_columns(
+
+        df,
+
+        [
+
+            "Stock",
+
+            COMPOSITE_SCORE,
+
+        ],
+
+    )
+
+    logger.info(
+
+        "Generating Composite Score chart."
+
+    )
 
     data = (
 
@@ -82,7 +154,7 @@ def composite_score_chart(
 
             top_n,
 
-            "Composite Score"
+            COMPOSITE_SCORE,
 
         )
 
@@ -90,7 +162,7 @@ def composite_score_chart(
 
     fig, ax = plt.subplots(
 
-        figsize=(12,6)
+        figsize=(12, 6),
 
     )
 
@@ -98,19 +170,23 @@ def composite_score_chart(
 
         data["Stock"],
 
-        data["Composite Score"]
+        data[
+
+            COMPOSITE_SCORE
+
+        ],
 
     )
 
     ax.set_title(
 
-        "Top Composite Scores"
+        "Top Composite Scores",
 
     )
 
     ax.set_ylabel(
 
-        "Composite Score"
+        COMPOSITE_SCORE,
 
     )
 
@@ -118,7 +194,7 @@ def composite_score_chart(
 
         axis="x",
 
-        rotation=90
+        rotation=90,
 
     )
 
@@ -127,17 +203,37 @@ def composite_score_chart(
     return fig
 
 
-###############################################################################
-# Edge Score
-###############################################################################
+# ============================================================
+# Edge Score Chart
+# ============================================================
 
 def edge_score_chart(
-
-    df,
-
-    top_n=20
-
+    df: pd.DataFrame,
+    top_n: int = 20,
 ):
+    """
+    Top Edge Score chart.
+    """
+
+    require_columns(
+
+        df,
+
+        [
+
+            "Stock",
+
+            EDGE_SCORE,
+
+        ],
+
+    )
+
+    logger.info(
+
+        "Generating Edge Score chart."
+
+    )
 
     data = (
 
@@ -147,7 +243,7 @@ def edge_score_chart(
 
             top_n,
 
-            "Edge Score"
+            EDGE_SCORE,
 
         )
 
@@ -155,7 +251,7 @@ def edge_score_chart(
 
     fig, ax = plt.subplots(
 
-        figsize=(12,6)
+        figsize=(12, 6),
 
     )
 
@@ -163,13 +259,23 @@ def edge_score_chart(
 
         data["Stock"],
 
-        data["Edge Score"]
+        data[
+
+            EDGE_SCORE
+
+        ],
 
     )
 
     ax.set_title(
 
-        "Top Edge Scores"
+        "Top Edge Scores",
+
+    )
+
+    ax.set_ylabel(
+
+        EDGE_SCORE,
 
     )
 
@@ -177,7 +283,7 @@ def edge_score_chart(
 
         axis="x",
 
-        rotation=90
+        rotation=90,
 
     )
 
@@ -185,20 +291,43 @@ def edge_score_chart(
 
     return fig
 
-
-###############################################################################
+# ============================================================
 # Recommendation Distribution
-###############################################################################
+# ============================================================
 
 def recommendation_chart(
-
-    df
-
+    df: pd.DataFrame,
 ):
+    """
+    Recommendation
+    distribution chart.
+    """
+
+    require_columns(
+
+        df,
+
+        [
+
+            RECOMMENDATION,
+
+        ],
+
+    )
+
+    logger.info(
+
+        "Generating Recommendation Distribution chart."
+
+    )
 
     counts = (
 
-        df["Recommendation"]
+        df[
+
+            RECOMMENDATION
+
+        ]
 
         .value_counts()
 
@@ -206,7 +335,7 @@ def recommendation_chart(
 
     fig, ax = plt.subplots(
 
-        figsize=(8,8)
+        figsize=(8, 8),
 
     )
 
@@ -216,58 +345,91 @@ def recommendation_chart(
 
         labels=counts.index,
 
-        autopct="%1.1f%%"
+        autopct="%1.1f%%",
 
     )
 
     ax.set_title(
 
-        "Recommendation Distribution"
+        "Recommendation Distribution",
 
     )
+
+    fig.tight_layout()
 
     return fig
 
 
-###############################################################################
+# ============================================================
 # Profit Factor vs Expectancy
-###############################################################################
+# ============================================================
 
 def expectancy_profit_chart(
-
-    df
-
+    df: pd.DataFrame,
 ):
+    """
+    Scatter chart of
+    Profit Factor vs
+    Expectancy.
+    """
+
+    require_columns(
+
+        df,
+
+        [
+
+            PROFIT_FACTOR,
+
+            EXPECTANCY,
+
+        ],
+
+    )
+
+    logger.info(
+
+        "Generating Profit Factor vs Expectancy chart."
+
+    )
 
     fig, ax = plt.subplots(
 
-        figsize=(10,6)
+        figsize=(10, 6),
 
     )
 
     ax.scatter(
 
-        df["Profit Factor"],
+        df[
 
-        df["Expectancy"]
+            PROFIT_FACTOR
+
+        ],
+
+        df[
+
+            EXPECTANCY
+
+        ],
 
     )
 
     ax.set_xlabel(
 
-        "Profit Factor"
+        PROFIT_FACTOR,
 
     )
 
     ax.set_ylabel(
 
-        "Expectancy"
+        EXPECTANCY,
 
     )
 
     ax.set_title(
 
-        "Profit Factor vs Expectancy"
+        "Profit Factor vs Expectancy",
 
     )
 
@@ -276,45 +438,76 @@ def expectancy_profit_chart(
     return fig
 
 
-###############################################################################
+# ============================================================
 # Reliability vs Efficiency
-###############################################################################
+# ============================================================
 
 def reliability_efficiency_chart(
-
-    df
-
+    df: pd.DataFrame,
 ):
+    """
+    Scatter chart of
+    Reliability Score
+    versus Efficiency Score.
+    """
+
+    require_columns(
+
+        df,
+
+        [
+
+            RELIABILITY_SCORE,
+
+            EFFICIENCY_SCORE,
+
+        ],
+
+    )
+
+    logger.info(
+
+        "Generating Reliability vs Efficiency chart."
+
+    )
 
     fig, ax = plt.subplots(
 
-        figsize=(10,6)
+        figsize=(10, 6),
 
     )
 
     ax.scatter(
 
-        df["Reliability Score"],
+        df[
 
-        df["Efficiency Score"]
+            RELIABILITY_SCORE
+
+        ],
+
+        df[
+
+            EFFICIENCY_SCORE
+
+        ],
 
     )
 
     ax.set_xlabel(
 
-        "Reliability Score"
+        RELIABILITY_SCORE,
 
     )
 
     ax.set_ylabel(
 
-        "Efficiency Score"
+        EFFICIENCY_SCORE,
 
     )
 
     ax.set_title(
 
-        "Reliability vs Efficiency"
+        "Reliability vs Efficiency",
 
     )
 
@@ -323,35 +516,73 @@ def reliability_efficiency_chart(
     return fig
 
 
-###############################################################################
+# ============================================================
 # Score Histogram
-###############################################################################
+# ============================================================
 
 def score_histogram(
-
-    df,
-
-    column
-
+    df: pd.DataFrame,
+    column: str,
 ):
+    """
+    Histogram for a
+    selected numeric
+    metric.
+    """
+
+    require_columns(
+
+        df,
+
+        [
+
+            column,
+
+        ],
+
+    )
+
+    logger.info(
+
+        "Generating histogram for '%s'.",
+
+        column,
+
+    )
 
     fig, ax = plt.subplots(
 
-        figsize=(10,6)
+        figsize=(10, 6),
 
     )
 
     ax.hist(
 
-        df[column],
+        df[
 
-        bins=20
+            column
+
+        ],
+
+        bins=20,
 
     )
 
     ax.set_title(
 
-        column
+        column,
+
+    )
+
+    ax.set_xlabel(
+
+        column,
+
+    )
+
+    ax.set_ylabel(
+
+        "Frequency",
 
     )
 
@@ -359,20 +590,27 @@ def score_histogram(
 
     return fig
 
-
-###############################################################################
+# ============================================================
 # Correlation Heatmap
-###############################################################################
+# ============================================================
 
 def correlation_heatmap(
-
-    correlation_df
-
+    correlation_df: pd.DataFrame,
 ):
+    """
+    Generate a correlation
+    heatmap.
+    """
+
+    logger.info(
+
+        "Generating Correlation Heatmap."
+
+    )
 
     fig, ax = plt.subplots(
 
-        figsize=(10,8)
+        figsize=(10, 8),
 
     )
 
@@ -380,7 +618,7 @@ def correlation_heatmap(
 
         correlation_df,
 
-        aspect="auto"
+        aspect="auto",
 
     )
 
@@ -388,7 +626,11 @@ def correlation_heatmap(
 
         range(
 
-            len(correlation_df.columns)
+            len(
+
+                correlation_df.columns,
+
+            )
 
         )
 
@@ -398,7 +640,7 @@ def correlation_heatmap(
 
         correlation_df.columns,
 
-        rotation=90
+        rotation=90,
 
     )
 
@@ -406,7 +648,11 @@ def correlation_heatmap(
 
         range(
 
-            len(correlation_df.index)
+            len(
+
+                correlation_df.index,
+
+            )
 
         )
 
@@ -414,13 +660,13 @@ def correlation_heatmap(
 
     ax.set_yticklabels(
 
-        correlation_df.index
+        correlation_df.index,
 
     )
 
     fig.colorbar(
 
-        image
+        image,
 
     )
 
@@ -429,119 +675,206 @@ def correlation_heatmap(
     return fig
 
 
-###############################################################################
-# Portfolio Allocation
-###############################################################################
+# ============================================================
+# Portfolio Allocation Chart
+# ============================================================
 
 def portfolio_chart(
-
-    portfolio_df
-
+    portfolio_df: pd.DataFrame,
 ):
+    """
+    Generate portfolio
+    allocation chart.
+    """
+
+    require_columns(
+
+        portfolio_df,
+
+        [
+
+            "Stock",
+
+            WEIGHT,
+
+        ],
+
+    )
+
+    logger.info(
+
+        "Generating Portfolio Allocation chart."
+
+    )
 
     fig, ax = plt.subplots(
 
-        figsize=(10,8)
+        figsize=(10, 8),
 
     )
 
     ax.pie(
 
-        portfolio_df["Weight"],
+        portfolio_df[
 
-        labels=portfolio_df["Stock"],
+            WEIGHT
 
-        autopct="%1.1f%%"
+        ],
+
+        labels=portfolio_df[
+
+            "Stock"
+
+        ],
+
+        autopct="%1.1f%%",
 
     )
 
     ax.set_title(
 
-        "Portfolio Allocation"
+        "Portfolio Allocation",
 
     )
+
+    fig.tight_layout()
 
     return fig
 
 
-###############################################################################
+# ============================================================
 # Export All Charts
-###############################################################################
+# ============================================================
 
 def export_all_charts(
-
-    comparison_df,
-
-    portfolio_df,
-
-    correlation_df,
-
-    output_directory
-
+    comparison_df: pd.DataFrame,
+    portfolio_df: pd.DataFrame,
+    correlation_df: pd.DataFrame,
+    output_directory: str | Path,
 ):
+    """
+    Export all institutional
+    charts to disk.
+    """
 
-    output_directory = Path(output_directory)
+    banner(
+
+        logger,
+
+        "Exporting Charts",
+
+    )
+
+    output_directory = Path(
+
+        output_directory,
+
+    )
 
     output_directory.mkdir(
 
         parents=True,
 
-        exist_ok=True
+        exist_ok=True,
 
     )
 
-    save_chart(
+    charts = {
 
-        composite_score_chart(comparison_df),
+        "composite_scores.png":
 
-        output_directory / "composite_scores.png"
+            composite_score_chart(
+
+                comparison_df,
+
+            ),
+
+        "edge_scores.png":
+
+            edge_score_chart(
+
+                comparison_df,
+
+            ),
+
+        "recommendations.png":
+
+            recommendation_chart(
+
+                comparison_df,
+
+            ),
+
+        "expectancy_profit.png":
+
+            expectancy_profit_chart(
+
+                comparison_df,
+
+            ),
+
+        "reliability_efficiency.png":
+
+            reliability_efficiency_chart(
+
+                comparison_df,
+
+            ),
+
+        "correlation_heatmap.png":
+
+            correlation_heatmap(
+
+                correlation_df,
+
+            ),
+
+        "portfolio.png":
+
+            portfolio_chart(
+
+                portfolio_df,
+
+            ),
+
+    }
+
+    for filename, figure in charts.items():
+
+        save_chart(
+
+            figure,
+
+            output_directory
+
+            / filename,
+
+        )
+
+        logger.info(
+
+            "Exported : %s",
+
+            filename,
+
+        )
+
+    logger.info(
+
+        "Total Charts Exported : %d",
+
+        len(
+
+            charts,
+
+        ),
 
     )
 
-    save_chart(
+    logger.info(
 
-        edge_score_chart(comparison_df),
+        "Output Directory : %s",
 
-        output_directory / "edge_scores.png"
-
-    )
-
-    save_chart(
-
-        recommendation_chart(comparison_df),
-
-        output_directory / "recommendations.png"
-
-    )
-
-    save_chart(
-
-        expectancy_profit_chart(comparison_df),
-
-        output_directory / "expectancy_profit.png"
-
-    )
-
-    save_chart(
-
-        reliability_efficiency_chart(comparison_df),
-
-        output_directory / "reliability_efficiency.png"
-
-    )
-
-    save_chart(
-
-        correlation_heatmap(correlation_df),
-
-        output_directory / "correlation_heatmap.png"
-
-    )
-
-    save_chart(
-
-        portfolio_chart(portfolio_df),
-
-        output_directory / "portfolio.png"
+        output_directory,
 
     )

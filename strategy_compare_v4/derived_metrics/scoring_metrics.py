@@ -1,6 +1,6 @@
 """
 ===============================================================
-Institutional Strategy Comparison Engine V3
+Institutional Strategy Comparison Engine V4
 
 Module
 ------
@@ -19,58 +19,30 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from strategy_compare_v4.config.constants import (
+    COMPOSITE_SCORE,
+    RECOMMENDATION,
+    INSTITUTION_RANK,
+)
 
-# ============================================================
-# Utility Functions
-# ============================================================
+from strategy_compare_v4.config.weights import (
+    COMPOSITE_WEIGHTS,
+)
 
-def numeric(series):
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
 
-    return pd.to_numeric(
+from strategy_compare_v4.utils.math_utils import (
+    numeric,
+    normalize,
+)
 
-        series,
+from strategy_compare_v4.utils.logger import (
+    get_logger,
+)
 
-        errors="coerce"
-
-    )
-
-
-def normalize(series):
-
-    """
-    Min-Max normalization (0-100)
-    """
-
-    series = numeric(series)
-
-    minimum = series.min()
-    maximum = series.max()
-
-    if pd.isna(minimum) or pd.isna(maximum):
-
-        return pd.Series(
-            np.nan,
-            index=series.index
-        )
-
-    if maximum == minimum:
-
-        return pd.Series(
-            50.0,
-            index=series.index
-        )
-
-    return (
-
-        (series - minimum)
-
-        /
-
-        (maximum - minimum)
-
-        * 100
-
-    )
+logger = get_logger(__name__)
 
 
 # ============================================================
@@ -78,14 +50,29 @@ def normalize(series):
 # ============================================================
 
 class ScoringMetrics:
+    """
+    Institutional Scoring Engine.
 
-    def __init__(self, df):
+    Responsible for calculating institutional
+    scores, rankings and recommendations.
+    """
+
+    def __init__(
+        self,
+        df: pd.DataFrame,
+    ):
 
         self.df = df.copy()
 
     # ---------------------------------------------------------
+    # Prepare Columns
+    # ---------------------------------------------------------
 
     def prepare_columns(self):
+
+        """
+        Convert required columns to numeric.
+        """
 
         required = [
 
@@ -109,63 +96,370 @@ class ScoringMetrics:
 
             "Institutional Opportunity Score",
 
-            "Institutional Efficiency Score"
+            "Institutional Efficiency Score",
 
         ]
 
-        for col in required:
+        require_columns(
 
-            if col in self.df.columns:
+            self.df,
 
-                self.df[col] = numeric(
+            required,
 
-                    self.df[col]
+        )
 
-                )
+        for column in required:
 
-        return self
-    
-    # ---------------------------------------------------------
+            self.df[column] = numeric(
 
-    def composite_score(self):
-        """
-        Master institutional score.
-        """
+                self.df[column]
 
-        self.df["Composite Score"] = (
+            )
 
-            self.df["Edge Score"] * 0.25
+        logger.info(
 
-            +
+            "Prepared %d scoring columns.",
 
-            self.df["Reliability Score"] * 0.20
-
-            +
-
-            self.df["Risk Score"] * 0.15
-
-            +
-
-            self.df["Opportunity Score"] * 0.15
-
-            +
-
-            self.df["Efficiency Score"] * 0.15
-
-            +
-
-            self.df["Return Score"] * 0.10
+            len(required),
 
         )
 
         return self
 
     # ---------------------------------------------------------
+    # Edge Score
+    # ---------------------------------------------------------
+
+    def edge_score(self):
+
+        """
+        Calculate institutional edge score.
+        """
+
+        self.df["Edge Score"] = (
+
+            normalize(
+
+                self.df["Expectancy"]
+
+            ) * 0.35
+
+            +
+
+            normalize(
+
+                self.df["Profit Factor"]
+
+            ) * 0.30
+
+            +
+
+            normalize(
+
+                self.df["Reward Risk"]
+
+            ) * 0.20
+
+            +
+
+            normalize(
+
+                self.df["Winning Exit %"]
+
+            ) * 0.15
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Reliability Score
+    # ---------------------------------------------------------
+
+    def reliability_score(self):
+
+        """
+        Calculate reliability score.
+        """
+
+        self.df["Reliability Score"] = (
+
+            normalize(
+
+                self.df["Institutional Exit Score"]
+
+            ) * 0.40
+
+            +
+
+            normalize(
+
+                self.df["Institutional Opportunity Score"]
+
+            ) * 0.35
+
+            +
+
+            normalize(
+
+                self.df["Institutional Efficiency Score"]
+
+            ) * 0.25
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Opportunity Score
+    # ---------------------------------------------------------
+
+    def opportunity_score(self):
+
+        """
+        Calculate opportunity score.
+        """
+
+        self.df["Opportunity Score"] = (
+
+            normalize(
+
+                self.df["Profit Velocity"]
+
+            ) * 0.60
+
+            +
+
+            normalize(
+
+                self.df["Annual Return %"]
+
+            ) * 0.40
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Efficiency Score
+    # ---------------------------------------------------------
+
+    def efficiency_score(self):
+
+        """
+        Calculate efficiency score.
+        """
+
+        self.df["Efficiency Score"] = (
+
+            normalize(
+
+                self.df["Holding Efficiency"]
+
+            ) * 0.50
+
+            +
+
+            normalize(
+
+                self.df["Institutional Efficiency Score"]
+
+            ) * 0.50
+
+        )
+
+        return self
+    
+    # ---------------------------------------------------------
+    # Risk Score
+    # ---------------------------------------------------------
+
+    def risk_score(self):
+
+        """
+        Calculate institutional risk score.
+        Higher Risk Adjusted Return indicates
+        lower investment risk.
+        """
+
+        self.df["Risk Score"] = (
+
+            normalize(
+
+                self.df["Risk Adjusted Return"]
+
+            ) * 0.70
+
+            +
+
+            normalize(
+
+                self.df["Institutional Exit Score"]
+
+            ) * 0.30
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Return Score
+    # ---------------------------------------------------------
+
+    def return_score(self):
+
+        """
+        Calculate return generation score.
+        """
+
+        self.df["Return Score"] = (
+
+            normalize(
+
+                self.df["Annual Return %"]
+
+            ) * 0.60
+
+            +
+
+            normalize(
+
+                self.df["Profit Velocity"]
+
+            ) * 0.40
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Consistency Score
+    # ---------------------------------------------------------
+
+    def consistency_score(self):
+
+        """
+        Measure consistency of strategy performance.
+        """
+
+        self.df["Consistency Score"] = (
+
+            normalize(
+
+                self.df["Institutional Exit Score"]
+
+            ) * 0.35
+
+            +
+
+            normalize(
+
+                self.df["Institutional Opportunity Score"]
+
+            ) * 0.35
+
+            +
+
+            normalize(
+
+                self.df["Institutional Efficiency Score"]
+
+            ) * 0.30
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Institutional Strength
+    # ---------------------------------------------------------
+
+    def institutional_strength(self):
+
+        """
+        Overall institutional strength.
+        """
+
+        self.df["Institutional Strength"] = (
+
+            self.df["Edge Score"] * 0.30
+
+            +
+
+            self.df["Reliability Score"] * 0.30
+
+            +
+
+            self.df["Opportunity Score"] * 0.20
+
+            +
+
+            self.df["Efficiency Score"] * 0.20
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Composite Score
+    # ---------------------------------------------------------
+
+    def composite_score(self):
+
+        """
+        Calculate the master institutional score
+        using centralized configuration weights.
+        """
+
+        self.df[COMPOSITE_SCORE] = (
+
+            self.df["Edge Score"]
+
+            * COMPOSITE_WEIGHTS["Edge Score"]
+
+            +
+
+            self.df["Reliability Score"]
+
+            * COMPOSITE_WEIGHTS["Reliability Score"]
+
+            +
+
+            self.df["Risk Score"]
+
+            * COMPOSITE_WEIGHTS["Risk Score"]
+
+            +
+
+            self.df["Opportunity Score"]
+
+            * COMPOSITE_WEIGHTS["Opportunity Score"]
+
+            +
+
+            self.df["Efficiency Score"]
+
+            * COMPOSITE_WEIGHTS["Efficiency Score"]
+
+            +
+
+            self.df["Return Score"]
+
+            * COMPOSITE_WEIGHTS["Return Score"]
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Confidence Score
+    # ---------------------------------------------------------
 
     def confidence_score(self):
+
         """
-        Confidence that strategy
-        performance is repeatable.
+        Estimate confidence that the strategy
+        can reproduce historical performance.
         """
 
         self.df["Confidence Score"] = (
@@ -185,8 +479,11 @@ class ScoringMetrics:
         return self
 
     # ---------------------------------------------------------
+    # Stability Score
+    # ---------------------------------------------------------
 
     def stability_score(self):
+
         """
         Long-term stability score.
         """
@@ -208,10 +505,13 @@ class ScoringMetrics:
         return self
 
     # ---------------------------------------------------------
+    # Performance Score
+    # ---------------------------------------------------------
 
     def performance_score(self):
+
         """
-        Measures overall trading performance.
+        Overall trading performance score.
         """
 
         self.df["Performance Score"] = (
@@ -231,10 +531,14 @@ class ScoringMetrics:
         return self
 
     # ---------------------------------------------------------
+    # Alpha Score
+    # ---------------------------------------------------------
 
     def alpha_score(self):
+
         """
-        Measures excess trading edge.
+        Calculate excess trading edge after
+        adjusting for risk.
         """
 
         self.df["Alpha Score"] = (
@@ -248,440 +552,879 @@ class ScoringMetrics:
         )
 
         return self
-
-    # ---------------------------------------------------------
-
-    def institutional_grade(self):
-        """
-        Letter grade based on Composite Score.
-        """
-
-        score = self.df["Composite Score"]
-
-        self.df["Institutional Grade"] = np.select(
-
-            [
-
-                score >= 90,
-
-                score >= 80,
-
-                score >= 70,
-
-                score >= 60,
-
-                score >= 50
-
-            ],
-
-            [
-
-                "A+",
-
-                "A",
-
-                "B",
-
-                "C",
-
-                "D"
-
-            ],
-
-            default="F"
-
-        )
-
-        return self
-
-    # ---------------------------------------------------------
-
-    def risk_grade(self):
-        """
-        Risk grade.
-        """
-
-        risk = self.df["Risk Score"]
-
-        self.df["Risk Grade"] = np.select(
-
-            [
-
-                risk >= 90,
-
-                risk >= 75,
-
-                risk >= 60,
-
-                risk >= 45
-
-            ],
-
-            [
-
-                "Low",
-
-                "Moderate",
-
-                "Elevated",
-
-                "High"
-
-            ],
-
-            default="Very High"
-
-        )
-
-        return self
-
-    # ---------------------------------------------------------
-
-    def percentile_rank(self):
-        """
-        Percentile rank across strategies.
-        """
-
-        self.df["Percentile Rank"] = (
-
-            self.df["Composite Score"]
-
-            .rank(
-
-                pct=True,
-
-                ascending=True
-
-            )
-
-            * 100
-
-        )
-
-        return self
-
-    # ---------------------------------------------------------
-
-    def overall_rank(self):
-        """
-        Overall institutional rank.
-        """
-
-        self.df["Institution Rank"] = (
-
-            self.df["Composite Score"]
-
-            .rank(
-
-                ascending=False,
-
-                method="dense"
-
-            )
-
-            .astype(int)
-
-        )
-
-        return self
-
-    # ---------------------------------------------------------
-
-    def final_institutional_score(self):
-        """
-        Final score after confidence adjustment.
-        """
-
-        self.df["Final Institutional Score"] = (
-
-            self.df["Composite Score"] * 0.70
-
-            +
-
-            self.df["Confidence Score"] * 0.30
-
-        )
-
-        return self
     
     # ---------------------------------------------------------
 
-    def recommendation(self):
-        """
-        Institutional recommendation based on
-        Final Institutional Score.
-        """
-
-        score = self.df["Final Institutional Score"]
-
-        conditions = [
-
-            score >= 90,
-
-            (score >= 80) & (score < 90),
-
-            (score >= 70) & (score < 80),
-
-            (score >= 60) & (score < 70),
-
-            (score >= 50) & (score < 60)
-
-        ]
-
-        choices = [
-
-            "Strong Buy",
-
-            "Buy",
-
-            "Watch",
-
-            "Improve",
-
-            "Avoid"
-
-        ]
-
-        self.df["Recommendation"] = np.select(
-
-            conditions,
-
-            choices,
-
-            default="Reject"
-
-        )
-
-        return self
+    # Institutional Grade
 
     # ---------------------------------------------------------
 
-    def normalize_scores(self):
-        """
-        Normalize major institutional scores.
-        """
 
-        metrics = [
 
-            "Edge Score",
+    def institutional_grade(self):
 
-            "Reliability Score",
 
-            "Risk Score",
 
-            "Opportunity Score",
-
-            "Efficiency Score",
-
-            "Return Score",
-
-            "Consistency Score",
-
-            "Institutional Strength",
-
-            "Composite Score",
-
-            "Confidence Score",
-
-            "Stability Score",
-
-            "Performance Score",
-
-            "Alpha Score",
-
-            "Final Institutional Score"
-
-        ]
-
-        for metric in metrics:
-
-            if metric not in self.df.columns:
-
-                continue
-
-            self.df[f"{metric} (Norm)"] = normalize(
-
-                self.df[metric]
-
-            )
-
-        return self
-
-    # ---------------------------------------------------------
-
-    def cleanup(self):
-        """
-        Remove invalid numeric values.
         """
 
-        self.df.replace(
+        Assign institutional letter grade.
+
+        """
+
+
+
+        score = self.df[COMPOSITE_SCORE]
+
+
+
+        self.df["Institutional Grade"] = np.select(
+
+
 
             [
 
-                np.inf,
 
-                -np.inf
+
+                score >= 90,
+
+
+
+                score >= 80,
+
+
+
+                score >= 70,
+
+
+
+                score >= 60,
+
+
+
+                score >= 50,
+
+
 
             ],
 
-            np.nan,
 
-            inplace=True
+
+            [
+
+
+
+                "A+",
+
+
+
+                "A",
+
+
+
+                "B",
+
+
+
+                "C",
+
+
+
+                "D",
+
+
+
+            ],
+
+
+
+            default="F",
+
+
 
         )
 
+
+
         return self
+
+
 
     # ---------------------------------------------------------
 
-    def round_metrics(self):
-        """
-        Round all institutional scores.
+    # Risk Grade
+
+    # ---------------------------------------------------------
+
+
+
+    def risk_grade(self):
+
+
+
         """
 
-        score_cols = [
+        Assign institutional risk grade.
+
+        """
+
+
+
+        risk = self.df["Risk Score"]
+
+
+
+        self.df["Risk Grade"] = np.select(
+
+
+
+            [
+
+
+
+                risk >= 90,
+
+
+
+                risk >= 75,
+
+
+
+                risk >= 60,
+
+
+
+                risk >= 45,
+
+
+
+            ],
+
+
+
+            [
+
+
+
+                "Low",
+
+
+
+                "Moderate",
+
+
+
+                "Elevated",
+
+
+
+                "High",
+
+
+
+            ],
+
+
+
+            default="Very High",
+
+
+
+        )
+
+
+
+        return self
+
+
+
+    # ---------------------------------------------------------
+
+    # Percentile Rank
+
+    # ---------------------------------------------------------
+
+
+
+    def percentile_rank(self):
+
+
+
+        """
+
+        Calculate percentile ranking.
+
+        """
+
+
+
+        self.df["Percentile Rank"] = (
+
+
+
+            self.df[COMPOSITE_SCORE]
+
+
+
+            .rank(
+
+
+
+                pct=True,
+
+
+
+                ascending=True,
+
+
+
+            )
+
+
+
+            * 100
+
+
+
+        )
+
+
+
+        return self
+
+
+
+    # ---------------------------------------------------------
+
+    # Institution Rank
+
+    # ---------------------------------------------------------
+
+
+
+    def overall_rank(self):
+
+
+
+        """
+
+        Calculate institutional ranking.
+
+        """
+
+
+
+        self.df[INSTITUTION_RANK] = (
+
+
+
+            self.df[COMPOSITE_SCORE]
+
+
+
+            .rank(
+
+
+
+                ascending=False,
+
+
+
+                method="dense",
+
+
+
+            )
+
+
+
+            .astype(int)
+
+
+
+        )
+
+
+
+        return self
+
+
+
+    # ---------------------------------------------------------
+
+    # Final Institutional Score
+
+    # ---------------------------------------------------------
+
+
+
+    def final_institutional_score(self):
+
+
+
+        """
+
+        Calculate final institutional score.
+
+        """
+
+
+
+        self.df["Final Institutional Score"] = (
+
+
+
+            self.df[COMPOSITE_SCORE] * 0.70
+
+
+
+            +
+
+
+
+            self.df["Confidence Score"] * 0.30
+
+
+
+        )
+
+
+
+        return self
+
+
+
+    # ---------------------------------------------------------
+
+    # Recommendation
+
+    # ---------------------------------------------------------
+
+
+
+    def recommendation(self):
+
+
+
+        """
+
+        Assign institutional recommendation.
+
+        """
+
+
+
+        from strategy_compare_v4.config.recommendations import (
+
+            assign_recommendations,
+
+        )
+
+
+
+        self.df = assign_recommendations(
+
+
+
+            self.df
+
+
+
+        )
+
+
+
+        return self
+
+
+
+    # ---------------------------------------------------------
+
+    # Normalize Scores
+
+    # ---------------------------------------------------------
+
+
+
+    def normalize_scores(self):
+
+
+
+        """
+
+        Normalize institutional scores.
+
+        """
+
+
+
+        metrics = [
+
+
 
             "Edge Score",
 
+
+
             "Reliability Score",
 
-            "Opportunity Score",
 
-            "Efficiency Score",
 
             "Risk Score",
 
+
+
+            "Opportunity Score",
+
+
+
+            "Efficiency Score",
+
+
+
             "Return Score",
+
+
 
             "Consistency Score",
 
+
+
             "Institutional Strength",
 
-            "Composite Score",
+
+
+            COMPOSITE_SCORE,
+
+
 
             "Confidence Score",
 
+
+
             "Stability Score",
+
+
 
             "Performance Score",
 
+
+
             "Alpha Score",
+
+
 
             "Final Institutional Score",
 
-            "Percentile Rank"
+
 
         ]
 
-        for col in score_cols:
 
-            if col in self.df.columns:
 
-                self.df[col] = self.df[col].round(2)
+        for metric in metrics:
+
+
+
+            if metric in self.df.columns:
+
+
+
+                self.df[f"{metric} (Norm)"] = normalize(
+
+
+
+                    self.df[metric]
+
+
+
+                )
+
+
 
         return self
 
+
+
     # ---------------------------------------------------------
 
-    def sort_results(self):
+    # Cleanup
+
+    # ---------------------------------------------------------
+
+
+
+    def cleanup(self):
+
+
+
         """
-        Sort strategies from best to worst.
+
+        Replace invalid values.
+
         """
 
-        self.df = self.df.sort_values(
 
-            by=[
 
-                "Institution Rank",
+        self.df.replace(
 
-                "Composite Score"
+
+
+            [
+
+
+
+                np.inf,
+
+
+
+                -np.inf,
+
+
 
             ],
 
-            ascending=[
 
-                True,
 
-                False
+            np.nan,
 
-            ]
 
-        ).reset_index(
 
-            drop=True
+            inplace=True,
+
+
 
         )
+
+
 
         return self
 
+
+
     # ---------------------------------------------------------
 
-    def run(self):
+    # Round Metrics
 
-        return (
+    # ---------------------------------------------------------
 
-            self.prepare_columns()
 
-                .edge_score()
 
-                .reliability_score()
+    def round_metrics(self):
 
-                .opportunity_score()
 
-                .efficiency_score()
 
-                .risk_score()
+        """
 
-                .return_score()
+        Round all numeric metrics.
 
-                .consistency_score()
+        """
 
-                .institutional_strength()
 
-                .composite_score()
 
-                .confidence_score()
+        numeric_columns = self.df.select_dtypes(
 
-                .stability_score()
 
-                .performance_score()
 
-                .alpha_score()
+            include="number"
 
-                .institutional_grade()
 
-                .risk_grade()
 
-                .percentile_rank()
+        ).columns
 
-                .overall_rank()
 
-                .final_institutional_score()
 
-                .recommendation()
+        self.df[numeric_columns] = (
 
-                .normalize_scores()
 
-                .cleanup()
 
-                .round_metrics()
+            self.df[numeric_columns]
 
-                .sort_results()
 
-                .df
+
+            .round(2)
+
+
 
         )
 
 
+
+        return self
+
+
+
+    # ---------------------------------------------------------
+
+    # Sort Results
+
+    # ---------------------------------------------------------
+
+
+
+    def sort_results(self):
+
+
+
+        """
+
+        Sort final institutional output.
+
+        """
+
+
+
+        self.df = (
+
+
+
+            self.df
+
+
+
+            .sort_values(
+
+
+
+                by=[
+
+
+
+                    INSTITUTION_RANK,
+
+
+
+                    COMPOSITE_SCORE,
+
+
+
+                ],
+
+
+
+                ascending=[
+
+
+
+                    True,
+
+
+
+                    False,
+
+
+
+                ],
+
+
+
+            )
+
+
+
+            .reset_index(
+
+
+
+                drop=True,
+
+
+
+            )
+
+
+
+        )
+
+
+
+        return self
+
+
+
+    # ---------------------------------------------------------
+
+    # Execute Engine
+
+    # ---------------------------------------------------------
+
+
+
+    def run(self):
+
+
+
+        """
+
+        Execute complete institutional
+
+        scoring pipeline.
+
+        """
+
+
+
+        logger.info(
+
+
+
+            "Running Institutional Scoring Engine..."
+
+
+
+        )
+
+
+
+        return (
+
+
+
+            self.prepare_columns()
+
+
+
+                .edge_score()
+
+
+
+                .reliability_score()
+
+
+
+                .opportunity_score()
+
+
+
+                .efficiency_score()
+
+
+
+                .risk_score()
+
+
+
+                .return_score()
+
+
+
+                .consistency_score()
+
+
+
+                .institutional_strength()
+
+
+
+                .composite_score()
+
+
+
+                .confidence_score()
+
+
+
+                .stability_score()
+
+
+
+                .performance_score()
+
+
+
+                .alpha_score()
+
+
+
+                .institutional_grade()
+
+
+
+                .risk_grade()
+
+
+
+                .percentile_rank()
+
+
+
+                .overall_rank()
+
+
+
+                .final_institutional_score()
+
+
+
+                .recommendation()
+
+
+
+                .normalize_scores()
+
+
+
+                .cleanup()
+
+
+
+                .round_metrics()
+
+
+
+                .sort_results()
+
+
+
+                .df
+
+
+
+        )
+
+
+
+
+
 # ============================================================
+
 # Convenience Function
+
 # ============================================================
+
+
 
 def derive_scoring_metrics(
-    df: pd.DataFrame
+
+    df: pd.DataFrame,
+
 ) -> pd.DataFrame:
-    """
-    Derive all institutional scoring metrics.
+
     """
 
-    return ScoringMetrics(df).run()
+    Derive institutional scoring metrics.
+
+    """
+
+
+
+    logger.info(
+
+
+
+        "Deriving Institutional Scoring Metrics..."
+
+
+
+    )
+
+
+
+    return ScoringMetrics(
+
+
+
+        df
+
+
+
+    ).run()

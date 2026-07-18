@@ -2,98 +2,157 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    strategy_comparison.py
+Module
+------
+strategy_comparison.py
 
-Purpose:
-    Master Orchestrator
+Purpose
+-------
+Master Orchestrator for the complete
+Institutional Strategy Comparison Platform.
 
 Pipeline
-
+--------
 Raw Reports
-        │
-        ▼
+      │
+      ▼
 Derived Metrics
-        │
-        ▼
+      │
+      ▼
 Strategy Comparison
-        │
-        ▼
+      │
+      ▼
 Stock Comparison
-        │
-        ▼
-Leaderboard
-        │
-        ▼
-Robustness
-        │
-        ▼
-Correlation
-        │
-        ▼
+      │
+      ▼
+Leaderboards
+      │
+      ▼
+Robustness Analysis
+      │
+      ▼
+Correlation Analysis
+      │
+      ▼
 Portfolio Builder
-        │
-        ▼
-Excel Report
+      │
+      ▼
+Institutional Excel Report
 
 =============================================================
 """
 
+from __future__ import annotations
+
+import time
 from pathlib import Path
-import traceback
+from typing import Any
 
 import pandas as pd
 
-from derived_metrics.derived_engine import derive_metrics
+from strategy_compare_v4.config.constants import (
+    CAPITAL,
+    INPUT_DIRECTORY,
+    MAX_POSITION_WEIGHT,
+    OUTPUT_DIRECTORY,
+    TOP_STOCKS,
+)
 
-from comparison.strategy_compare import compare_strategies
-from comparison.stock_compare import compare_stocks
-from comparison.leaderboard import build_leaderboards
-from comparison.robustness import analyze_robustness
-from comparison.correlation import analyze_correlations
+from strategy_compare_v4.utils.logger import (
+    banner,
+    get_logger,
+)
 
-from portfolio.portfolio_builder import build_portfolio
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
 
-from reports.excel_exporter import export_excel
+from strategy_compare_v4.derived_metrics.derived_engine import (
+    derive_metrics,
+)
+
+from strategy_compare_v4.comparison.strategy_compare import (
+    compare_strategies,
+)
+
+from strategy_compare_v4.comparison.stock_compare import (
+    compare_stocks,
+)
+
+from strategy_compare_v4.comparison.leaderboard import (
+    build_leaderboards,
+)
+
+from strategy_compare_v4.comparison.robustness import (
+    analyze_robustness,
+)
+
+from strategy_compare_v4.comparison.correlation import (
+    analyze_correlations,
+)
+
+from strategy_compare_v4.portfolio.portfolio_builder import (
+    build_portfolio,
+)
+
+from strategy_compare_v4.reports.excel_exporter import (
+    export_excel,
+)
+
+logger = get_logger(__name__)
 
 
-###############################################################################
-# Configuration
-###############################################################################
-
-INPUT_DIRECTORY = "."
-
-OUTPUT_DIRECTORY = "Institutional_Output"
-
-CAPITAL = 1_000_000
-
-TOP_STOCKS = 25
-
-MAX_WEIGHT = 10
-
-
-###############################################################################
-# Main Engine
-###############################################################################
+# ============================================================
+# Master Orchestrator
+# ============================================================
 
 class StrategyComparisonPlatform:
     """
-    Master Pipeline
+    Master orchestration engine
+    for the Institutional
+    Strategy Comparison Platform.
     """
 
     def __init__(
         self,
-        input_directory=INPUT_DIRECTORY,
-        output_directory=OUTPUT_DIRECTORY
+        input_directory: str | Path = INPUT_DIRECTORY,
+        output_directory: str | Path = OUTPUT_DIRECTORY,
     ):
+        """
+        Initialize platform.
+        """
 
-        self.input_directory = Path(input_directory)
+        banner(
 
-        self.output_directory = Path(output_directory)
+            logger,
+
+            "Strategy Comparison Platform",
+
+        )
+
+        self.input_directory = Path(
+
+            input_directory,
+
+        )
+
+        self.output_directory = Path(
+
+            output_directory,
+
+        )
 
         self.output_directory.mkdir(
-            exist_ok=True
+
+            parents=True,
+
+            exist_ok=True,
+
         )
+
+        # --------------------------------------------------
+        # Pipeline Engines
+        # --------------------------------------------------
 
         self.strategy_engine = None
 
@@ -107,50 +166,93 @@ class StrategyComparisonPlatform:
 
         self.portfolio_engine = None
 
-        self.comparison_df = None
+        # --------------------------------------------------
+        # Outputs
+        # --------------------------------------------------
 
-###############################################################################
-# Stage 0
-###############################################################################
+        self.comparison_df: pd.DataFrame | None = None
 
-def run_derived_metrics(self):
+        self.execution_time: float = 0.0
 
-    print()
+        self.diagnostic_report: dict[str, Any] = {}
 
-    print("=" * 70)
+        logger.info(
 
-    print("Generating Derived Metrics")
+            "Input Directory  : %s",
 
-    print("=" * 70)
+            self.input_directory,
 
-    derive_metrics(
+        )
 
-        input_directory=self.input_directory
+        logger.info(
 
-    )
+            "Output Directory : %s",
 
-    return self
+            self.output_directory,
 
-###############################################################################
-# Stage 1
-###############################################################################
+        )
 
-    def run_strategy_comparison(self):
+    # ============================================================
+    # Stage 0
+    # ============================================================
 
-        print()
+    def run_derived_metrics(
+        self,
+    ):
+        """
+        Generate all derived
+        institutional metrics.
+        """
 
-        print("=" * 70)
+        banner(
 
-        print("Running Strategy Comparison")
+            logger,
 
-        print("=" * 70)
+            "Stage 0 : Derived Metrics",
+
+        )
+
+        derive_metrics(
+
+            input_directory=self.input_directory,
+
+        )
+
+        logger.info(
+
+            "Derived metrics generated successfully."
+
+        )
+
+        return self
+
+
+    # ============================================================
+    # Stage 1
+    # ============================================================
+
+    def run_strategy_comparison(
+        self,
+    ):
+        """
+        Execute strategy
+        comparison engine.
+        """
+
+        banner(
+
+            logger,
+
+            "Stage 1 : Strategy Comparison",
+
+        )
 
         self.strategy_engine = compare_strategies(
 
             self.input_directory,
 
-            self.output_directory /
-            "Strategy_Comparison.xlsx"
+            self.output_directory
+            / "Strategy_Comparison.xlsx",
 
         )
 
@@ -161,161 +263,314 @@ def run_derived_metrics(self):
 
         )
 
+        require_columns(
+
+            self.comparison_df,
+
+            [
+
+                "Strategy",
+
+                "Stock",
+
+            ],
+
+        )
+
+        logger.info(
+
+            "Strategies : %d",
+
+            self.comparison_df[
+                "Strategy"
+            ].nunique(),
+
+        )
+
+        logger.info(
+
+            "Stocks : %d",
+
+            self.comparison_df[
+                "Stock"
+            ].nunique(),
+
+        )
+
+        logger.info(
+
+            "Rows : %d",
+
+            len(
+
+                self.comparison_df,
+
+            ),
+
+        )
+
         return self
 
 
-###############################################################################
-# Stage 2
-###############################################################################
+    # ============================================================
+    # Stage 2
+    # ============================================================
 
-    def run_stock_comparison(self):
+    def run_stock_comparison(
+        self,
+    ):
+        """
+        Execute stock
+        comparison engine.
+        """
 
-        print()
+        banner(
 
-        print("=" * 70)
+            logger,
 
-        print("Running Stock Comparison")
+            "Stage 2 : Stock Comparison",
 
-        print("=" * 70)
+        )
+
+        require_columns(
+
+            self.comparison_df,
+
+            [
+
+                "Stock",
+
+            ],
+
+        )
 
         self.stock_engine = compare_stocks(
 
             self.comparison_df,
 
-            self.output_directory /
-            "Stock_Comparison.xlsx"
+            self.output_directory
+            / "Stock_Comparison.xlsx",
+
+        )
+
+        logger.info(
+
+            "Stock comparison completed."
 
         )
 
         return self
 
 
-###############################################################################
-# Stage 3
-###############################################################################
+    # ============================================================
+    # Stage 3
+    # ============================================================
 
-    def run_leaderboards(self):
+    def run_leaderboards(
+        self,
+    ):
+        """
+        Build institutional
+        leaderboards.
+        """
 
-        print()
+        banner(
 
-        print("=" * 70)
+            logger,
 
-        print("Building Leaderboards")
-
-        print("=" * 70)
-
-        self.leaderboard_engine = build_leaderboards(
-
-            self.comparison_df,
-
-            self.output_directory /
-            "Leaderboards.xlsx"
+            "Stage 3 : Leaderboards",
 
         )
 
-        return self
+        self.leaderboard_engine = (
 
+            build_leaderboards(
 
-###############################################################################
-# Stage 4
-###############################################################################
+                self.comparison_df,
 
-    def run_robustness(self):
+                self.output_directory
+                / "Leaderboards.xlsx",
 
-        print()
-
-        print("=" * 70)
-
-        print("Running Robustness Analysis")
-
-        print("=" * 70)
-
-        self.robustness_engine = analyze_robustness(
-
-            self.comparison_df,
-
-            self.output_directory /
-            "Robustness.xlsx"
+            )
 
         )
 
-        return self
+        logger.info(
 
-
-###############################################################################
-# Stage 5
-###############################################################################
-
-    def run_correlation(self):
-
-        print()
-
-        print("=" * 70)
-
-        print("Running Correlation Analysis")
-
-        print("=" * 70)
-
-        self.correlation_engine = analyze_correlations(
-
-            self.comparison_df,
-
-            self.output_directory /
-            "Correlation.xlsx"
+            "Leaderboards generated successfully."
 
         )
 
         return self
     
-###############################################################################
-# Stage 6
-###############################################################################
+    # ============================================================
+    # Stage 4
+    # ============================================================
 
-    def run_portfolio(self):
+    def run_robustness(
+        self,
+    ):
+        """
+        Execute robustness
+        analysis.
+        """
 
-        print()
+        banner(
 
-        print("=" * 70)
+            logger,
 
-        print("Building Institutional Portfolio")
+            "Stage 4 : Robustness Analysis",
 
-        print("=" * 70)
+        )
 
-        self.portfolio_engine = build_portfolio(
+        self.robustness_engine = (
 
-            self.comparison_df,
+            analyze_robustness(
 
-            capital=CAPITAL,
+                self.comparison_df,
 
-            top_n=TOP_STOCKS,
+                self.output_directory
+                / "Robustness.xlsx",
 
-            max_weight=MAX_WEIGHT,
+            )
 
-            output_file=self.output_directory /
-            "Institutional_Portfolio.xlsx"
+        )
+
+        logger.info(
+
+            "Robustness analysis completed."
 
         )
 
         return self
 
 
-###############################################################################
-# Stage 7
-###############################################################################
+    # ============================================================
+    # Stage 5
+    # ============================================================
 
-    def export_final_report(self):
-
+    def run_correlation(
+        self,
+    ):
         """
-        Export consolidated Excel workbook.
+        Execute correlation
+        analysis.
         """
 
-        print()
+        banner(
 
-        print("=" * 70)
+            logger,
 
-        print("Exporting Institutional Report")
+            "Stage 5 : Correlation Analysis",
 
-        print("=" * 70)
+        )
+
+        self.correlation_engine = (
+
+            analyze_correlations(
+
+                self.comparison_df,
+
+                self.output_directory
+                / "Correlation.xlsx",
+
+            )
+
+        )
+
+        logger.info(
+
+            "Correlation analysis completed."
+
+        )
+
+        return self
+
+
+    # ============================================================
+    # Stage 6
+    # ============================================================
+
+    def run_portfolio(
+        self,
+    ):
+        """
+        Build the institutional
+        portfolio.
+        """
+
+        banner(
+
+            logger,
+
+            "Stage 6 : Portfolio Builder",
+
+        )
+
+        self.portfolio_engine = (
+
+            build_portfolio(
+
+                self.comparison_df,
+
+                capital=CAPITAL,
+
+                top_n=TOP_STOCKS,
+
+                max_weight=MAX_POSITION_WEIGHT,
+
+                output_file=(
+
+                    self.output_directory
+
+                    / "Institutional_Portfolio.xlsx"
+
+                ),
+
+            )
+
+        )
+
+        logger.info(
+
+            "Portfolio built successfully."
+
+        )
+
+        logger.info(
+
+            "Portfolio Positions : %d",
+
+            len(
+
+                self.portfolio_engine.portfolio,
+
+            ),
+
+        )
+
+        return self
+
+
+    # ============================================================
+    # Stage 7
+    # ============================================================
+
+    def export_final_report(
+        self,
+    ):
+        """
+        Export consolidated
+        institutional report.
+        """
+
+        banner(
+
+            logger,
+
+            "Stage 7 : Export Report",
+
+        )
 
         sheets = {
 
@@ -377,89 +632,165 @@ def run_derived_metrics(self):
 
             "Portfolio Summary":
 
-                self.portfolio_engine.summary
+                self.portfolio_engine.summary,
 
         }
 
         export_excel(
 
-            self.output_directory /
-            "Institutional_Strategy_Report.xlsx",
+            self.output_directory
 
-            sheets
+            / "Institutional_Strategy_Report.xlsx",
+
+            sheets,
+
+        )
+
+        logger.info(
+
+            "Final institutional report exported."
+
+        )
+
+        logger.info(
+
+            "Worksheets Exported : %d",
+
+            len(
+
+                sheets,
+
+            ),
 
         )
 
         return self
 
+    # ============================================================
+    # Diagnostics
+    # ============================================================
 
-###############################################################################
-# Diagnostics
-###############################################################################
+    def diagnostics(
+        self,
+    ):
+        """
+        Generate pipeline
+        diagnostics.
+        """
 
-    def diagnostics(self):
+        banner(
 
-        print()
+            logger,
 
-        print("=" * 70)
-
-        print("PIPELINE SUMMARY")
-
-        print("=" * 70)
-
-        print(
-
-            f"Strategies : "
-
-            f"{self.comparison_df['Strategy'].nunique()}"
+            "Pipeline Summary",
 
         )
 
-        print(
+        require_columns(
 
-            f"Stocks     : "
+            self.comparison_df,
 
-            f"{self.comparison_df['Stock'].nunique()}"
+            [
 
-        )
+                "Strategy",
 
-        print(
+                "Stock",
 
-            f"Rows       : "
-
-            f"{len(self.comparison_df)}"
+            ],
 
         )
 
-        print(
+        self.diagnostic_report = {
 
-            f"Portfolio  : "
+            "strategies":
 
-            f"{len(self.portfolio_engine.portfolio)} Positions"
+                self.comparison_df[
+                    "Strategy"
+                ].nunique(),
 
-        )
+            "stocks":
 
-        print("=" * 70)
+                self.comparison_df[
+                    "Stock"
+                ].nunique(),
 
-        print()
+            "rows":
+
+                len(
+
+                    self.comparison_df,
+
+                ),
+
+            "portfolio_positions":
+
+                len(
+
+                    self.portfolio_engine
+                    .portfolio,
+
+                ),
+
+            "execution_time":
+
+                round(
+
+                    self.execution_time,
+
+                    3,
+
+                ),
+
+        }
+
+        for key, value in (
+
+            self.diagnostic_report
+
+            .items()
+
+        ):
+
+            logger.info(
+
+                "%-22s : %s",
+
+                key.replace(
+
+                    "_",
+
+                    " ",
+
+                ).title(),
+
+                value,
+
+            )
 
         return self
-    
-###############################################################################
-# Pipeline
-###############################################################################
 
-    def run(self):
 
+    # ============================================================
+    # Execute Pipeline
+    # ============================================================
+
+    def run(
+        self,
+    ):
         """
-        Execute complete institutional workflow.
+        Execute the complete
+        institutional workflow.
         """
+
+        start = time.perf_counter()
 
         try:
 
             (
 
                 self
+
+                .run_derived_metrics()
 
                 .run_strategy_comparison()
 
@@ -475,147 +806,224 @@ def run_derived_metrics(self):
 
                 .export_final_report()
 
-                .diagnostics()
+            )
+
+        except Exception:
+
+            logger.exception(
+
+                "Strategy Comparison Platform failed."
 
             )
 
-            print()
-
-            print("=" * 70)
-
-            print("PIPELINE COMPLETED SUCCESSFULLY")
-
-            print("=" * 70)
-
-            print()
-
-        except Exception as e:
-
-            print()
-
-            print("=" * 70)
-
-            print("PIPELINE FAILED")
-
-            print("=" * 70)
-
-            print(f"Error : {e}")
-
-            traceback.print_exc()
-
-            print()
-
             raise
+
+        finally:
+
+            self.execution_time = (
+
+                time.perf_counter()
+
+                - start
+
+            )
+
+            self.diagnostics()
+
+            banner(
+
+                logger,
+
+                "Pipeline Completed",
+
+            )
+
+            logger.info(
+
+                "Execution Time : %.3f seconds",
+
+                self.execution_time,
+
+            )
 
         return self
 
 
-###############################################################################
-# Results
-###############################################################################
+    # ============================================================
+    # Results
+    # ============================================================
 
-    def get_results(self):
-
+    def get_results(
+        self,
+    ) -> dict[str, Any]:
         """
-        Return all generated engines and outputs.
+        Return all generated
+        engines and outputs.
         """
 
         return {
 
-            "comparison": self.comparison_df,
+            "comparison":
 
-            "strategy_engine": self.strategy_engine,
+                self.comparison_df,
 
-            "stock_engine": self.stock_engine,
+            "strategy_engine":
 
-            "leaderboard_engine": self.leaderboard_engine,
+                self.strategy_engine,
 
-            "robustness_engine": self.robustness_engine,
+            "stock_engine":
 
-            "correlation_engine": self.correlation_engine,
+                self.stock_engine,
 
-            "portfolio_engine": self.portfolio_engine
+            "leaderboard_engine":
+
+                self.leaderboard_engine,
+
+            "robustness_engine":
+
+                self.robustness_engine,
+
+            "correlation_engine":
+
+                self.correlation_engine,
+
+            "portfolio_engine":
+
+                self.portfolio_engine,
+
+            "diagnostics":
+
+                self.diagnostic_report,
+
+            "execution_time":
+
+                self.execution_time,
 
         }
     
-###############################################################################
+# ============================================================
 # Convenience Function
-###############################################################################
+# ============================================================
 
 def run_strategy_comparison_pipeline(
-
-    input_directory=INPUT_DIRECTORY,
-
-    output_directory=OUTPUT_DIRECTORY
-
-):
-
+    input_directory: str | Path = INPUT_DIRECTORY,
+    output_directory: str | Path = OUTPUT_DIRECTORY,
+) -> StrategyComparisonPlatform:
     """
-    Execute the complete Strategy Comparison pipeline.
+    Execute the complete
+    Institutional Strategy
+    Comparison pipeline.
 
     Parameters
     ----------
     input_directory : str | Path
-        Directory containing strategy folders.
+        Directory containing
+        strategy reports.
 
     output_directory : str | Path
-        Directory where reports will be generated.
+        Destination directory
+        for generated reports.
 
     Returns
     -------
     StrategyComparisonPlatform
+        Fully executed
+        pipeline instance.
     """
+
+    banner(
+
+        logger,
+
+        "Launching Strategy Comparison Pipeline",
+
+    )
 
     engine = StrategyComparisonPlatform(
 
         input_directory=input_directory,
 
-        output_directory=output_directory
+        output_directory=output_directory,
 
     )
 
     engine.run()
 
+    logger.info(
+
+        "Pipeline finished successfully."
+
+    )
+
     return engine
 
 
-###############################################################################
+# ============================================================
 # Main
-###############################################################################
+# ============================================================
 
 def main():
-
     """
-    Entry point.
+    Application entry point.
     """
 
-    print()
+    banner(
 
-    print("=" * 70)
+        logger,
 
-    print("INSTITUTIONAL STRATEGY COMPARISON PLATFORM V4")
+        "Institutional Strategy Comparison Platform V4",
 
-    print("=" * 70)
+    )
 
-    print()
+    engine = run_strategy_comparison_pipeline()
 
-    run_strategy_comparison_pipeline()
+    logger.info(
 
-    print()
+        "Reports generated successfully."
 
-    print("=" * 70)
+    )
 
-    print("REPORTS GENERATED SUCCESSFULLY")
+    logger.info(
 
-    print("=" * 70)
+        "Output Directory : %s",
 
-    print()
+        engine.output_directory,
+
+    )
+
+    logger.info(
+
+        "Execution Time : %.3f seconds",
+
+        engine.execution_time,
+
+    )
 
 
-###############################################################################
+# ============================================================
 # CLI Entry
-###############################################################################
+# ============================================================
 
 if __name__ == "__main__":
 
-    main()
+    try:
+
+        main()
+
+    except KeyboardInterrupt:
+
+        logger.warning(
+
+            "Pipeline interrupted by user."
+
+        )
+
+    except Exception:
+
+        logger.exception(
+
+            "Unexpected fatal error."
+
+        )
+
+        raise

@@ -2,18 +2,54 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    config/constants.py
+Module
+------
+config/constants.py
 
-Purpose:
-    Shared constants used throughout the platform.
+Purpose
+-------
+Centralized constants shared across the entire
+Institutional Strategy Comparison Platform.
+
+Guidelines
+----------
+• Column Names
+• Report Names
+• Excel Sheet Names
+• Recommendation Labels
+• File Names
+• Default Configuration
 
 =============================================================
 """
 
-###############################################################################
+from __future__ import annotations
+
+from pathlib import Path
+
+# ============================================================
+# Project Directories
+# ============================================================
+
+PROJECT_ROOT = Path(".")
+
+INPUT_DIRECTORY = PROJECT_ROOT
+
+OUTPUT_DIRECTORY = PROJECT_ROOT / "Institutional_Output"
+
+# ============================================================
+# Portfolio Defaults
+# ============================================================
+
+CAPITAL = 1_000_000
+
+TOP_STOCKS = 25
+
+MAX_POSITION_WEIGHT = 10.0
+
+# ============================================================
 # Common Column Names
-###############################################################################
+# ============================================================
 
 STOCK = "Stock"
 
@@ -23,9 +59,11 @@ INSTITUTION_RANK = "Institution Rank"
 
 RECOMMENDATION = "Recommendation"
 
-###############################################################################
+WEIGHT = "Weight"
+
+# ============================================================
 # Performance Metrics
-###############################################################################
+# ============================================================
 
 EXPECTANCY = "Expectancy"
 
@@ -41,9 +79,9 @@ TRADES = "Trades"
 
 TRADES_PER_YEAR = "Trades / Year"
 
-###############################################################################
+# ============================================================
 # Exit Metrics
-###############################################################################
+# ============================================================
 
 WINNING_EXIT = "Winning Exit %"
 
@@ -57,17 +95,17 @@ STOP_PERCENT = "Stop %"
 
 TIME_PERCENT = "Time %"
 
-###############################################################################
+# ============================================================
 # Efficiency Metrics
-###############################################################################
+# ============================================================
 
 HOLDING_EFFICIENCY = "Holding Efficiency"
 
 SIGNAL_QUALITY = "Signal Quality"
 
-###############################################################################
-# Scores
-###############################################################################
+# ============================================================
+# Institutional Scores
+# ============================================================
 
 EDGE_SCORE = "Edge Score"
 
@@ -77,9 +115,9 @@ EFFICIENCY_SCORE = "Efficiency Score"
 
 COMPOSITE_SCORE = "Composite Score"
 
-###############################################################################
+# ============================================================
 # Report Names
-###############################################################################
+# ============================================================
 
 SUMMARY = "Summary"
 
@@ -91,9 +129,9 @@ ROBUSTNESS = "Robustness"
 
 CORRELATION = "Correlation"
 
-###############################################################################
+# ============================================================
 # Excel Sheet Names
-###############################################################################
+# ============================================================
 
 SHEET_STRATEGY_COMPARISON = "Strategy Comparison"
 
@@ -109,13 +147,25 @@ SHEET_OVERALL_LEADERBOARD = "Overall Leaderboard"
 
 SHEET_STRATEGY_LEADERBOARD = "Strategy Leaderboard"
 
+SHEET_STOCK_LEADERBOARD = "Stock Leaderboard"
+
+SHEET_EDGE_LEADERBOARD = "Edge Leaderboard"
+
+SHEET_ROBUSTNESS = "Robustness"
+
+SHEET_STABILITY = "Stability"
+
+SHEET_CORRELATION = "Correlation"
+
+SHEET_DIVERSIFICATION = "Diversification"
+
 SHEET_PORTFOLIO = "Portfolio"
 
 SHEET_PORTFOLIO_SUMMARY = "Portfolio Summary"
 
-###############################################################################
+# ============================================================
 # Recommendation Labels
-###############################################################################
+# ============================================================
 
 STRONG_BUY = "Strong Buy"
 
@@ -129,9 +179,25 @@ AVOID = "Avoid"
 
 REJECT = "Reject"
 
-###############################################################################
-# File Names
-###############################################################################
+RECOMMENDATION_ORDER = [
+
+    STRONG_BUY,
+
+    BUY,
+
+    WATCH,
+
+    IMPROVE,
+
+    AVOID,
+
+    REJECT,
+
+]
+
+# ============================================================
+# Output File Names
+# ============================================================
 
 FINAL_REPORT = "Institutional_Strategy_Report.xlsx"
 

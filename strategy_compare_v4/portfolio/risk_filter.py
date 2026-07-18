@@ -2,21 +2,39 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    portfolio/risk_filter.py
+Module
+------
+portfolio/risk_filter.py
 
-Purpose:
-    Institutional risk filters applied before
-    portfolio allocation.
+Purpose
+-------
+Institutional risk filtering engine used before
+portfolio construction.
+
+Applies standardized institutional quality filters
+to retain only high-confidence trading strategies.
 
 =============================================================
 """
 
 from __future__ import annotations
 
+from typing import Callable
+
 import pandas as pd
 
-from config.thresholds import (
+from strategy_compare_v4.config.constants import (
+    COMPOSITE_SCORE,
+    EDGE_SCORE,
+    RELIABILITY_SCORE,
+    EFFICIENCY_SCORE,
+    EXPECTANCY,
+    PROFIT_FACTOR,
+    REWARD_RISK,
+    TRADES,
+)
+
+from strategy_compare_v4.config.thresholds import (
     MIN_COMPOSITE_SCORE,
     MIN_EDGE_SCORE,
     MIN_RELIABILITY_SCORE,
@@ -28,187 +46,854 @@ from config.thresholds import (
     TOP_STOCKS,
 )
 
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
 
-###############################################################################
+from strategy_compare_v4.utils.math_utils import (
+    round_dataframe,
+)
+
+from strategy_compare_v4.utils.logger import (
+    get_logger,
+    banner,
+)
+
+logger = get_logger(__name__)
+
+
+# ============================================================
+# Validation
+# ============================================================
+
+def validate_input(
+    df: pd.DataFrame,
+    required_columns: list[str],
+) -> pd.DataFrame:
+    """
+    Validate the input dataframe
+    before applying filters.
+    """
+
+    banner(
+
+        logger,
+
+        "Validating Risk Filter Input",
+
+    )
+
+    require_columns(
+
+        df,
+
+        required_columns,
+
+    )
+
+    logger.info(
+
+        "Rows             : %d",
+
+        len(
+
+            df,
+
+        ),
+
+    )
+
+    logger.info(
+
+        "Unique Stocks    : %d",
+
+        df["Stock"].nunique(),
+
+    )
+
+    return df.copy()
+
+
+# ============================================================
 # Composite Score Filter
-###############################################################################
+# ============================================================
 
-def filter_composite_score(df):
+def filter_composite_score(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Remove low composite score strategies.
-    """
-
-    return df.loc[
-        df["Composite Score"] >= MIN_COMPOSITE_SCORE
-    ].copy()
-
-
-###############################################################################
-# Edge Score Filter
-###############################################################################
-
-def filter_edge_score(df):
-    """
-    Remove weak edge strategies.
+    Remove low Composite
+    Score strategies.
     """
 
-    return df.loc[
-        df["Edge Score"] >= MIN_EDGE_SCORE
-    ].copy()
+    df = validate_input(
 
+        df,
 
-###############################################################################
-# Reliability Filter
-###############################################################################
+        [
 
-def filter_reliability(df):
-    """
-    Keep reliable strategies.
-    """
+            "Stock",
 
-    return df.loc[
-        df["Reliability Score"] >= MIN_RELIABILITY_SCORE
-    ].copy()
+            COMPOSITE_SCORE,
 
+        ],
 
-###############################################################################
-# Efficiency Filter
-###############################################################################
+    )
 
-def filter_efficiency(df):
-    """
-    Keep efficient strategies.
-    """
+    filtered = (
 
-    return df.loc[
-        df["Efficiency Score"] >= MIN_EFFICIENCY_SCORE
-    ].copy()
+        df.loc[
 
+            df[
 
-###############################################################################
-# Expectancy Filter
-###############################################################################
+                COMPOSITE_SCORE
 
-def filter_expectancy(df):
-    """
-    Positive expectancy only.
-    """
+            ]
 
-    return df.loc[
-        df["Expectancy"] >= MIN_EXPECTANCY
-    ].copy()
+            >=
 
+            MIN_COMPOSITE_SCORE
 
-###############################################################################
-# Profit Factor Filter
-###############################################################################
+        ]
 
-def filter_profit_factor(df):
-    """
-    Profit Factor filter.
-    """
-
-    return df.loc[
-        df["Profit Factor"] >= MIN_PROFIT_FACTOR
-    ].copy()
-
-
-###############################################################################
-# Reward Risk Filter
-###############################################################################
-
-def filter_reward_risk(df):
-    """
-    Reward/Risk filter.
-    """
-
-    return df.loc[
-        df["Reward Risk"] >= MIN_REWARD_RISK
-    ].copy()
-
-
-###############################################################################
-# Trade Count Filter
-###############################################################################
-
-def filter_trade_count(df):
-    """
-    Minimum historical trades.
-    """
-
-    return df.loc[
-        df["Trades"] >= MIN_TRADES
-    ].copy()
-
-
-###############################################################################
-# Top Ranked Filter
-###############################################################################
-
-def filter_top_ranked(df):
-    """
-    Keep highest ranked opportunities.
-    """
-
-    return (
-        df.sort_values(
-            "Composite Score",
-            ascending=False
-        )
-        .head(TOP_STOCKS)
         .copy()
+
+    )
+
+    logger.info(
+
+        "Composite Score Filter : %d -> %d",
+
+        len(df),
+
+        len(filtered),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
     )
 
 
-###############################################################################
+# ============================================================
+# Edge Score Filter
+# ============================================================
+
+def filter_edge_score(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Remove weak Edge
+    Score strategies.
+    """
+
+    df = validate_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            EDGE_SCORE,
+
+        ],
+
+    )
+
+    filtered = (
+
+        df.loc[
+
+            df[
+
+                EDGE_SCORE
+
+            ]
+
+            >=
+
+            MIN_EDGE_SCORE
+
+        ]
+
+        .copy()
+
+    )
+
+    logger.info(
+
+        "Edge Score Filter : %d -> %d",
+
+        len(df),
+
+        len(filtered),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
+    )
+
+# ============================================================
+# Reliability Filter
+# ============================================================
+
+def filter_reliability(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Keep reliable
+    strategies.
+    """
+
+    df = validate_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            RELIABILITY_SCORE,
+
+        ],
+
+    )
+
+    filtered = (
+
+        df.loc[
+
+            df[
+
+                RELIABILITY_SCORE
+
+            ]
+
+            >=
+
+            MIN_RELIABILITY_SCORE
+
+        ]
+
+        .copy()
+
+    )
+
+    logger.info(
+
+        "Reliability Filter : %d -> %d",
+
+        len(df),
+
+        len(filtered),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
+    )
+
+
+# ============================================================
+# Efficiency Filter
+# ============================================================
+
+def filter_efficiency(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Keep efficient
+    strategies.
+    """
+
+    df = validate_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            EFFICIENCY_SCORE,
+
+        ],
+
+    )
+
+    filtered = (
+
+        df.loc[
+
+            df[
+
+                EFFICIENCY_SCORE
+
+            ]
+
+            >=
+
+            MIN_EFFICIENCY_SCORE
+
+        ]
+
+        .copy()
+
+    )
+
+    logger.info(
+
+        "Efficiency Filter : %d -> %d",
+
+        len(df),
+
+        len(filtered),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
+    )
+
+
+# ============================================================
+# Expectancy Filter
+# ============================================================
+
+def filter_expectancy(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Keep positive
+    expectancy strategies.
+    """
+
+    df = validate_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            EXPECTANCY,
+
+        ],
+
+    )
+
+    filtered = (
+
+        df.loc[
+
+            df[
+
+                EXPECTANCY
+
+            ]
+
+            >=
+
+            MIN_EXPECTANCY
+
+        ]
+
+        .copy()
+
+    )
+
+    logger.info(
+
+        "Expectancy Filter : %d -> %d",
+
+        len(df),
+
+        len(filtered),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
+    )
+
+
+# ============================================================
+# Profit Factor Filter
+# ============================================================
+
+def filter_profit_factor(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Keep strategies with
+    sufficient Profit Factor.
+    """
+
+    df = validate_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            PROFIT_FACTOR,
+
+        ],
+
+    )
+
+    filtered = (
+
+        df.loc[
+
+            df[
+
+                PROFIT_FACTOR
+
+            ]
+
+            >=
+
+            MIN_PROFIT_FACTOR
+
+        ]
+
+        .copy()
+
+    )
+
+    logger.info(
+
+        "Profit Factor Filter : %d -> %d",
+
+        len(df),
+
+        len(filtered),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
+    )
+
+# ============================================================
+# Reward / Risk Filter
+# ============================================================
+
+def filter_reward_risk(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Keep strategies having
+    sufficient Reward/Risk.
+    """
+
+    df = validate_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            REWARD_RISK,
+
+        ],
+
+    )
+
+    filtered = (
+
+        df.loc[
+
+            df[
+
+                REWARD_RISK
+
+            ]
+
+            >=
+
+            MIN_REWARD_RISK
+
+        ]
+
+        .copy()
+
+    )
+
+    logger.info(
+
+        "Reward/Risk Filter : %d -> %d",
+
+        len(df),
+
+        len(filtered),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
+    )
+
+
+# ============================================================
+# Trade Count Filter
+# ============================================================
+
+def filter_trade_count(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Keep strategies with
+    sufficient trade history.
+    """
+
+    df = validate_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            TRADES,
+
+        ],
+
+    )
+
+    filtered = (
+
+        df.loc[
+
+            df[
+
+                TRADES
+
+            ]
+
+            >=
+
+            MIN_TRADES
+
+        ]
+
+        .copy()
+
+    )
+
+    logger.info(
+
+        "Trade Count Filter : %d -> %d",
+
+        len(df),
+
+        len(filtered),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
+    )
+
+
+# ============================================================
+# Top Ranked Filter
+# ============================================================
+
+def filter_top_ranked(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Keep the highest-ranked
+    opportunities.
+    """
+
+    df = validate_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            COMPOSITE_SCORE,
+
+        ],
+
+    )
+
+    filtered = (
+
+        df
+
+        .sort_values(
+
+            COMPOSITE_SCORE,
+
+            ascending=False,
+
+        )
+
+        .head(
+
+            TOP_STOCKS,
+
+        )
+
+        .copy()
+
+    )
+
+    logger.info(
+
+        "Top Ranked Filter : %d retained",
+
+        len(
+
+            filtered,
+
+        ),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
+    )
+
+
+# ============================================================
 # Remove Duplicates
-###############################################################################
+# ============================================================
 
-def remove_duplicates(df):
+def remove_duplicates(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    One entry per stock.
+    Keep only the
+    highest-ranked strategy
+    for each stock.
     """
 
-    return (
-        df.sort_values(
-            "Composite Score",
-            ascending=False
+    df = validate_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            COMPOSITE_SCORE,
+
+        ],
+
+    )
+
+    original_rows = len(
+
+        df,
+
+    )
+
+    filtered = (
+
+        df
+
+        .sort_values(
+
+            COMPOSITE_SCORE,
+
+            ascending=False,
+
         )
+
         .drop_duplicates(
+
             subset="Stock",
-            keep="first"
+
+            keep="first",
+
         )
-        .reset_index(drop=True)
+
+        .reset_index(
+
+            drop=True,
+
+        )
+
+    )
+
+    logger.info(
+
+        "Duplicates Removed : %d",
+
+        original_rows
+
+        -
+
+        len(
+
+            filtered,
+
+        ),
+
+    )
+
+    return round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
     )
 
 
-###############################################################################
-# Full Risk Filter
-###############################################################################
+# ============================================================
+# Institutional Risk Filter Pipeline
+# ============================================================
 
-def apply_risk_filters(df):
+def apply_risk_filters(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Apply all institutional filters.
+    Apply the complete
+    institutional risk
+    filtering pipeline.
     """
 
-    df = filter_expectancy(df)
+    banner(
 
-    df = filter_profit_factor(df)
+        logger,
 
-    df = filter_reward_risk(df)
+        "Institutional Risk Filter",
 
-    df = filter_trade_count(df)
+    )
 
-    df = filter_edge_score(df)
+    filters: list[
 
-    df = filter_reliability(df)
+        Callable[[pd.DataFrame], pd.DataFrame]
 
-    df = filter_efficiency(df)
+    ] = [
 
-    df = filter_composite_score(df)
+        filter_expectancy,
 
-    df = remove_duplicates(df)
+        filter_profit_factor,
 
-    df = filter_top_ranked(df)
+        filter_reward_risk,
 
-    return df.reset_index(drop=True)
+        filter_trade_count,
+
+        filter_edge_score,
+
+        filter_reliability,
+
+        filter_efficiency,
+
+        filter_composite_score,
+
+        remove_duplicates,
+
+        filter_top_ranked,
+
+    ]
+
+    filtered = df.copy()
+
+    logger.info(
+
+        "Initial Universe : %d",
+
+        len(
+
+            filtered,
+
+        ),
+
+    )
+
+    for risk_filter in filters:
+
+        filtered = risk_filter(
+
+            filtered,
+
+        )
+
+    filtered = (
+
+        filtered
+
+        .reset_index(
+
+            drop=True,
+
+        )
+
+    )
+
+    filtered = round_dataframe(
+
+        filtered,
+
+        decimals=2,
+
+    )
+
+    logger.info(
+
+        "Final Universe : %d",
+
+        len(
+
+            filtered,
+
+        ),
+
+    )
+
+    logger.info(
+
+        "Institutional risk filtering completed."
+
+    )
+
+    return filtered

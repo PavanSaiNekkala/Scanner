@@ -1,45 +1,86 @@
 """
 =============================================================
-Institutional Portfolio Builder V4
+Institutional Strategy Comparison Platform V4
 
-Module:
-    portfolio/portfolio_builder.py
+Module
+------
+portfolio/portfolio_builder.py
 
-Purpose:
-    Construct an institutional-grade portfolio using
-    the outputs from the Strategy Comparison Engine.
+Purpose
+-------
+Construct an institutional-grade portfolio using
+the outputs from the Strategy Comparison Engine.
 
 Features
-
-    • Portfolio Construction
-    • Position Sizing
-    • Equal Weight Portfolio
-    • Score Weighted Portfolio
-    • Risk Filter
-    • Recommendation Filter
-    • Portfolio Summary
+--------
+• Portfolio Construction
+• Position Sizing
+• Equal Weight Portfolio
+• Score Weighted Portfolio
+• Risk Filter
+• Recommendation Filter
+• Portfolio Summary
 
 =============================================================
 """
 
 from __future__ import annotations
 
+import time
+from typing import Dict
+
 import numpy as np
 import pandas as pd
 
+from strategy_compare_v4.config.constants import (
+    COMPOSITE_SCORE,
+    EXPECTANCY,
+    PROFIT_FACTOR,
+    RECOMMENDATION,
+)
+
+from strategy_compare_v4.config.thresholds import (
+    MAX_POSITION_WEIGHT,
+)
+
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
+
+from strategy_compare_v4.utils.math_utils import (
+    safe_divide,
+    round_dataframe,
+)
+
+from strategy_compare_v4.utils.logger import (
+    get_logger,
+    banner,
+)
+
+logger = get_logger(__name__)
+
+
+# ============================================================
+# Portfolio Builder
+# ============================================================
 
 class PortfolioBuilder:
-
     """
-    Institutional Portfolio Builder
+    Institutional Portfolio Builder.
+
+    Responsibilities
+    ----------------
+    • Portfolio construction
+    • Position sizing
+    • Capital allocation
+    • Diversification checks
+    • Sector exposure analysis
+    • Portfolio reporting
     """
 
     def __init__(
-
         self,
-
-        comparison_df: pd.DataFrame
-
+        comparison_df: pd.DataFrame,
     ):
 
         self.df = comparison_df.copy()
@@ -50,89 +91,132 @@ class PortfolioBuilder:
 
         self.summary = pd.DataFrame()
 
+        self.sector_summary = pd.DataFrame()
 
+        self.diagnostic_report: Dict = {}
+
+        self.execution_time: float = 0.0
+
+    # ---------------------------------------------------------
+    # Validate Input
     # ---------------------------------------------------------
 
     def validate(self):
 
         """
-        Validate required columns.
+        Validate comparison dataframe.
         """
 
-        required = [
+        banner(
 
-            "Stock",
+            logger,
 
-            "Strategy",
-
-            "Composite Score",
-
-            "Recommendation"
-
-        ]
-
-        missing = [
-
-            c
-
-            for c in required
-
-            if c not in self.df.columns
-
-        ]
-
-        if missing:
-
-            raise ValueError(
-
-                "Missing columns:\n"
-
-                +
-
-                "\n".join(missing)
-
-            )
-
-        return self
-
-
-    # ---------------------------------------------------------
-
-    def recommendation_filter(
-
-        self,
-
-        recommendations=(
-
-            "Strong Buy",
-
-            "Buy",
-
-            "Watch"
+            "Validating Portfolio Builder Input",
 
         )
 
-    ):
+        require_columns(
 
+            self.df,
+
+            [
+
+                "Stock",
+
+                "Strategy",
+
+                COMPOSITE_SCORE,
+
+                RECOMMENDATION,
+
+            ],
+
+        )
+
+        logger.info(
+
+            "Validation successful."
+
+        )
+
+        logger.info(
+
+            "Rows       : %d",
+
+            len(
+
+                self.df,
+
+            ),
+
+        )
+
+        logger.info(
+
+            "Stocks     : %d",
+
+            self.df[
+
+                "Stock"
+
+            ].nunique(),
+
+        )
+
+        logger.info(
+
+            "Strategies : %d",
+
+            self.df[
+
+                "Strategy"
+
+            ].nunique(),
+
+        )
+
+        logger.info(
+
+            "Average Composite : %.2f",
+
+            self.df[
+
+                COMPOSITE_SCORE
+
+            ].mean(),
+
+        )
+
+        return self
+    
+    # ---------------------------------------------------------
+    # Recommendation Filter
+    # ---------------------------------------------------------
+
+    def recommendation_filter(
+        self,
+        recommendations: tuple = (
+            "Strong Buy",
+            "Buy",
+            "Watch",
+        ),
+    ):
         """
-        Keep only desired recommendations.
+        Filter portfolio candidates
+        based on recommendations.
         """
 
         self.filtered = (
 
-            self.df
-
-            .loc[
+            self.df.loc[
 
                 self.df[
 
-                    "Recommendation"
+                    RECOMMENDATION
 
-                ]
+                ].isin(
 
-                .isin(
-
-                    recommendations
+                    recommendations,
 
                 )
 
@@ -142,21 +226,38 @@ class PortfolioBuilder:
 
         )
 
+        logger.info(
+
+            "Recommendation Filter"
+
+        )
+
+        logger.info(
+
+            "Selected Stocks : %d",
+
+            len(
+
+                self.filtered,
+
+            ),
+
+        )
+
         return self
 
 
     # ---------------------------------------------------------
+    # Top-N Selection
+    # ---------------------------------------------------------
 
     def top_n(
-
         self,
-
-        n=25
-
+        n: int = 25,
     ):
-
         """
-        Select Top-N opportunities.
+        Select the highest-ranked
+        portfolio opportunities.
         """
 
         self.filtered = (
@@ -165,23 +266,31 @@ class PortfolioBuilder:
 
             .sort_values(
 
-                "Composite Score",
+                COMPOSITE_SCORE,
 
-                ascending=False
+                ascending=False,
 
             )
 
             .head(
 
-                n
+                n,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
+
+        )
+
+        logger.info(
+
+            "Top %d opportunities selected.",
+
+            n,
 
         )
 
@@ -189,32 +298,50 @@ class PortfolioBuilder:
 
 
     # ---------------------------------------------------------
+    # Equal Weight Portfolio
+    # ---------------------------------------------------------
 
-    def equal_weight_portfolio(self):
-
+    def equal_weight_portfolio(
+        self,
+    ):
         """
-        Equal weighted allocation.
+        Generate an equal-weight
+        portfolio.
         """
 
         self.portfolio = (
 
-            self.filtered.copy()
+            self.filtered
+
+            .copy()
 
         )
 
-        weight = (
+        total_positions = len(
 
-            100
+            self.portfolio,
 
-            /
+        )
 
-            len(
+        if total_positions == 0:
 
-                self.portfolio
+            logger.warning(
+
+                "No securities available."
 
             )
 
-        )
+            self.portfolio[
+
+                "Weight %"
+
+            ] = pd.Series(
+
+                dtype=float,
+
+            )
+
+            return self
 
         self.portfolio[
 
@@ -222,9 +349,25 @@ class PortfolioBuilder:
 
         ] = round(
 
-            weight,
+            100
 
-            2
+            / total_positions,
+
+            2,
+
+        )
+
+        self.portfolio = round_dataframe(
+
+            self.portfolio,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Equal-weight portfolio created."
 
         )
 
@@ -232,18 +375,34 @@ class PortfolioBuilder:
 
 
     # ---------------------------------------------------------
+    # Composite Score Allocation
+    # ---------------------------------------------------------
 
-    def score_weight_portfolio(self):
-
+    def score_weight_portfolio(
+        self,
+    ):
         """
-        Composite Score weighted allocation.
+        Allocate portfolio weights
+        using Composite Score.
         """
 
-        total = (
+        require_columns(
+
+            self.portfolio,
+
+            [
+
+                COMPOSITE_SCORE,
+
+            ],
+
+        )
+
+        total_score = (
 
             self.portfolio[
 
-                "Composite Score"
+                COMPOSITE_SCORE
 
             ]
 
@@ -251,48 +410,100 @@ class PortfolioBuilder:
 
         )
 
+        if total_score <= 0:
+
+            logger.warning(
+
+                "Composite Score total is zero."
+
+            )
+
+            self.portfolio[
+
+                "Score Weight %"
+
+            ] = self.portfolio[
+
+                "Weight %"
+
+            ]
+
+            return self
+
         self.portfolio[
 
             "Score Weight %"
 
         ] = (
 
+            safe_divide(
+
+                self.portfolio[
+
+                    COMPOSITE_SCORE
+
+                ],
+
+                total_score,
+
+            )
+
+            * 100
+
+        )
+
+        self.portfolio = round_dataframe(
+
+            self.portfolio,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Score-weighted portfolio created."
+
+        )
+
+        logger.info(
+
+            "Total Weight : %.2f%%",
+
             self.portfolio[
 
-                "Composite Score"
+                "Score Weight %"
 
-            ]
-
-            /
-
-            total
-
-            *
-
-            100
-
-        ).round(
-
-            2
+            ].sum(),
 
         )
 
         return self
-
-
+    
+    # ---------------------------------------------------------
+    # Capital Allocation
     # ---------------------------------------------------------
 
     def allocation_amount(
-
         self,
-
-        capital=100000
-
+        capital: float = 100000,
     ):
+        """
+        Allocate investment capital
+        according to score weights.
+        """
 
-        """
-        Allocate capital.
-        """
+        require_columns(
+
+            self.portfolio,
+
+            [
+
+                "Score Weight %",
+
+            ],
+
+        )
 
         self.portfolio[
 
@@ -304,19 +515,43 @@ class PortfolioBuilder:
 
             *
 
+            safe_divide(
+
+                self.portfolio[
+
+                    "Score Weight %"
+
+                ],
+
+                100,
+
+            )
+
+        )
+
+        self.portfolio = round_dataframe(
+
+            self.portfolio,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Capital allocation completed."
+
+        )
+
+        logger.info(
+
+            "Portfolio Capital : %.2f",
+
             self.portfolio[
 
-                "Score Weight %"
+                "Capital"
 
-            ]
-
-            /
-
-            100
-
-        ).round(
-
-            2
+            ].sum(),
 
         )
 
@@ -324,11 +559,15 @@ class PortfolioBuilder:
 
 
     # ---------------------------------------------------------
+    # Position Ranking
+    # ---------------------------------------------------------
 
-    def position_rank(self):
-
+    def position_rank(
+        self,
+    ):
         """
-        Rank portfolio positions.
+        Rank portfolio positions
+        by Composite Score.
         """
 
         self.portfolio = (
@@ -337,15 +576,15 @@ class PortfolioBuilder:
 
             .sort_values(
 
-                "Composite Score",
+                COMPOSITE_SCORE,
 
-                ascending=False
+                ascending=False,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
@@ -363,11 +602,17 @@ class PortfolioBuilder:
 
                 len(
 
-                    self.portfolio
+                    self.portfolio,
 
-                ) + 1
+                ) + 1,
 
-            )
+            ),
+
+        )
+
+        logger.info(
+
+            "Portfolio positions ranked."
 
         )
 
@@ -375,18 +620,40 @@ class PortfolioBuilder:
 
 
     # ---------------------------------------------------------
+    # Portfolio Summary
+    # ---------------------------------------------------------
 
-    def portfolio_summary(self):
+    def portfolio_summary(
+        self,
+    ):
+        """
+        Generate portfolio
+        summary statistics.
+        """
 
-        """
-        Portfolio statistics.
-        """
+        require_columns(
+
+            self.portfolio,
+
+            [
+
+                COMPOSITE_SCORE,
+
+                EXPECTANCY,
+
+                PROFIT_FACTOR,
+
+                "Capital",
+
+            ],
+
+        )
 
         self.summary = pd.DataFrame(
 
             {
 
-                "Metric":[
+                "Metric": [
 
                     "Positions",
 
@@ -396,15 +663,15 @@ class PortfolioBuilder:
 
                     "Average Profit Factor",
 
-                    "Total Capital"
+                    "Total Capital",
 
                 ],
 
-                "Value":[
+                "Value": [
 
                     len(
 
-                        self.portfolio
+                        self.portfolio,
 
                     ),
 
@@ -412,11 +679,11 @@ class PortfolioBuilder:
 
                         self.portfolio[
 
-                            "Composite Score"
+                            COMPOSITE_SCORE
 
                         ].mean(),
 
-                        2
+                        2,
 
                     ),
 
@@ -424,11 +691,11 @@ class PortfolioBuilder:
 
                         self.portfolio[
 
-                            "Expectancy"
+                            EXPECTANCY
 
                         ].mean(),
 
-                        2
+                        2,
 
                     ),
 
@@ -436,11 +703,11 @@ class PortfolioBuilder:
 
                         self.portfolio[
 
-                            "Profit Factor"
+                            PROFIT_FACTOR
 
                         ].mean(),
 
-                        2
+                        2,
 
                     ),
 
@@ -452,30 +719,56 @@ class PortfolioBuilder:
 
                         ].sum(),
 
-                        2
+                        2,
 
-                    )
+                    ),
 
-                ]
+                ],
 
             }
 
         )
 
+        logger.info(
+
+            "Portfolio summary generated."
+
+        )
+
         return self
-    
+
+
+    # ---------------------------------------------------------
+    # Diversification Check
     # ---------------------------------------------------------
 
-    def diversification_check(self):
+    def diversification_check(
+        self,
+    ):
+        """
+        Calculate portfolio
+        diversification metrics.
+        """
 
-        """
-        Calculate portfolio concentration
-        using weight distribution.
-        """
+        require_columns(
+
+            self.portfolio,
+
+            [
+
+                "Score Weight %",
+
+            ],
+
+        )
 
         self.summary.loc[
 
-            len(self.summary)
+            len(
+
+                self.summary,
+
+            )
 
         ] = [
 
@@ -483,17 +776,25 @@ class PortfolioBuilder:
 
             round(
 
-                self.portfolio["Score Weight %"].max(),
+                self.portfolio[
 
-                2
+                    "Score Weight %"
 
-            )
+                ].max(),
+
+                2,
+
+            ),
 
         ]
 
         self.summary.loc[
 
-            len(self.summary)
+            len(
+
+                self.summary,
+
+            )
 
         ] = [
 
@@ -501,17 +802,25 @@ class PortfolioBuilder:
 
             round(
 
-                self.portfolio["Score Weight %"].min(),
+                self.portfolio[
 
-                2
+                    "Score Weight %"
 
-            )
+                ].min(),
+
+                2,
+
+            ),
 
         ]
 
         self.summary.loc[
 
-            len(self.summary)
+            len(
+
+                self.summary,
+
+            )
 
         ] = [
 
@@ -519,26 +828,46 @@ class PortfolioBuilder:
 
             round(
 
-                self.portfolio["Score Weight %"].mean(),
+                self.portfolio[
 
-                2
+                    "Score Weight %"
 
-            )
+                ].mean(),
+
+                2,
+
+            ),
 
         ]
+
+        logger.info(
+
+            "Diversification metrics generated."
+
+        )
 
         return self
 
 
     # ---------------------------------------------------------
+    # Sector Exposure
+    # ---------------------------------------------------------
 
-    def sector_exposure(self):
-
+    def sector_exposure(
+        self,
+    ):
         """
-        Sector allocation if sector data exists.
+        Calculate sector-wise
+        portfolio exposure.
         """
 
         if "Sector" not in self.portfolio.columns:
+
+            logger.info(
+
+                "Sector column not available."
+
+            )
 
             self.sector_summary = pd.DataFrame()
 
@@ -552,7 +881,7 @@ class PortfolioBuilder:
 
                 "Sector",
 
-                as_index=False
+                as_index=False,
 
             )
 
@@ -562,7 +891,7 @@ class PortfolioBuilder:
 
                     "Stock",
 
-                    "count"
+                    "count",
 
                 ),
 
@@ -570,7 +899,7 @@ class PortfolioBuilder:
 
                     "Capital",
 
-                    "sum"
+                    "sum",
 
                 ),
 
@@ -578,9 +907,9 @@ class PortfolioBuilder:
 
                     "Score Weight %",
 
-                    "sum"
+                    "sum",
 
-                )
+                ),
 
             )
 
@@ -588,9 +917,35 @@ class PortfolioBuilder:
 
                 "Weight",
 
-                ascending=False
+                ascending=False,
 
             )
+
+        )
+
+        self.sector_summary = round_dataframe(
+
+            self.sector_summary,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Sector exposure calculated."
+
+        )
+
+        logger.info(
+
+            "Sectors : %d",
+
+            len(
+
+                self.sector_summary,
+
+            ),
 
         )
 
@@ -598,18 +953,29 @@ class PortfolioBuilder:
 
 
     # ---------------------------------------------------------
+    # Position Limit
+    # ---------------------------------------------------------
 
     def apply_position_limit(
-
         self,
-
-        max_weight=10
-
+        max_weight: float = MAX_POSITION_WEIGHT,
     ):
+        """
+        Apply maximum position
+        weight constraint.
+        """
 
-        """
-        Cap position weights.
-        """
+        require_columns(
+
+            self.portfolio,
+
+            [
+
+                "Score Weight %",
+
+            ],
+
+        )
 
         self.portfolio[
 
@@ -625,23 +991,13 @@ class PortfolioBuilder:
 
             .clip(
 
-                upper=max_weight
+                upper=max_weight,
 
             )
 
         )
 
-        total = self.portfolio[
-
-            "Adjusted Weight %"
-
-        ].sum()
-
-        self.portfolio[
-
-            "Adjusted Weight %"
-
-        ] = (
+        total = (
 
             self.portfolio[
 
@@ -649,17 +1005,212 @@ class PortfolioBuilder:
 
             ]
 
-            /
+            .sum()
 
-            total
+        )
 
-            *
+        if total <= 0:
 
-            100
+            logger.warning(
 
-        ).round(
+                "Adjusted weights sum to zero."
 
-            2
+            )
+
+            return self
+
+        self.portfolio[
+
+            "Adjusted Weight %"
+
+        ] = (
+
+            safe_divide(
+
+                self.portfolio[
+
+                    "Adjusted Weight %"
+
+                ],
+
+                total,
+
+            )
+
+            * 100
+
+        )
+
+        self.portfolio = round_dataframe(
+
+            self.portfolio,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Maximum position limit applied (%.2f%%).",
+
+            max_weight,
+
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Diagnostics
+    # ---------------------------------------------------------
+
+    def diagnostics(
+        self,
+    ):
+        """
+        Log portfolio diagnostics.
+        """
+
+        banner(
+
+            logger,
+
+            "Institutional Portfolio Summary",
+
+        )
+
+        if self.portfolio.empty:
+
+            logger.warning(
+
+                "Portfolio is empty."
+
+            )
+
+            return self
+
+        logger.info(
+
+            "Positions          : %d",
+
+            len(
+
+                self.portfolio,
+
+            ),
+
+        )
+
+        logger.info(
+
+            "Total Capital      : %.2f",
+
+            self.portfolio[
+
+                "Capital"
+
+            ].sum(),
+
+        )
+
+        logger.info(
+
+            "Average Score      : %.2f",
+
+            self.portfolio[
+
+                COMPOSITE_SCORE
+
+            ].mean(),
+
+        )
+
+        if "Adjusted Weight %" in self.portfolio.columns:
+
+            logger.info(
+
+                "Highest Weight     : %.2f%%",
+
+                self.portfolio[
+
+                    "Adjusted Weight %"
+
+                ].max(),
+
+            )
+
+            logger.info(
+
+                "Lowest Weight      : %.2f%%",
+
+                self.portfolio[
+
+                    "Adjusted Weight %"
+
+                ].min(),
+
+            )
+
+        self.diagnostic_report = {
+
+            "positions": len(
+
+                self.portfolio,
+
+            ),
+
+            "capital": round(
+
+                self.portfolio[
+
+                    "Capital"
+
+                ].sum(),
+
+                2,
+
+            ),
+
+            "average_score": round(
+
+                self.portfolio[
+
+                    COMPOSITE_SCORE
+
+                ].mean(),
+
+                2,
+
+            ),
+
+        }
+
+        return self
+
+
+    # ---------------------------------------------------------
+    # Execution Report
+    # ---------------------------------------------------------
+
+    def execution_report(
+        self,
+    ):
+        """
+        Log execution statistics.
+        """
+
+        banner(
+
+            logger,
+
+            "Execution Report",
+
+        )
+
+        logger.info(
+
+            "Execution Time : %.3f seconds",
+
+            self.execution_time,
 
         )
 
@@ -667,220 +1218,206 @@ class PortfolioBuilder:
 
 
     # ---------------------------------------------------------
-
-    def diagnostics(self):
-
-        """
-        Portfolio diagnostics.
-        """
-
-        print()
-
-        print("=" * 70)
-
-        print("INSTITUTIONAL PORTFOLIO")
-
-        print("=" * 70)
-
-        print(
-
-            f"Positions : {len(self.portfolio)}"
-
-        )
-
-        print(
-
-            f"Capital   : {self.portfolio['Capital'].sum():,.2f}"
-
-        )
-
-        print(
-
-            f"Average Score : "
-
-            f"{self.portfolio['Composite Score'].mean():.2f}"
-
-        )
-
-        print(
-
-            f"Highest Weight : "
-
-            f"{self.portfolio['Adjusted Weight %'].max():.2f}%"
-
-        )
-
-        print("=" * 70)
-
-        print()
-
-        return self
-
-
+    # Export
     # ---------------------------------------------------------
 
     def export(
-
         self,
-
-        output="Institutional_Portfolio.xlsx"
-
+        output: str = "Institutional_Portfolio.xlsx",
     ):
-
         """
-        Export workbook.
+        Export portfolio reports.
         """
 
-        with pd.ExcelWriter(
+        from strategy_compare_v4.utils.io_utils import (
+
+            write_excel,
+
+        )
+
+        sheets = {
+
+            "Portfolio":
+
+                self.portfolio,
+
+            "Summary":
+
+                self.summary,
+
+        }
+
+        if not self.sector_summary.empty:
+
+            sheets[
+
+                "Sector Allocation"
+
+            ] = self.sector_summary
+
+        write_excel(
 
             output,
 
-            engine="openpyxl"
+            sheets,
 
-        ) as writer:
+        )
 
-            self.portfolio.to_excel(
+        logger.info(
 
-                writer,
+            "Portfolio exported to %s",
 
-                sheet_name="Portfolio",
+            output,
 
-                index=False
-
-            )
-
-            self.summary.to_excel(
-
-                writer,
-
-                sheet_name="Summary",
-
-                index=False
-
-            )
-
-            if not self.sector_summary.empty:
-
-                self.sector_summary.to_excel(
-
-                    writer,
-
-                    sheet_name="Sector Allocation",
-
-                    index=False
-
-                )
+        )
 
         return self
 
 
     # ---------------------------------------------------------
+    # Get Results
+    # ---------------------------------------------------------
 
-    def get_results(self):
-
+    def get_results(
+        self,
+    ):
         """
         Return generated reports.
         """
 
         return {
 
-            "portfolio": self.portfolio,
+            "portfolio":
 
-            "summary": self.summary,
+                self.portfolio,
 
-            "sector": self.sector_summary
+            "summary":
+
+                self.summary,
+
+            "sector":
+
+                self.sector_summary,
+
+            "diagnostics":
+
+                self.diagnostic_report,
+
+            "execution_time":
+
+                self.execution_time,
 
         }
 
 
     # ---------------------------------------------------------
+    # Run Pipeline
+    # ---------------------------------------------------------
 
     def run(
-
         self,
-
-        capital=100000,
-
-        top_n=25,
-
-        max_weight=10
-
+        capital: float = 100000,
+        top_n: int = 25,
+        max_weight: float = MAX_POSITION_WEIGHT,
     ):
-
         """
-        Execute complete portfolio pipeline.
+        Execute the complete
+        portfolio construction
+        pipeline.
         """
 
-        return (
+        start = time.perf_counter()
 
-            self
+        try:
 
-            .validate()
+            (
 
-            .recommendation_filter()
+                self
 
-            .top_n(
+                .validate()
 
-                top_n
+                .recommendation_filter()
+
+                .top_n(
+
+                    top_n,
+
+                )
+
+                .equal_weight_portfolio()
+
+                .score_weight_portfolio()
+
+                .allocation_amount(
+
+                    capital,
+
+                )
+
+                .position_rank()
+
+                .portfolio_summary()
+
+                .diversification_check()
+
+                .sector_exposure()
+
+                .apply_position_limit(
+
+                    max_weight,
+
+                )
+
+                .diagnostics()
 
             )
 
-            .equal_weight_portfolio()
+        except Exception:
 
-            .score_weight_portfolio()
+            logger.exception(
 
-            .allocation_amount(
-
-                capital
+                "Portfolio construction failed."
 
             )
 
-            .position_rank()
+            raise
 
-            .portfolio_summary()
+        finally:
 
-            .diversification_check()
+            self.execution_time = (
 
-            .sector_exposure()
+                time.perf_counter()
 
-            .apply_position_limit(
-
-                max_weight
+                - start
 
             )
 
-            .diagnostics()
+            self.execution_report()
 
-        )
+        return self
 
 
-# ==========================================================
+# ============================================================
 # Convenience Function
-# ==========================================================
+# ============================================================
 
 def build_portfolio(
-
-    comparison_df,
-
-    capital=100000,
-
-    top_n=25,
-
-    max_weight=10,
-
-    output_file="Institutional_Portfolio.xlsx"
-
+    comparison_df: pd.DataFrame,
+    capital: float = 100000,
+    top_n: int = 25,
+    max_weight: float = MAX_POSITION_WEIGHT,
+    output_file: str = "Institutional_Portfolio.xlsx",
 ):
-
     """
-    Build an institutional portfolio.
+    Build an institutional
+    portfolio.
     """
 
     engine = (
 
         PortfolioBuilder(
 
-            comparison_df
+            comparison_df,
 
         )
 
@@ -890,7 +1427,7 @@ def build_portfolio(
 
             top_n=top_n,
 
-            max_weight=max_weight
+            max_weight=max_weight,
 
         )
 
@@ -898,21 +1435,55 @@ def build_portfolio(
 
     engine.export(
 
-        output_file
+        output_file,
 
     )
 
     return engine
 
 
-# ==========================================================
+# ============================================================
 # Main
-# ==========================================================
+# ============================================================
 
 if __name__ == "__main__":
 
-    print(
+    from strategy_compare_v4.utils.io_utils import (
 
-        "Import build_portfolio() into strategy_compare.py"
+        read_excel,
 
     )
+
+    INPUT_FILE = "strategy_comparison.xlsx"
+
+    OUTPUT_FILE = "Institutional_Portfolio.xlsx"
+
+    try:
+
+        dataframe = read_excel(
+
+            INPUT_FILE,
+
+        )
+
+        build_portfolio(
+
+            dataframe,
+
+            output_file=OUTPUT_FILE,
+
+        )
+
+        logger.info(
+
+            "Portfolio build completed successfully."
+
+        )
+
+    except Exception:
+
+        logger.exception(
+
+            "Portfolio Builder terminated unexpectedly."
+
+        )

@@ -1,0 +1,259 @@
+strategy_compare_v4
+├── README.md
+├── backtest_F_ATR_FT
+│   ├── ADANIENT_backtest_F_ATR_FT.csv
+│   ├── BALRAMCHIN_backtest_F_ATR_FT.csv
+│   ├── BEL_backtest_F_ATR_FT.csv
+│   ├── CDSL_backtest_F_ATR_FT.csv
+│   ├── CEATLTD_backtest_F_ATR_FT.csv
+│   ├── CUMMINSIND_backtest_F_ATR_FT.csv
+│   ├── DIXON_backtest_F_ATR_FT.csv
+│   ├── HDFCBANK_backtest_F_ATR_FT.csv
+│   ├── HFCL_backtest_F_ATR_FT.csv
+│   ├── HINDUNILVR_backtest_F_ATR_FT.csv
+│   ├── IDEA_backtest_F_ATR_FT.csv
+│   ├── INDIGO_backtest_F_ATR_FT.csv
+│   ├── INFY_backtest_F_ATR_FT.csv
+│   ├── ITC_backtest_F_ATR_FT.csv
+│   ├── KEC_backtest_F_ATR_FT.csv
+│   ├── LICHSGFIN_backtest_F_ATR_FT.csv
+│   ├── MARUTI_backtest_F_ATR_FT.csv
+│   ├── MOTHERSON_backtest_F_ATR_FT.csv
+│   ├── PAYTM_backtest_F_ATR_FT.csv
+│   ├── PERSISTENT_backtest_F_ATR_FT.csv
+│   ├── RELIANCE_backtest_F_ATR_FT.csv
+│   ├── TATAPOWER_backtest_F_ATR_FT.csv
+│   ├── TCS_backtest_F_ATR_FT.csv
+│   ├── YESBANK_backtest_F_ATR_FT.csv
+│   └── backtest_F_ATR_FT_Statistics.xlsx
+├── backtest_F_ATR_Tr
+│   ├── ADANIENT_backtest_F_ATR_Tr.csv
+│   ├── BALRAMCHIN_backtest_F_ATR_Tr.csv
+│   ├── BEL_backtest_F_ATR_Tr.csv
+│   ├── CDSL_backtest_F_ATR_Tr.csv
+│   ├── CEATLTD_backtest_F_ATR_Tr.csv
+│   ├── CUMMINSIND_backtest_F_ATR_Tr.csv
+│   ├── DIXON_backtest_F_ATR_Tr.csv
+│   ├── HDFCBANK_backtest_F_ATR_Tr.csv
+│   ├── HFCL_backtest_F_ATR_Tr.csv
+│   ├── HINDUNILVR_backtest_F_ATR_Tr.csv
+│   ├── IDEA_backtest_F_ATR_Tr.csv
+│   ├── INDIGO_backtest_F_ATR_Tr.csv
+│   ├── INFY_backtest_F_ATR_Tr.csv
+│   ├── ITC_backtest_F_ATR_Tr.csv
+│   ├── KEC_backtest_F_ATR_Tr.csv
+│   ├── LICHSGFIN_backtest_F_ATR_Tr.csv
+│   ├── MARUTI_backtest_F_ATR_Tr.csv
+│   ├── MOTHERSON_backtest_F_ATR_Tr.csv
+│   ├── PAYTM_backtest_F_ATR_Tr.csv
+│   ├── PERSISTENT_backtest_F_ATR_Tr.csv
+│   ├── RELIANCE_backtest_F_ATR_Tr.csv
+│   ├── TATAPOWER_backtest_F_ATR_Tr.csv
+│   ├── TCS_backtest_F_ATR_Tr.csv
+│   ├── YESBANK_backtest_F_ATR_Tr.csv
+│   └── backtest_F_ATR_Tr_Statistics.xlsx
+├── backtest_F_Str_FT
+│   ├── ADANIENT_backtest_F_Str_FT.csv
+│   ├── BALRAMCHIN_backtest_F_Str_FT.csv
+│   ├── BEL_backtest_F_Str_FT.csv
+│   ├── CDSL_backtest_F_Str_FT.csv
+│   ├── CEATLTD_backtest_F_Str_FT.csv
+│   ├── CUMMINSIND_backtest_F_Str_FT.csv
+│   ├── DIXON_backtest_F_Str_FT.csv
+│   ├── HDFCBANK_backtest_F_Str_FT.csv
+│   ├── HFCL_backtest_F_Str_FT.csv
+│   ├── HINDUNILVR_backtest_F_Str_FT.csv
+│   ├── IDEA_backtest_F_Str_FT.csv
+│   ├── INDIGO_backtest_F_Str_FT.csv
+│   ├── INFY_backtest_F_Str_FT.csv
+│   ├── ITC_backtest_F_Str_FT.csv
+│   ├── KEC_backtest_F_Str_FT.csv
+│   ├── LICHSGFIN_backtest_F_Str_FT.csv
+│   ├── MARUTI_backtest_F_Str_FT.csv
+│   ├── MOTHERSON_backtest_F_Str_FT.csv
+│   ├── PAYTM_backtest_F_Str_FT.csv
+│   ├── PERSISTENT_backtest_F_Str_FT.csv
+│   ├── RELIANCE_backtest_F_Str_FT.csv
+│   ├── TATAPOWER_backtest_F_Str_FT.csv
+│   ├── TCS_backtest_F_Str_FT.csv
+│   ├── YESBANK_backtest_F_Str_FT.csv
+│   └── backtest_F_Str_FT_Statistics.xlsx
+├── backtest_F_Str_Tr
+│   ├── ADANIENT_backtest_F_Str_Tr.csv
+│   ├── BALRAMCHIN_backtest_F_Str_Tr.csv
+│   ├── BEL_backtest_F_Str_Tr.csv
+│   ├── CDSL_backtest_F_Str_Tr.csv
+│   ├── CEATLTD_backtest_F_Str_Tr.csv
+│   ├── CUMMINSIND_backtest_F_Str_Tr.csv
+│   ├── DIXON_backtest_F_Str_Tr.csv
+│   ├── HDFCBANK_backtest_F_Str_Tr.csv
+│   ├── HFCL_backtest_F_Str_Tr.csv
+│   ├── HINDUNILVR_backtest_F_Str_Tr.csv
+│   ├── IDEA_backtest_F_Str_Tr.csv
+│   ├── INDIGO_backtest_F_Str_Tr.csv
+│   ├── INFY_backtest_F_Str_Tr.csv
+│   ├── ITC_backtest_F_Str_Tr.csv
+│   ├── KEC_backtest_F_Str_Tr.csv
+│   ├── LICHSGFIN_backtest_F_Str_Tr.csv
+│   ├── MARUTI_backtest_F_Str_Tr.csv
+│   ├── MOTHERSON_backtest_F_Str_Tr.csv
+│   ├── PAYTM_backtest_F_Str_Tr.csv
+│   ├── PERSISTENT_backtest_F_Str_Tr.csv
+│   ├── RELIANCE_backtest_F_Str_Tr.csv
+│   ├── TATAPOWER_backtest_F_Str_Tr.csv
+│   ├── TCS_backtest_F_Str_Tr.csv
+│   ├── YESBANK_backtest_F_Str_Tr.csv
+│   └── backtest_F_Str_Tr_Statistics.xlsx
+├── backtest_WF_ATR_FT
+│   ├── ADANIENT_backtest_WF_ATR_FT.csv
+│   ├── BALRAMCHIN_backtest_WF_ATR_FT.csv
+│   ├── BEL_backtest_WF_ATR_FT.csv
+│   ├── CDSL_backtest_WF_ATR_FT.csv
+│   ├── CEATLTD_backtest_WF_ATR_FT.csv
+│   ├── CUMMINSIND_backtest_WF_ATR_FT.csv
+│   ├── DIXON_backtest_WF_ATR_FT.csv
+│   ├── HDFCBANK_backtest_WF_ATR_FT.csv
+│   ├── HFCL_backtest_WF_ATR_FT.csv
+│   ├── HINDUNILVR_backtest_WF_ATR_FT.csv
+│   ├── IDEA_backtest_WF_ATR_FT.csv
+│   ├── INDIGO_backtest_WF_ATR_FT.csv
+│   ├── INFY_backtest_WF_ATR_FT.csv
+│   ├── ITC_backtest_WF_ATR_FT.csv
+│   ├── KEC_backtest_WF_ATR_FT.csv
+│   ├── LICHSGFIN_backtest_WF_ATR_FT.csv
+│   ├── MARUTI_backtest_WF_ATR_FT.csv
+│   ├── MOTHERSON_backtest_WF_ATR_FT.csv
+│   ├── PAYTM_backtest_WF_ATR_FT.csv
+│   ├── PERSISTENT_backtest_WF_ATR_FT.csv
+│   ├── RELIANCE_backtest_WF_ATR_FT.csv
+│   ├── TATAPOWER_backtest_WF_ATR_FT.csv
+│   ├── TCS_backtest_WF_ATR_FT.csv
+│   ├── YESBANK_backtest_WF_ATR_FT.csv
+│   └── backtest_WF_ATR_FT_Statistics.xlsx
+├── backtest_WF_ATR_Tr
+│   ├── ADANIENT_backtest_WF_ATR_Tr.csv
+│   ├── BALRAMCHIN_backtest_WF_ATR_Tr.csv
+│   ├── BEL_backtest_WF_ATR_Tr.csv
+│   ├── CDSL_backtest_WF_ATR_Tr.csv
+│   ├── CEATLTD_backtest_WF_ATR_Tr.csv
+│   ├── CUMMINSIND_backtest_WF_ATR_Tr.csv
+│   ├── DIXON_backtest_WF_ATR_Tr.csv
+│   ├── HDFCBANK_backtest_WF_ATR_Tr.csv
+│   ├── HFCL_backtest_WF_ATR_Tr.csv
+│   ├── HINDUNILVR_backtest_WF_ATR_Tr.csv
+│   ├── IDEA_backtest_WF_ATR_Tr.csv
+│   ├── INDIGO_backtest_WF_ATR_Tr.csv
+│   ├── INFY_backtest_WF_ATR_Tr.csv
+│   ├── ITC_backtest_WF_ATR_Tr.csv
+│   ├── KEC_backtest_WF_ATR_Tr.csv
+│   ├── LICHSGFIN_backtest_WF_ATR_Tr.csv
+│   ├── MARUTI_backtest_WF_ATR_Tr.csv
+│   ├── MOTHERSON_backtest_WF_ATR_Tr.csv
+│   ├── PAYTM_backtest_WF_ATR_Tr.csv
+│   ├── PERSISTENT_backtest_WF_ATR_Tr.csv
+│   ├── RELIANCE_backtest_WF_ATR_Tr.csv
+│   ├── TATAPOWER_backtest_WF_ATR_Tr.csv
+│   ├── TCS_backtest_WF_ATR_Tr.csv
+│   ├── YESBANK_backtest_WF_ATR_Tr.csv
+│   └── backtest_WF_ATR_Tr_Statistics.xlsx
+├── backtest_WF_Str_FT
+│   ├── ADANIENT_backtest_WF_Str_FT.csv
+│   ├── BALRAMCHIN_backtest_WF_Str_FT.csv
+│   ├── BEL_backtest_WF_Str_FT.csv
+│   ├── CDSL_backtest_WF_Str_FT.csv
+│   ├── CEATLTD_backtest_WF_Str_FT.csv
+│   ├── CUMMINSIND_backtest_WF_Str_FT.csv
+│   ├── DIXON_backtest_WF_Str_FT.csv
+│   ├── HDFCBANK_backtest_WF_Str_FT.csv
+│   ├── HFCL_backtest_WF_Str_FT.csv
+│   ├── HINDUNILVR_backtest_WF_Str_FT.csv
+│   ├── IDEA_backtest_WF_Str_FT.csv
+│   ├── INDIGO_backtest_WF_Str_FT.csv
+│   ├── INFY_backtest_WF_Str_FT.csv
+│   ├── ITC_backtest_WF_Str_FT.csv
+│   ├── KEC_backtest_WF_Str_FT.csv
+│   ├── LICHSGFIN_backtest_WF_Str_FT.csv
+│   ├── MARUTI_backtest_WF_Str_FT.csv
+│   ├── MOTHERSON_backtest_WF_Str_FT.csv
+│   ├── PAYTM_backtest_WF_Str_FT.csv
+│   ├── PERSISTENT_backtest_WF_Str_FT.csv
+│   ├── RELIANCE_backtest_WF_Str_FT.csv
+│   ├── TATAPOWER_backtest_WF_Str_FT.csv
+│   ├── TCS_backtest_WF_Str_FT.csv
+│   ├── YESBANK_backtest_WF_Str_FT.csv
+│   └── backtest_WF_Str_FT_Statistics.xlsx
+├── backtest_WF_Str_Tr
+│   ├── ADANIENT_backtest_WF_Str_Tr.csv
+│   ├── BALRAMCHIN_backtest_WF_Str_Tr.csv
+│   ├── BEL_backtest_WF_Str_Tr.csv
+│   ├── CDSL_backtest_WF_Str_Tr.csv
+│   ├── CEATLTD_backtest_WF_Str_Tr.csv
+│   ├── CUMMINSIND_backtest_WF_Str_Tr.csv
+│   ├── DIXON_backtest_WF_Str_Tr.csv
+│   ├── HDFCBANK_backtest_WF_Str_Tr.csv
+│   ├── HFCL_backtest_WF_Str_Tr.csv
+│   ├── HINDUNILVR_backtest_WF_Str_Tr.csv
+│   ├── IDEA_backtest_WF_Str_Tr.csv
+│   ├── INDIGO_backtest_WF_Str_Tr.csv
+│   ├── INFY_backtest_WF_Str_Tr.csv
+│   ├── ITC_backtest_WF_Str_Tr.csv
+│   ├── KEC_backtest_WF_Str_Tr.csv
+│   ├── LICHSGFIN_backtest_WF_Str_Tr.csv
+│   ├── MARUTI_backtest_WF_Str_Tr.csv
+│   ├── MOTHERSON_backtest_WF_Str_Tr.csv
+│   ├── PAYTM_backtest_WF_Str_Tr.csv
+│   ├── PERSISTENT_backtest_WF_Str_Tr.csv
+│   ├── RELIANCE_backtest_WF_Str_Tr.csv
+│   ├── TATAPOWER_backtest_WF_Str_Tr.csv
+│   ├── TCS_backtest_WF_Str_Tr.csv
+│   ├── YESBANK_backtest_WF_Str_Tr.csv
+│   └── backtest_WF_Str_Tr_Statistics.xlsx
+├── comparison
+│   ├── __init__.py
+│   ├── correlation.py
+│   ├── leaderboard.py
+│   ├── robustness.py
+│   ├── stock_compare.py
+│   └── strategy_compare.py
+├── config
+│   ├── __init__.py
+│   ├── constants.py
+│   ├── recommendations.py
+│   ├── thresholds.py
+│   └── weights.py
+├── derived_metrics
+│   ├── __init__.py
+│   ├── derived_engine.py
+│   ├── efficiency_metrics.py
+│   ├── exit_metrics.py
+│   ├── opportunity_metrics.py
+│   ├── performance_metrics.py
+│   ├── risk_metrics.py
+│   ├── scoring_metrics.py
+│   └── validation_metrics.py
+├── portfolio
+│   ├── __init__.py
+│   ├── allocation.py
+│   ├── portfolio_builder.py
+│   └── risk_filter.py
+├── reports
+│   ├── __init__.py
+│   ├── charts.py
+│   ├── dashboard.py
+│   └── excel_exporter.py
+├── requirements.txt
+├── stock_backtest_stats.py
+├── strategy_comparison.py
+├── tests
+│   ├── __init__.py
+│   ├── test_comparison.py
+│   ├── test_portfolio.py
+│   └── test_reports.py
+└── utils
+    ├── __init__.py
+    ├── helpers.py
+    ├── io_utils.py
+    ├── logger.py
+    └── math_utils.py
+
+16 directories, 241 files

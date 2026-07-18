@@ -2,371 +2,195 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    utils/io_utils.py
+Module
+------
+utils/logger.py
 
-Purpose:
-    Common input/output utilities.
+Purpose
+-------
+Centralized logging utilities used throughout the
+Institutional Strategy Comparison Platform.
+
+Provides
+--------
+• Configured application logger
+• Console logging
+• Optional file logging
+• Section banners
 
 =============================================================
 """
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+from typing import Optional
 
-import pandas as pd
+# ============================================================
+# Logger Configuration
+# ============================================================
+
+LOG_FORMAT = (
+    "%(asctime)s | "
+    "%(levelname)-8s | "
+    "%(name)s | "
+    "%(message)s"
+)
+
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+DEFAULT_LEVEL = logging.INFO
 
 
-###############################################################################
-# Directory
-###############################################################################
+# ============================================================
+# Logger Factory
+# ============================================================
 
-def ensure_directory(path):
+def get_logger(
+    name: str,
+    log_file: str | Path | None = None,
+    level: int = DEFAULT_LEVEL,
+) -> logging.Logger:
     """
-    Create directory if it does not exist.
+    Create or retrieve a configured logger.
+
+    Parameters
+    ----------
+    name : str
+        Logger name.
+
+    log_file : str | Path | None
+        Optional log file.
+
+    level : int
+        Logging level.
+
+    Returns
+    -------
+    logging.Logger
     """
 
-    path = Path(path)
+    logger = logging.getLogger(name)
 
-    path.mkdir(
+    if logger.handlers:
+        return logger
 
-        parents=True,
+    logger.setLevel(level)
+    logger.propagate = False
 
-        exist_ok=True
-
+    formatter = logging.Formatter(
+        fmt=LOG_FORMAT,
+        datefmt=DATE_FORMAT,
     )
 
-    return path
+    # --------------------------------------------------------
+    # Console Handler
+    # --------------------------------------------------------
 
+    console_handler = logging.StreamHandler()
 
-###############################################################################
-# File Exists
-###############################################################################
+    console_handler.setLevel(level)
 
-def file_exists(path):
-    """
-    Check whether file exists.
-    """
+    console_handler.setFormatter(formatter)
 
-    return Path(path).is_file()
+    logger.addHandler(console_handler)
 
+    # --------------------------------------------------------
+    # File Handler (Optional)
+    # --------------------------------------------------------
 
-###############################################################################
-# Directory Exists
-###############################################################################
+    if log_file is not None:
 
-def directory_exists(path):
-    """
-    Check whether directory exists.
-    """
+        log_file = Path(log_file)
 
-    return Path(path).is_dir()
-
-
-###############################################################################
-# Read CSV
-###############################################################################
-
-def read_csv(
-
-    file_path,
-
-    **kwargs
-
-):
-    """
-    Read CSV file.
-    """
-
-    return pd.read_csv(
-
-        file_path,
-
-        **kwargs
-
-    )
-
-
-###############################################################################
-# Read Excel
-###############################################################################
-
-def read_excel(
-
-    file_path,
-
-    sheet_name=0,
-
-    **kwargs
-
-):
-    """
-    Read Excel worksheet.
-    """
-
-    return pd.read_excel(
-
-        file_path,
-
-        sheet_name=sheet_name,
-
-        **kwargs
-
-    )
-
-
-###############################################################################
-# Write CSV
-###############################################################################
-
-def write_csv(
-
-    df,
-
-    file_path,
-
-    index=False,
-
-    **kwargs
-
-):
-    """
-    Export dataframe to CSV.
-    """
-
-    df.to_csv(
-
-        file_path,
-
-        index=index,
-
-        **kwargs
-
-    )
-
-
-###############################################################################
-# Write Excel
-###############################################################################
-
-def write_excel(
-
-    df,
-
-    file_path,
-
-    sheet_name="Sheet1",
-
-    index=False,
-
-    **kwargs
-
-):
-    """
-    Export dataframe to Excel.
-    """
-
-    with pd.ExcelWriter(
-
-        file_path,
-
-        engine="openpyxl"
-
-    ) as writer:
-
-        df.to_excel(
-
-            writer,
-
-            sheet_name=sheet_name,
-
-            index=index,
-
-            **kwargs
-
+        log_file.parent.mkdir(
+            parents=True,
+            exist_ok=True,
         )
 
-
-###############################################################################
-# List Files
-###############################################################################
-
-def list_files(
-
-    directory,
-
-    pattern="*"
-
-):
-    """
-    List files matching pattern.
-    """
-
-    return sorted(
-
-        Path(directory).glob(pattern)
-
-    )
-
-
-###############################################################################
-# List Directories
-###############################################################################
-
-def list_directories(
-
-    directory
-
-):
-    """
-    Return sub-directories.
-    """
-
-    return sorted(
-
-        [
-
-            p
-
-            for p in Path(directory).iterdir()
-
-            if p.is_dir()
-
-        ]
-
-    )
-
-
-###############################################################################
-# Find Statistics Files
-###############################################################################
-
-def find_statistics_files(
-
-    directory
-
-):
-    """
-    Find strategy statistics workbooks.
-    """
-
-    return sorted(
-
-        Path(directory).glob(
-
-            "**/*Statistics.xlsx"
-
+        file_handler = logging.FileHandler(
+            log_file,
+            encoding="utf-8",
         )
 
-    )
+        file_handler.setLevel(level)
+
+        file_handler.setFormatter(formatter)
+
+        logger.addHandler(file_handler)
+
+    return logger
 
 
-###############################################################################
-# Find Backtest CSV Files
-###############################################################################
+# ============================================================
+# Banner
+# ============================================================
 
-def find_backtest_files(
-
-    directory
-
-):
+def banner(
+    logger: logging.Logger,
+    title: str,
+    width: int = 70,
+) -> None:
     """
-    Find all backtest CSV files.
+    Log a section banner.
+
+    Example
+    -------
+    ======================================================
+                    DERIVED METRICS
+    ======================================================
     """
 
-    return sorted(
+    line = "=" * width
 
-        Path(directory).glob(
+    logger.info(line)
 
-            "**/*.csv"
+    logger.info(title.center(width))
 
+    logger.info(line)
+
+
+# ============================================================
+# Divider
+# ============================================================
+
+def divider(
+    logger: logging.Logger,
+    width: int = 70,
+    character: str = "-",
+) -> None:
+    """
+    Log a divider line.
+    """
+
+    logger.info(character * width)
+
+
+# ============================================================
+# Execution Timer
+# ============================================================
+
+def log_execution_time(
+    logger: logging.Logger,
+    seconds: float,
+    task: Optional[str] = None,
+) -> None:
+    """
+    Log execution time.
+    """
+
+    if task:
+
+        logger.info(
+            "%s completed in %.2f seconds",
+            task,
+            seconds,
         )
 
-    )
+    else:
 
-
-###############################################################################
-# File Stem
-###############################################################################
-
-def file_stem(
-
-    file_path
-
-):
-    """
-    Filename without extension.
-    """
-
-    return Path(
-
-        file_path
-
-    ).stem
-
-
-###############################################################################
-# File Name
-###############################################################################
-
-def file_name(
-
-    file_path
-
-):
-    """
-    Filename with extension.
-    """
-
-    return Path(
-
-        file_path
-
-    ).name
-
-
-###############################################################################
-# Resolve Path
-###############################################################################
-
-def resolve_path(
-
-    *parts
-
-):
-    """
-    Build absolute path.
-    """
-
-    return Path(
-
-        *parts
-
-    ).resolve()
-
-
-###############################################################################
-# Relative Path
-###############################################################################
-
-def relative_path(
-
-    path,
-
-    start="."
-
-):
-    """
-    Return relative path.
-    """
-
-    return Path(
-
-        path
-
-    ).relative_to(
-
-        Path(start)
-
-    )
+        logger.info(
+            "Execution completed in %.2f seconds",
+            seconds,
+        )

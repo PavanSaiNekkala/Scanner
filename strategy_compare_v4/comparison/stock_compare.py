@@ -2,31 +2,76 @@
 =============================================================
 Institutional Stock Comparison Engine V4
 
-Module:
-    comparison/stock_compare.py
+Module
+------
+comparison/stock_compare.py
 
-Purpose:
-    Compare all strategies for every stock and identify
-    the best performing strategy.
+Purpose
+-------
+Compare all strategies for every stock and identify
+the best performing strategy using institutional
+ranking metrics.
 
 =============================================================
 """
 
 from __future__ import annotations
 
+import time
+from typing import Dict
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 
-from pathlib import Path
+from strategy_compare_v4.config.constants import (
+    REQUIRED_COMPARISON_COLUMNS,
+    COMPOSITE_SCORE,
+    INSTITUTION_RANK,
+    RECOMMENDATION,
+)
 
+from strategy_compare_v4.config.recommendations import (
+    assign_recommendations,
+)
+
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
+
+from strategy_compare_v4.utils.math_utils import (
+    round_dataframe,
+)
+
+from strategy_compare_v4.utils.logger import (
+    get_logger,
+    banner,
+)
+
+logger = get_logger(__name__)
+
+
+# ============================================================
+# Stock Comparison Engine
+# ============================================================
 
 class StockComparisonEngine:
-
     """
-    Institutional Stock Comparison Engine
+    Institutional Stock Comparison Engine.
+
+    Responsibilities
+    ----------------
+    • Compare every strategy for every stock
+    • Rank strategies within each stock
+    • Compute institutional stock scores
+    • Generate recommendations
+    • Export institutional reports
     """
 
-    def __init__(self, comparison_df):
+    def __init__(
+        self,
+        comparison_df: pd.DataFrame,
+    ):
 
         self.df = comparison_df.copy()
 
@@ -42,93 +87,113 @@ class StockComparisonEngine:
 
         self.statistics = pd.DataFrame()
 
+        self.diagnostic_report: Dict = {}
 
-    # ----------------------------------------------------------
+        self.execution_time: float = 0.0
+
+    # ---------------------------------------------------------
+    # Validate Input
+    # ---------------------------------------------------------
 
     def validate(self):
 
-        required = [
+        """
+        Validate comparison dataframe.
+        """
 
-            "Stock",
+        banner(
 
-            "Strategy",
+            logger,
+            "Validating Stock Comparison Input",
 
-            "Composite Score",
+        )
 
-            "Expectancy",
+        require_columns(
 
-            "Profit Factor",
+            self.df,
+            REQUIRED_COMPARISON_COLUMNS,
 
-            "Reward Risk"
+        )
 
-        ]
+        logger.info(
 
-        missing = [
+            "Validation successful."
 
-            c
+        )
 
-            for c in required
+        logger.info(
 
-            if c not in self.df.columns
+            "Rows       : %d",
+            len(self.df),
 
-        ]
+        )
 
-        if missing:
+        logger.info(
 
-            raise ValueError(
+            "Stocks     : %d",
+            self.df["Stock"].nunique(),
 
-                "Missing columns:\n"
+        )
 
-                +
+        logger.info(
 
-                "\n".join(missing)
+            "Strategies : %d",
+            self.df["Strategy"].nunique(),
 
-            )
+        )
 
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Rank Strategies Within Stock
+    # ---------------------------------------------------------
 
     def rank_within_stock(self):
 
         """
-        Rank strategies for each stock.
+        Rank competing strategies
+        inside each stock.
         """
 
         self.df["Strategy Rank"] = (
 
             self.df
 
-            .groupby("Stock")["Composite Score"]
+            .groupby("Stock")[COMPOSITE_SCORE]
 
             .rank(
 
                 ascending=False,
-
-                method="dense"
+                method="dense",
 
             )
 
         )
 
+        logger.info(
+
+            "Strategy ranking completed."
+
+        )
+
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Best Strategy
+    # ---------------------------------------------------------
 
     def best_strategy(self):
 
         """
-        Highest ranked strategy
-        for every stock.
+        Determine the highest scoring
+        strategy for each stock.
         """
 
         idx = (
 
             self.df
 
-            .groupby("Stock")["Composite Score"]
+            .groupby("Stock")[COMPOSITE_SCORE]
 
             .idxmax()
 
@@ -142,26 +207,43 @@ class StockComparisonEngine:
 
             .sort_values(
 
-                "Composite Score",
+                COMPOSITE_SCORE,
 
-                ascending=False
+                ascending=False,
 
             )
 
-            .reset_index(drop=True)
+            .reset_index(
+
+                drop=True,
+
+            )
+
+        )
+
+        logger.info(
+
+            "Best strategy identified for %d stocks.",
+
+            len(
+
+                self.best_strategies
+
+            ),
 
         )
 
         return self
-
-
-    # ----------------------------------------------------------
+    
+    # ---------------------------------------------------------
+    # Stock Summary
+    # ---------------------------------------------------------
 
     def summarize_stock(self):
 
         """
-        Aggregate statistics
-        for every stock.
+        Generate institutional summary
+        statistics for every stock.
         """
 
         self.stock_summary = (
@@ -172,7 +254,7 @@ class StockComparisonEngine:
 
                 "Stock",
 
-                as_index=False
+                as_index=False,
 
             )
 
@@ -182,31 +264,31 @@ class StockComparisonEngine:
 
                     "Strategy",
 
-                    "count"
+                    "count",
 
                 ),
 
                 AverageComposite=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "mean"
+                    "mean",
 
                 ),
 
                 MaximumComposite=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "max"
+                    "max",
 
                 ),
 
                 MinimumComposite=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "min"
+                    "min",
 
                 ),
 
@@ -214,7 +296,7 @@ class StockComparisonEngine:
 
                     "Expectancy",
 
-                    "mean"
+                    "mean",
 
                 ),
 
@@ -222,7 +304,7 @@ class StockComparisonEngine:
 
                     "Profit Factor",
 
-                    "mean"
+                    "mean",
 
                 ),
 
@@ -230,83 +312,122 @@ class StockComparisonEngine:
 
                     "Reward Risk",
 
-                    "mean"
+                    "mean",
 
-                )
+                ),
 
             )
 
         )
 
+        self.stock_summary = round_dataframe(
+
+            self.stock_summary,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Generated stock summary for %d stocks.",
+
+            len(
+
+                self.stock_summary
+
+            ),
+
+        )
+
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Stock Statistics
+    # ---------------------------------------------------------
 
     def stock_statistics(self):
 
         """
-        Dispersion statistics.
+        Calculate dispersion statistics
+        for each stock.
         """
 
-        stats = (
+        self.statistics = (
 
             self.df
 
-            .groupby("Stock")
+            .groupby(
+
+                "Stock",
+
+                as_index=False,
+
+            )
 
             .agg(
 
                 StdComposite=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "std"
+                    "std",
 
                 ),
 
                 Variance=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "var"
+                    "var",
 
                 ),
 
                 Median=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "median"
+                    "median",
 
                 ),
 
                 Mean=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "mean"
+                    "mean",
 
-                )
+                ),
 
             )
 
-            .reset_index()
+        )
+
+        self.statistics = round_dataframe(
+
+            self.statistics,
+
+            decimals=2,
 
         )
 
-        self.statistics = stats
+        logger.info(
+
+            "Calculated stock statistics."
+
+        )
 
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Consistency Score
+    # ---------------------------------------------------------
 
     def consistency_score(self):
 
         """
-        Lower variation =
-        higher consistency.
+        Lower variation indicates
+        higher institutional consistency.
         """
 
         self.consistency = (
@@ -315,34 +436,61 @@ class StockComparisonEngine:
 
         )
 
-        self.consistency["Consistency Score"] = (
+        self.consistency[
+
+            "Consistency Score"
+
+        ] = (
 
             100
 
             -
 
-            self.consistency["StdComposite"]
+            self.consistency[
 
-            .fillna(0)
+                "StdComposite"
+
+            ]
+
+            .fillna(
+
+                0
+
+            )
 
         ).clip(
 
             lower=0,
 
-            upper=100
+            upper=100,
+
+        )
+
+        self.consistency = round_dataframe(
+
+            self.consistency,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Consistency scores computed."
 
         )
 
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Merge Results
+    # ---------------------------------------------------------
 
     def merge_results(self):
 
         """
-        Merge all stock level
-        statistics.
+        Merge stock summary with
+        institutional consistency scores.
         """
 
         self.stock_rankings = (
@@ -357,7 +505,7 @@ class StockComparisonEngine:
 
                         "Stock",
 
-                        "Consistency Score"
+                        "Consistency Score",
 
                     ]
 
@@ -365,68 +513,100 @@ class StockComparisonEngine:
 
                 on="Stock",
 
-                how="left"
+                how="left",
 
             )
 
         )
 
+        logger.info(
+
+            "Merged institutional results."
+
+        )
+
         return self
-    
-    # ----------------------------------------------------------
+
+    # ---------------------------------------------------------
+    # Agreement Score
+    # ---------------------------------------------------------
 
     def agreement_score(self):
 
         """
-        Measure how consistently
-        strategies favour a stock.
+        Measure agreement between
+        strategies for every stock.
         """
 
         agreement = (
 
             self.df
 
-            .groupby("Stock")
+            .groupby(
+
+                "Stock",
+
+                as_index=False,
+
+            )
 
             .agg(
 
                 CompositeStd=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "std"
+                    "std",
 
                 ),
 
                 CompositeMean=(
 
-                    "Composite Score",
+                    COMPOSITE_SCORE,
 
-                    "mean"
+                    "mean",
 
-                )
+                ),
 
             )
 
-            .reset_index()
-
         )
 
-        agreement["Agreement Score"] = (
+        agreement[
+
+            "Agreement Score"
+
+        ] = (
 
             100
 
             -
 
-            agreement["CompositeStd"]
+            agreement[
 
-            .fillna(0)
+                "CompositeStd"
+
+            ]
+
+            .fillna(
+
+                0
+
+            )
 
         ).clip(
 
-            0,
+            lower=0,
 
-            100
+            upper=100,
+
+        )
+
+        agreement = round_dataframe(
+
+            agreement,
+
+            decimals=2,
 
         )
 
@@ -442,7 +622,7 @@ class StockComparisonEngine:
 
                         "Stock",
 
-                        "Agreement Score"
+                        "Agreement Score",
 
                     ]
 
@@ -450,62 +630,78 @@ class StockComparisonEngine:
 
                 on="Stock",
 
-                how="left"
+                how="left",
 
             )
 
         )
 
+        logger.info(
+
+            "Agreement scores calculated."
+
+        )
+
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Institutional Score
+    # ---------------------------------------------------------
 
     def institutional_score(self):
 
         """
-        Final stock score.
+        Calculate the final institutional
+        score for every stock.
         """
 
         self.stock_rankings[
-
             "Institutional Score"
-
         ] = (
 
             self.stock_rankings[
-
                 "AverageComposite"
-
             ] * 0.60
 
             +
 
             self.stock_rankings[
-
                 "Consistency Score"
-
             ] * 0.25
 
             +
 
             self.stock_rankings[
-
                 "Agreement Score"
-
             ] * 0.15
 
-        ).round(2)
+        )
+
+        self.stock_rankings = round_dataframe(
+
+            self.stock_rankings,
+
+            decimals=2,
+
+        )
+
+        logger.info(
+
+            "Institutional scores calculated."
+
+        )
 
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Rank Stocks
+    # ---------------------------------------------------------
 
     def rank_stocks(self):
 
         """
-        Global stock ranking.
+        Rank all stocks using
+        institutional score.
         """
 
         self.stock_rankings = (
@@ -516,22 +712,20 @@ class StockComparisonEngine:
 
                 "Institutional Score",
 
-                ascending=False
+                ascending=False,
 
             )
 
             .reset_index(
 
-                drop=True
+                drop=True,
 
             )
 
         )
 
         self.stock_rankings[
-
-            "Institution Rank"
-
+            INSTITUTION_RANK
         ] = np.arange(
 
             1,
@@ -540,84 +734,81 @@ class StockComparisonEngine:
 
                 self.stock_rankings
 
-            ) + 1
+            ) + 1,
+
+        )
+
+        logger.info(
+
+            "Assigned institutional ranks."
 
         )
 
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Recommendations
+    # ---------------------------------------------------------
 
     def recommendation(self):
 
         """
-        Institutional recommendation.
+        Generate institutional
+        recommendations.
         """
 
-        score = self.stock_rankings[
+        recommendation_df = assign_recommendations(
 
-            "Institutional Score"
+            self.stock_rankings[
+                [
 
-        ]
+                    "Institutional Score",
 
-        conditions = [
+                ]
 
-            score >= 90,
+            ].rename(
 
-            score >= 80,
+                columns={
 
-            score >= 70,
+                    "Institutional Score":
 
-            score >= 60,
+                    COMPOSITE_SCORE
 
-            score >= 50
+                }
 
-        ]
+            )
 
-        values = [
-
-            "Strong Buy",
-
-            "Buy",
-
-            "Watch",
-
-            "Improve",
-
-            "Avoid"
-
-        ]
+        )
 
         self.stock_rankings[
+            RECOMMENDATION
+        ] = recommendation_df[
+            RECOMMENDATION
+        ]
 
-            "Recommendation"
+        logger.info(
 
-        ] = np.select(
-
-            conditions,
-
-            values,
-
-            default="Reject"
+            "Institutional recommendations generated."
 
         )
 
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Top Opportunities
+    # ---------------------------------------------------------
 
     def top_opportunities(
 
         self,
 
-        top_n=25
+        top_n: int = 25,
 
     ):
 
         """
-        Top ranked stocks.
+        Select the highest ranked
+        institutional opportunities.
         """
 
         self.best_strategies = (
@@ -632,17 +823,32 @@ class StockComparisonEngine:
 
             .copy()
 
+            .reset_index(
+
+                drop=True,
+
+            )
+
+        )
+
+        logger.info(
+
+            "Selected top %d institutional opportunities.",
+
+            top_n,
+
         )
 
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Diagnostics
+    # ---------------------------------------------------------
 
     def diagnostics(self):
 
         """
-        Diagnostics.
+        Generate execution diagnostics.
         """
 
         self.diagnostic_report = {
@@ -658,162 +864,341 @@ class StockComparisonEngine:
             "Strategies":
 
                 self.df[
-
                     "Strategy"
-
                 ].nunique(),
 
-            "Average Score":
+            "Average Institutional Score":
 
                 round(
 
                     self.stock_rankings[
-
                         "Institutional Score"
-
                     ].mean(),
 
-                    2
+                    2,
 
                 ),
 
-            "Highest Score":
+            "Highest Institutional Score":
 
                 round(
 
                     self.stock_rankings[
-
                         "Institutional Score"
-
                     ].max(),
 
-                    2
+                    2,
 
                 ),
 
-            "Lowest Score":
+            "Lowest Institutional Score":
 
                 round(
 
                     self.stock_rankings[
-
                         "Institutional Score"
-
                     ].min(),
 
-                    2
+                    2,
 
-                )
+                ),
+
+            "Strong Buy":
+
+                (
+
+                    self.stock_rankings[
+                        RECOMMENDATION
+                    ] == "Strong Buy"
+
+                ).sum(),
+
+            "Buy":
+
+                (
+
+                    self.stock_rankings[
+                        RECOMMENDATION
+                    ] == "Buy"
+
+                ).sum(),
+
+            "Watch":
+
+                (
+
+                    self.stock_rankings[
+                        RECOMMENDATION
+                    ] == "Watch"
+
+                ).sum(),
+
+            "Improve":
+
+                (
+
+                    self.stock_rankings[
+                        RECOMMENDATION
+                    ] == "Improve"
+
+                ).sum(),
+
+            "Avoid":
+
+                (
+
+                    self.stock_rankings[
+                        RECOMMENDATION
+                    ] == "Avoid"
+
+                ).sum(),
+
+            "Reject":
+
+                (
+
+                    self.stock_rankings[
+                        RECOMMENDATION
+                    ] == "Reject"
+
+                ).sum(),
 
         }
 
+        logger.info(
+
+            "Diagnostics generated."
+
+        )
+
+        return self
+    
+    # ---------------------------------------------------------
+    # Execution Report
+    # ---------------------------------------------------------
+
+    def execution_report(self):
+
+        """
+        Log execution summary.
+        """
+
+        banner(
+
+            logger,
+
+            "Institutional Stock Comparison Completed",
+
+        )
+
+        for key, value in self.diagnostic_report.items():
+
+            logger.info(
+
+                "%-35s : %s",
+
+                key,
+
+                value,
+
+            )
+
+        logger.info("")
+
+        logger.info(
+
+            "Stock Comparison Engine completed successfully."
+
+        )
+
         return self
 
-
-    # ----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Export Results
+    # ---------------------------------------------------------
 
     def export(
 
         self,
 
-        output="Stock_Comparison.xlsx"
+        output_file: str = "Stock_Comparison.xlsx",
 
     ):
 
         """
-        Export reports.
+        Export all reports.
         """
 
-        with pd.ExcelWriter(
+        from strategy_compare_v4.utils.io_utils import (
+            write_excel,
+        )
 
-            output,
+        sheets = {
 
-            engine="openpyxl"
+            "All Strategies":
 
-        ) as writer:
+                self.df,
 
-            self.df.to_excel(
+            "Stock Rankings":
 
-                writer,
+                self.stock_rankings,
 
-                sheet_name="All Strategies",
+            "Top Opportunities":
 
-                index=False
+                self.best_strategies,
 
-            )
+            "Statistics":
 
-            self.stock_rankings.to_excel(
+                self.statistics,
 
-                writer,
+            "Stock Summary":
 
-                sheet_name="Stock Rankings",
+                self.stock_summary,
 
-                index=False
+            "Consistency":
 
-            )
+                self.consistency,
 
-            self.best_strategies.to_excel(
+        }
 
-                writer,
+        write_excel(
 
-                sheet_name="Top Opportunities",
+            sheets,
 
-                index=False
+            output_file,
 
-            )
+        )
 
-            self.statistics.to_excel(
+        logger.info(
 
-                writer,
+            "Results exported -> %s",
 
-                sheet_name="Statistics",
+            output_file,
 
-                index=False
-
-            )
+        )
 
         return self
 
+    # ---------------------------------------------------------
+    # Get Results
+    # ---------------------------------------------------------
 
-    # ----------------------------------------------------------
+    def get_results(self):
+
+        """
+        Return generated dataframes.
+        """
+
+        return {
+
+            "all_strategies":
+
+                self.df,
+
+            "stock_rankings":
+
+                self.stock_rankings,
+
+            "top_opportunities":
+
+                self.best_strategies,
+
+            "statistics":
+
+                self.statistics,
+
+            "stock_summary":
+
+                self.stock_summary,
+
+            "consistency":
+
+                self.consistency,
+
+        }
+
+    # ---------------------------------------------------------
+    # Execute Pipeline
+    # ---------------------------------------------------------
 
     def run(self):
 
         """
-        Execute stock comparison.
+        Execute the complete
+        stock comparison pipeline.
         """
 
-        return (
+        start = time.perf_counter()
 
-            self
+        try:
 
-            .validate()
+            (
 
-            .rank_within_stock()
+                self
 
-            .best_strategy()
+                .validate()
 
-            .summarize_stock()
+                .rank_within_stock()
 
-            .stock_statistics()
+                .best_strategy()
 
-            .consistency_score()
+                .summarize_stock()
 
-            .merge_results()
+                .stock_statistics()
 
-            .agreement_score()
+                .consistency_score()
 
-            .institutional_score()
+                .merge_results()
 
-            .rank_stocks()
+                .agreement_score()
 
-            .recommendation()
+                .institutional_score()
 
-            .top_opportunities()
+                .rank_stocks()
 
-            .diagnostics()
+                .recommendation()
 
-        )
+                .top_opportunities()
+
+                .diagnostics()
+
+            )
+
+        except Exception as exc:
+
+            logger.exception(
+
+                "Stock Comparison Engine failed."
+
+            )
+
+            raise RuntimeError(
+
+                f"Stock Comparison Engine failed:\n{exc}"
+
+            ) from exc
+
+        finally:
+
+            self.execution_time = round(
+
+                time.perf_counter()
+
+                - start,
+
+                3,
+
+            )
+
+        self.diagnostic_report[
+
+            "Execution Time (s)"
+
+        ] = self.execution_time
+
+        self.execution_report()
+
+        return self
 
 
 # ============================================================
@@ -822,17 +1207,22 @@ class StockComparisonEngine:
 
 def compare_stocks(
 
-    comparison_df,
+    comparison_df: pd.DataFrame,
 
-    output_file="Stock_Comparison.xlsx"
+    output_file: str = "Stock_Comparison.xlsx",
 
-):
+) -> StockComparisonEngine:
+
+    """
+    Execute the institutional
+    stock comparison engine.
+    """
 
     engine = (
 
         StockComparisonEngine(
 
-            comparison_df
+            comparison_df,
 
         )
 
@@ -842,7 +1232,7 @@ def compare_stocks(
 
     engine.export(
 
-        output_file
+        output_file,
 
     )
 
@@ -853,10 +1243,63 @@ def compare_stocks(
 # Main
 # ============================================================
 
-if __name__ == "__main__":
+def main():
 
-    print(
+    import argparse
 
-        "Use compare_stocks() from strategy_compare.py"
+    parser = argparse.ArgumentParser(
+
+        description=(
+
+            "Institutional Stock "
+
+            "Comparison Engine V4"
+
+        )
 
     )
+
+    parser.add_argument(
+
+        "--input",
+
+        required=True,
+
+        help="Comparison DataFrame Excel file",
+
+    )
+
+    parser.add_argument(
+
+        "--output",
+
+        default="Stock_Comparison.xlsx",
+
+        help="Output Excel workbook",
+
+    )
+
+    args = parser.parse_args()
+
+    from strategy_compare_v4.utils.io_utils import (
+        read_excel,
+    )
+
+    comparison_df = read_excel(
+
+        args.input,
+
+    )
+
+    compare_stocks(
+
+        comparison_df=comparison_df,
+
+        output_file=args.output,
+
+    )
+
+
+if __name__ == "__main__":
+
+    main()

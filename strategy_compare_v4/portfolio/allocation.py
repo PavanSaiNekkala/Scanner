@@ -2,326 +2,838 @@
 =============================================================
 Institutional Strategy Comparison Platform V4
 
-File:
-    portfolio/allocation.py
+Module
+------
+portfolio/allocation.py
 
-Purpose:
-    Portfolio allocation algorithms.
+Purpose
+-------
+Institutional portfolio allocation engine providing
+multiple allocation methodologies with standardized
+validation, normalization, and position sizing.
+
+Supported Methods
+-----------------
+• Equal Weight
+• Composite Score
+• Edge Score
+• Reliability Score
+• Blended Allocation
 
 =============================================================
 """
 
 from __future__ import annotations
 
+from typing import Callable
+
 import numpy as np
 import pandas as pd
 
-from config.thresholds import (
-    MAX_POSITION_WEIGHT,
-    MIN_POSITION_WEIGHT
+from strategy_compare_v4.config.constants import (
+    COMPOSITE_SCORE,
+    EDGE_SCORE,
+    RELIABILITY_SCORE,
 )
 
+from strategy_compare_v4.config.thresholds import (
+    MAX_POSITION_WEIGHT,
+    MIN_POSITION_WEIGHT,
+)
 
-###############################################################################
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
+
+from strategy_compare_v4.utils.math_utils import (
+    safe_divide,
+    round_dataframe,
+)
+
+from strategy_compare_v4.utils.logger import (
+    get_logger,
+    banner,
+)
+
+logger = get_logger(__name__)
+
+
+# ============================================================
+# Validation
+# ============================================================
+
+def validate_portfolio_input(
+    df: pd.DataFrame,
+    required_columns: list[str],
+) -> pd.DataFrame:
+    """
+    Validate portfolio input dataframe.
+    """
+
+    banner(
+
+        logger,
+
+        "Validating Portfolio Allocation",
+
+    )
+
+    require_columns(
+
+        df,
+
+        required_columns,
+
+    )
+
+    logger.info(
+
+        "Rows             : %d",
+
+        len(df),
+
+    )
+
+    logger.info(
+
+        "Unique Stocks    : %d",
+
+        df["Stock"].nunique(),
+
+    )
+
+    return df.copy()
+
+
+# ============================================================
 # Equal Weight Allocation
-###############################################################################
+# ============================================================
 
-def equal_weight(df):
+def equal_weight(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Allocate equal weights.
+    Allocate equal weights
+    across all securities.
     """
 
-    df = df.copy()
+    df = validate_portfolio_input(
 
-    n = len(df)
+        df,
 
-    if n == 0:
+        ["Stock"],
 
-        df["Weight"] = []
+    )
+
+    total_positions = len(df)
+
+    if total_positions == 0:
+
+        df["Weight"] = pd.Series(
+
+            dtype=float,
+
+        )
+
+        logger.warning(
+
+            "No securities available."
+
+        )
 
         return df
 
     df["Weight"] = round(
 
-        100 / n,
+        100 / total_positions,
 
-        2
+        2,
 
     )
 
-    return df
+    logger.info(
+
+        "Equal allocation generated."
+
+    )
+
+    return round_dataframe(
+
+        df,
+
+        decimals=2,
+
+    )
 
 
-###############################################################################
+# ============================================================
 # Composite Score Allocation
-###############################################################################
+# ============================================================
 
-def score_weight(df):
+def score_weight(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Allocate using Composite Score.
+    Allocate using
+    Composite Score.
     """
 
-    df = df.copy()
+    df = validate_portfolio_input(
 
-    scores = df["Composite Score"].clip(lower=0)
+        df,
 
-    total = scores.sum()
+        [
 
-    if total == 0:
+            "Stock",
 
-        return equal_weight(df)
+            COMPOSITE_SCORE,
 
-    df["Weight"] = (
-
-        scores
-
-        /
-
-        total
-
-        *
-
-        100
+        ],
 
     )
 
-    return df
+    scores = (
 
+        df[
 
-###############################################################################
+            COMPOSITE_SCORE
+
+        ]
+
+        .clip(
+
+            lower=0,
+
+        )
+
+    )
+
+    total = scores.sum()
+
+    if total <= 0:
+
+        logger.warning(
+
+            "Composite scores sum to zero."
+
+        )
+
+        return equal_weight(
+
+            df,
+
+        )
+
+    df["Weight"] = (
+
+        safe_divide(
+
+            scores,
+
+            total,
+
+        )
+
+        * 100
+
+    )
+
+    logger.info(
+
+        "Composite allocation generated."
+
+    )
+
+    return round_dataframe(
+
+        df,
+
+        decimals=2,
+
+    )
+
+# ============================================================
 # Edge Score Allocation
-###############################################################################
+# ============================================================
 
-def edge_weight(df):
+def edge_weight(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Allocate using Edge Score.
+    Allocate portfolio using
+    Edge Score.
     """
 
-    df = df.copy()
+    df = validate_portfolio_input(
 
-    scores = df["Edge Score"].clip(lower=0)
+        df,
 
-    total = scores.sum()
+        [
 
-    if total == 0:
+            "Stock",
 
-        return equal_weight(df)
+            EDGE_SCORE,
 
-    df["Weight"] = (
-
-        scores
-
-        /
-
-        total
-
-        *
-
-        100
+        ],
 
     )
 
-    return df
+    scores = (
 
+        df[
 
-###############################################################################
-# Reliability Allocation
-###############################################################################
+            EDGE_SCORE
 
-def reliability_weight(df):
-    """
-    Allocate using Reliability Score.
-    """
+        ]
 
-    df = df.copy()
+        .clip(
 
-    scores = df["Reliability Score"].clip(lower=0)
+            lower=0,
 
-    total = scores.sum()
-
-    if total == 0:
-
-        return equal_weight(df)
-
-    df["Weight"] = (
-
-        scores
-
-        /
-
-        total
-
-        *
-
-        100
+        )
 
     )
 
-    return df
+    total = scores.sum()
+
+    if total <= 0:
+
+        logger.warning(
+
+            "Edge scores sum to zero."
+
+        )
+
+        return equal_weight(
+
+            df,
+
+        )
+
+    df["Weight"] = (
+
+        safe_divide(
+
+            scores,
+
+            total,
+
+        )
+
+        * 100
+
+    )
+
+    logger.info(
+
+        "Edge Score allocation generated."
+
+    )
+
+    return round_dataframe(
+
+        df,
+
+        decimals=2,
+
+    )
 
 
-###############################################################################
-# Composite + Reliability Allocation
-###############################################################################
+# ============================================================
+# Reliability Score Allocation
+# ============================================================
+
+def reliability_weight(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Allocate portfolio using
+    Reliability Score.
+    """
+
+    df = validate_portfolio_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            RELIABILITY_SCORE,
+
+        ],
+
+    )
+
+    scores = (
+
+        df[
+
+            RELIABILITY_SCORE
+
+        ]
+
+        .clip(
+
+            lower=0,
+
+        )
+
+    )
+
+    total = scores.sum()
+
+    if total <= 0:
+
+        logger.warning(
+
+            "Reliability scores sum to zero."
+
+        )
+
+        return equal_weight(
+
+            df,
+
+        )
+
+    df["Weight"] = (
+
+        safe_divide(
+
+            scores,
+
+            total,
+
+        )
+
+        * 100
+
+    )
+
+    logger.info(
+
+        "Reliability allocation generated."
+
+    )
+
+    return round_dataframe(
+
+        df,
+
+        decimals=2,
+
+    )
+
+
+# ============================================================
+# Blended Allocation
+# ============================================================
 
 def blended_weight(
-    df,
-    composite_weight=0.60,
-    reliability_weighting=0.40
-):
+    df: pd.DataFrame,
+    composite_weight: float = 0.60,
+    reliability_weighting: float = 0.40,
+) -> pd.DataFrame:
     """
-    Allocate using weighted blend.
+    Allocate portfolio using a
+    weighted blend of Composite
+    Score and Reliability Score.
     """
 
-    df = df.copy()
+    df = validate_portfolio_input(
 
-    score = (
+        df,
+
+        [
+
+            "Stock",
+
+            COMPOSITE_SCORE,
+
+            RELIABILITY_SCORE,
+
+        ],
+
+    )
+
+    blended_score = (
 
         composite_weight
 
-        * df["Composite Score"]
+        * df[
+
+            COMPOSITE_SCORE
+
+        ]
 
         +
 
         reliability_weighting
 
-        * df["Reliability Score"]
+        * df[
+
+            RELIABILITY_SCORE
+
+        ]
+
+    ).clip(
+
+        lower=0,
 
     )
 
-    total = score.sum()
+    total = blended_score.sum()
 
-    if total == 0:
+    if total <= 0:
 
-        return equal_weight(df)
+        logger.warning(
+
+            "Blended scores sum to zero."
+
+        )
+
+        return equal_weight(
+
+            df,
+
+        )
 
     df["Weight"] = (
 
-        score
+        safe_divide(
 
-        /
+            blended_score,
 
-        total
+            total,
 
-        *
+        )
 
-        100
+        * 100
 
     )
 
-    return df
+    logger.info(
 
+        "Blended allocation generated."
 
-###############################################################################
+    )
+
+    return round_dataframe(
+
+        df,
+
+        decimals=2,
+
+    )
+
+# ============================================================
 # Apply Position Limits
-###############################################################################
+# ============================================================
 
-def apply_position_limits(df):
+def apply_position_limits(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Apply min/max limits and normalize.
+    Apply minimum and maximum
+    position limits and
+    re-normalize weights.
     """
 
-    df = df.copy()
+    df = validate_portfolio_input(
 
-    df["Weight"] = df["Weight"].clip(
+        df,
 
-        lower=MIN_POSITION_WEIGHT,
+        [
 
-        upper=MAX_POSITION_WEIGHT
+            "Stock",
+
+            "Weight",
+
+        ],
+
+    )
+
+    df["Weight"] = (
+
+        df["Weight"]
+
+        .clip(
+
+            lower=MIN_POSITION_WEIGHT,
+
+            upper=MAX_POSITION_WEIGHT,
+
+        )
 
     )
 
     total = df["Weight"].sum()
 
-    if total > 0:
+    if total <= 0:
 
-        df["Weight"] = (
+        logger.warning(
 
-            df["Weight"]
-
-            /
-
-            total
-
-            *
-
-            100
+            "Weight total is zero after applying limits."
 
         )
 
-    return df
+        return equal_weight(
 
+            df,
 
-###############################################################################
-# Round Allocation
-###############################################################################
+        )
 
-def finalize_weights(df):
-    """
-    Round weights.
-    """
+    df["Weight"] = (
 
-    df = df.copy()
+        safe_divide(
 
-    df["Weight"] = df["Weight"].round(2)
+            df["Weight"],
 
-    difference = round(
+            total,
 
-        100 - df["Weight"].sum(),
+        )
 
-        2
+        * 100
 
     )
 
-    if len(df):
+    logger.info(
+
+        "Position limits applied."
+
+    )
+
+    return round_dataframe(
+
+        df,
+
+        decimals=2,
+
+    )
+
+
+# ============================================================
+# Finalize Allocation
+# ============================================================
+
+def finalize_weights(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Round weights and ensure
+    the total allocation
+    equals exactly 100%.
+    """
+
+    df = validate_portfolio_input(
+
+        df,
+
+        [
+
+            "Stock",
+
+            "Weight",
+
+        ],
+
+    )
+
+    df["Weight"] = (
+
+        df["Weight"]
+
+        .round(
+
+            2,
+
+        )
+
+    )
+
+    difference = round(
+
+        100
+
+        -
+
+        df["Weight"].sum(),
+
+        2,
+
+    )
+
+    if not df.empty:
+
+        largest = (
+
+            df["Weight"]
+
+            .idxmax()
+
+        )
 
         df.loc[
 
-            df["Weight"].idxmax(),
+            largest,
 
-            "Weight"
+            "Weight",
 
         ] += difference
 
-    return df
+    logger.info(
+
+        "Portfolio weights finalized."
+
+    )
+
+    return round_dataframe(
+
+        df,
+
+        decimals=2,
+
+    )
 
 
-###############################################################################
-# Main Allocation Function
-###############################################################################
+# ============================================================
+# Portfolio Allocation Dispatcher
+# ============================================================
 
 def allocate_portfolio(
-    df,
-    method="composite"
-):
+    df: pd.DataFrame,
+    method: str = "composite",
+) -> pd.DataFrame:
     """
-    Portfolio allocation dispatcher.
+    Institutional portfolio
+    allocation dispatcher.
+
+    Supported Methods
+    -----------------
+    • equal
+    • composite
+    • edge
+    • reliability
+    • blend
     """
 
-    method = method.lower()
+    allocation_methods: dict[
 
-    if method == "equal":
+        str,
 
-        df = equal_weight(df)
+        Callable[[pd.DataFrame], pd.DataFrame],
 
-    elif method == "edge":
+    ] = {
 
-        df = edge_weight(df)
+        "equal":
 
-    elif method == "reliability":
+            equal_weight,
 
-        df = reliability_weight(df)
+        "composite":
 
-    elif method == "blend":
+            score_weight,
 
-        df = blended_weight(df)
+        "edge":
 
-    else:
+            edge_weight,
 
-        df = score_weight(df)
+        "reliability":
 
-    df = apply_position_limits(df)
+            reliability_weight,
 
-    df = finalize_weights(df)
+        "blend":
 
-    return df
+            blended_weight,
+
+    }
+
+    method = (
+
+        method
+
+        .strip()
+
+        .lower()
+
+    )
+
+    if method not in allocation_methods:
+
+        logger.warning(
+
+            "Unknown allocation method '%s'. "
+
+            "Using Composite Score allocation.",
+
+            method,
+
+        )
+
+        method = "composite"
+
+    logger.info(
+
+        "Allocation Method : %s",
+
+        method.title(),
+
+    )
+
+    portfolio = (
+
+        allocation_methods[
+
+            method
+
+        ](
+
+            df,
+
+        )
+
+    )
+
+    portfolio = apply_position_limits(
+
+        portfolio,
+
+    )
+
+    portfolio = finalize_weights(
+
+        portfolio,
+
+    )
+
+    logger.info(
+
+        "Portfolio allocation completed."
+
+    )
+
+    logger.info(
+
+        "Total Allocation : %.2f%%",
+
+        portfolio["Weight"].sum(),
+
+    )
+
+    logger.info(
+
+        "Maximum Position : %.2f%%",
+
+        portfolio["Weight"].max(),
+
+    )
+
+    logger.info(
+
+        "Minimum Position : %.2f%%",
+
+        portfolio["Weight"].min(),
+
+    )
+
+    return portfolio

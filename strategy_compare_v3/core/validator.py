@@ -36,15 +36,12 @@ class DataValidator:
     def __init__(
         self,
         file_path: str | Path | None = None,
-        dataframe: Optional[pd.DataFrame] = None
+        dataframe: Optional[pd.DataFrame] = None,
     ):
-
         if file_path is None:
-
             self.file_path = None
 
         else:
-
             self.file_path = Path(file_path)
 
         self.df = dataframe
@@ -54,335 +51,149 @@ class DataValidator:
     # ======================================================
 
     def validate_file_exists(self) -> None:
-
         """
         Skip this check when dataframe comes
         from Streamlit UploadedFile.
         """
 
         if self.file_path is None:
-
-            logger.info(
-
-                "Skipping file existence validation."
-
-            )
+            logger.info("Skipping file existence validation.")
 
             return
 
         if not self.file_path.exists():
-
-            raise FileNotFoundError(
-
-                f"{self.file_path} does not exist."
-
-            )
+            raise FileNotFoundError(f"{self.file_path} does not exist.")
 
         logger.info("File exists.")
 
     # ------------------------------------------------------
 
     def validate_extension(self) -> None:
-
         if self.file_path is None:
-
-            logger.info(
-
-                "Skipping extension validation."
-
-            )
+            logger.info("Skipping extension validation.")
 
             return
 
         extension = self.file_path.suffix.lower()
 
         if extension not in SUPPORTED_FILE_TYPES:
+            raise ValueError(f"Unsupported file type: {extension}")
 
-            raise ValueError(
-
-                f"Unsupported file type: {extension}"
-
-            )
-
-        logger.info(
-
-            "Supported file format."
-
-        )
+        logger.info("Supported file format.")
 
     # ------------------------------------------------------
 
     def validate_file_size(self) -> None:
-
         if self.file_path is None:
-
-            logger.info(
-
-                "Skipping file size validation."
-
-            )
+            logger.info("Skipping file size validation.")
 
             return
 
         if self.file_path.stat().st_size == 0:
+            raise ValueError("Input file is empty.")
 
-            raise ValueError(
-
-                "Input file is empty."
-
-            )
-
-        logger.info(
-
-            "File size validation passed."
-
-        )
+        logger.info("File size validation passed.")
 
     # ======================================================
     # DATAFRAME VALIDATION
     # ======================================================
 
     def validate_dataframe(self) -> None:
-
         if self.df is None:
-
-            raise ValueError(
-
-                "DataFrame is None."
-
-            )
+            raise ValueError("DataFrame is None.")
 
         if self.df.empty:
+            raise ValueError("DataFrame is empty.")
 
-            raise ValueError(
-
-                "DataFrame is empty."
-
-            )
-
-        logger.info(
-
-            "DataFrame validation passed."
-
-        )
+        logger.info("DataFrame validation passed.")
 
     # ------------------------------------------------------
 
     def validate_duplicate_columns(self) -> None:
-
-        duplicated = self.df.columns[
-
-            self.df.columns.duplicated()
-
-        ]
+        duplicated = self.df.columns[self.df.columns.duplicated()]
 
         if len(duplicated):
+            raise ValueError(f"Duplicate columns found: {duplicated.tolist()}")
 
-            raise ValueError(
-
-                f"Duplicate columns found: "
-
-                f"{duplicated.tolist()}"
-
-            )
-
-        logger.info(
-
-            "Duplicate column validation passed."
-
-        )
+        logger.info("Duplicate column validation passed.")
 
     # ------------------------------------------------------
 
     def validate_column_names(self) -> None:
-
         invalid = []
 
         for column in self.df.columns:
-
             if str(column).strip() == "":
-
                 invalid.append(column)
 
         if invalid:
+            raise ValueError("Unnamed columns detected.")
 
-            raise ValueError(
-
-                "Unnamed columns detected."
-
-            )
-
-        logger.info(
-
-            "Column names validated."
-
-        )
+        logger.info("Column names validated.")
 
     # ------------------------------------------------------
 
     def validate_numeric_columns(self) -> None:
-
-        numeric = self.df.select_dtypes(
-
-            include="number"
-
-        )
+        numeric = self.df.select_dtypes(include="number")
 
         if numeric.empty:
+            raise ValueError("No numeric columns detected.")
 
-            raise ValueError(
-
-                "No numeric columns detected."
-
-            )
-
-        logger.info(
-
-            "%d numeric columns detected.",
-
-            numeric.shape[1]
-
-        )
+        logger.info("%d numeric columns detected.", numeric.shape[1])
 
     # ------------------------------------------------------
 
-    def validate_required_columns(
-
-        self,
-
-        required_columns: Iterable[str]
-
-    ) -> None:
-
-        missing = (
-
-            set(required_columns)
-
-            - set(self.df.columns)
-
-        )
+    def validate_required_columns(self, required_columns: Iterable[str]) -> None:
+        missing = set(required_columns) - set(self.df.columns)
 
         if missing:
+            raise ValueError(f"Missing required columns: {sorted(missing)}")
 
-            raise ValueError(
-
-                f"Missing required columns: "
-
-                f"{sorted(missing)}"
-
-            )
-
-        logger.info(
-
-            "Required columns validated."
-
-        )
+        logger.info("Required columns validated.")
 
     # ======================================================
     # QUALITY CHECKS
     # ======================================================
 
     def validate_null_columns(self) -> None:
-
         null_columns = [
-
-            column
-
-            for column in self.df.columns
-
-            if self.df[column].isna().all()
-
+            column for column in self.df.columns if self.df[column].isna().all()
         ]
 
         if null_columns:
-
-            logger.warning(
-
-                "Entirely NULL columns: %s",
-
-                null_columns
-
-            )
+            logger.warning("Entirely NULL columns: %s", null_columns)
 
     # ------------------------------------------------------
 
     def validate_constant_columns(self) -> None:
-
         constant = [
-
             column
-
             for column in self.df.columns
-
-            if self.df[column].nunique(
-
-                dropna=False
-
-            ) <= 1
-
+            if self.df[column].nunique(dropna=False) <= 1
         ]
 
         if constant:
-
-            logger.warning(
-
-                "Constant columns: %s",
-
-                constant
-
-            )
+            logger.warning("Constant columns: %s", constant)
 
     # ------------------------------------------------------
 
     def validate_duplicate_rows(self) -> None:
-
-        duplicates = int(
-
-            self.df.duplicated().sum()
-
-        )
+        duplicates = int(self.df.duplicated().sum())
 
         if duplicates:
-
-            logger.warning(
-
-                "%d duplicate rows found.",
-
-                duplicates
-
-            )
+            logger.warning("%d duplicate rows found.", duplicates)
 
         else:
-
-            logger.info(
-
-                "No duplicate rows."
-
-            )
+            logger.info("No duplicate rows.")
 
     # ======================================================
     # COMPLETE VALIDATION
     # ======================================================
 
-    def run(
+    def run(self, required_columns: Iterable[str] | None = None) -> None:
+        logger.info("=" * 80)
 
-        self,
-
-        required_columns: Iterable[str] | None = None
-
-    ) -> None:
-
-        logger.info(
-
-            "=" * 80
-
-        )
-
-        logger.info(
-
-            "Starting dataset validation..."
-
-        )
+        logger.info("Starting dataset validation...")
 
         self.validate_file_exists()
 
@@ -405,30 +216,12 @@ class DataValidator:
         self.validate_constant_columns()
 
         if required_columns:
+            self.validate_required_columns(required_columns)
 
-            self.validate_required_columns(
+        logger.info("Validation completed successfully.")
 
-                required_columns
-
-            )
-
-        logger.info(
-
-            "Validation completed successfully."
-
-        )
-
-        logger.info(
-
-            "=" * 80
-
-        )
+        logger.info("=" * 80)
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import DataValidator from loader.py"
-
-    )
+    print("Import DataValidator from loader.py")

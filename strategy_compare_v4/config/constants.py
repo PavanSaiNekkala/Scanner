@@ -31,11 +31,11 @@ from pathlib import Path
 # Project Directories
 # ============================================================
 
-PROJECT_ROOT = Path(".")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 INPUT_DIRECTORY = PROJECT_ROOT
 
-OUTPUT_DIRECTORY = PROJECT_ROOT / "Institutional_Output"
+OUTPUT_DIRECTORY = PROJECT_ROOT / "output"
 
 # ============================================================
 # Portfolio Defaults
@@ -60,6 +60,39 @@ INSTITUTION_RANK = "Institution Rank"
 RECOMMENDATION = "Recommendation"
 
 WEIGHT = "Weight"
+
+# ============================================================
+# Validation Metrics
+# ============================================================
+
+VALIDATION_STATUS = "Validation Status"
+
+# ============================================================
+# Strategy Discovery
+# ============================================================
+
+STRATEGY_FOLDERS = [
+    "backtest_F_ATR_FT",
+    "backtest_F_ATR_Tr",
+    "backtest_F_Str_FT",
+    "backtest_F_Str_Tr",
+    "backtest_WF_ATR_FT",
+    "backtest_WF_ATR_Tr",
+    "backtest_WF_Str_FT",
+    "backtest_WF_Str_Tr",
+]
+
+# ============================================================
+# Required Columns
+# ============================================================
+
+REQUIRED_COMPARISON_COLUMNS = [
+    "Stock",
+    "Strategy",
+    "Institution Rank",
+    "Composite Score",
+    "Recommendation",
+]
 
 # ============================================================
 # Performance Metrics
@@ -180,26 +213,25 @@ AVOID = "Avoid"
 REJECT = "Reject"
 
 RECOMMENDATION_ORDER = [
-
     STRONG_BUY,
-
     BUY,
-
     WATCH,
-
     IMPROVE,
-
     AVOID,
-
     REJECT,
-
 ]
 
 # ============================================================
 # Output File Names
 # ============================================================
 
+DERIVED_METRICS_REPORT = "Derived_Metrics.xlsx"
+
+COMPARISON_REPORT = "Strategy_Comparison.xlsx"
+
 FINAL_REPORT = "Institutional_Strategy_Report.xlsx"
+
+FINAL_INSTITUTIONAL_REPORT = "Institutional_Strategy_Report.xlsx"
 
 PORTFOLIO_REPORT = "Institutional_Portfolio.xlsx"
 
@@ -212,3 +244,9 @@ CORRELATION_REPORT = "Correlation.xlsx"
 STOCK_REPORT = "Stock_Comparison.xlsx"
 
 STRATEGY_REPORT = "Strategy_Comparison.xlsx"
+
+# ============================================================
+# Public Exports
+# ============================================================
+
+__all__ = [name for name in globals() if name.isupper()]

@@ -16,13 +16,12 @@ import pytest
 
 from normalization.normalization_engine import NormalizationEngine
 
-
 # ==========================================================
 # Constructor
 # ==========================================================
 
-def test_normalization_engine_creation(sample_dataframe):
 
+def test_normalization_engine_creation(sample_dataframe):
     engine = NormalizationEngine(sample_dataframe)
 
     assert engine is not None
@@ -32,8 +31,8 @@ def test_normalization_engine_creation(sample_dataframe):
 # Run Engine
 # ==========================================================
 
-def test_run_normalization(sample_dataframe):
 
+def test_run_normalization(sample_dataframe):
     engine = NormalizationEngine(sample_dataframe)
 
     result = engine.run()
@@ -45,28 +44,15 @@ def test_run_normalization(sample_dataframe):
 # Expected Methods
 # ==========================================================
 
-def test_available_methods(sample_dataframe):
 
+def test_available_methods(sample_dataframe):
     engine = NormalizationEngine(sample_dataframe)
 
     result = engine.run()
 
-    expected = [
-
-        "Percentile",
-
-        "Min-Max",
-
-        "Z-Score",
-
-        "Robust Z-Score",
-
-        "Quantile"
-
-    ]
+    expected = ["Percentile", "Min-Max", "Z-Score", "Robust Z-Score", "Quantile"]
 
     for method in expected:
-
         assert method in result
 
 
@@ -74,14 +60,13 @@ def test_available_methods(sample_dataframe):
 # Returned Objects
 # ==========================================================
 
-def test_return_types(sample_dataframe):
 
+def test_return_types(sample_dataframe):
     engine = NormalizationEngine(sample_dataframe)
 
     result = engine.run()
 
     for dataframe in result.values():
-
         assert isinstance(dataframe, pd.DataFrame)
 
 
@@ -89,14 +74,13 @@ def test_return_types(sample_dataframe):
 # Row Count
 # ==========================================================
 
-def test_row_count(sample_dataframe):
 
+def test_row_count(sample_dataframe):
     engine = NormalizationEngine(sample_dataframe)
 
     result = engine.run()
 
     for dataframe in result.values():
-
         assert len(dataframe) == len(sample_dataframe)
 
 
@@ -104,8 +88,8 @@ def test_row_count(sample_dataframe):
 # Numeric Values
 # ==========================================================
 
-def test_numeric_columns(sample_dataframe):
 
+def test_numeric_columns(sample_dataframe):
     engine = NormalizationEngine(sample_dataframe)
 
     result = engine.run()
@@ -121,8 +105,8 @@ def test_numeric_columns(sample_dataframe):
 # Missing Values
 # ==========================================================
 
-def test_missing_values(sample_dataframe):
 
+def test_missing_values(sample_dataframe):
     df = sample_dataframe.copy()
 
     df.loc[0, "Profit Factor"] = None
@@ -138,16 +122,11 @@ def test_missing_values(sample_dataframe):
 # Empty DataFrame
 # ==========================================================
 
+
 def test_empty_dataframe():
-
-    engine = NormalizationEngine(
-
-        pd.DataFrame()
-
-    )
+    engine = NormalizationEngine(pd.DataFrame())
 
     with pytest.raises(Exception):
-
         engine.run()
 
 
@@ -155,17 +134,9 @@ def test_empty_dataframe():
 # Single Row
 # ==========================================================
 
+
 def test_single_row():
-
-    df = pd.DataFrame({
-
-        "Stock": ["ABC"],
-
-        "Expectancy%": [12],
-
-        "Profit Factor": [2.4]
-
-    })
+    df = pd.DataFrame({"Stock": ["ABC"], "Expectancy%": [12], "Profit Factor": [2.4]})
 
     engine = NormalizationEngine(df)
 
@@ -178,61 +149,37 @@ def test_single_row():
 # Repeatability
 # ==========================================================
 
-def test_repeatability(sample_dataframe):
 
+def test_repeatability(sample_dataframe):
     engine = NormalizationEngine(sample_dataframe)
 
     first = engine.run()
 
     second = engine.run()
 
-    pd.testing.assert_frame_equal(
-
-        first["Percentile"],
-
-        second["Percentile"]
-
-    )
+    pd.testing.assert_frame_equal(first["Percentile"], second["Percentile"])
 
 
 # ==========================================================
 # Performance
 # ==========================================================
 
-def test_large_dataset():
 
+def test_large_dataset():
     rows = 10000
 
-    df = pd.DataFrame({
-
-        "Stock":
-
-            [f"S{i}" for i in range(rows)],
-
-        "Expectancy%":
-
-            range(rows),
-
-        "Profit Factor":
-
-            range(rows),
-
-        "Reward Risk":
-
-            range(rows),
-
-        "Trades":
-
-            range(rows)
-
-    })
+    df = pd.DataFrame(
+        {
+            "Stock": [f"S{i}" for i in range(rows)],
+            "Expectancy%": range(rows),
+            "Profit Factor": range(rows),
+            "Reward Risk": range(rows),
+            "Trades": range(rows),
+        }
+    )
 
     engine = NormalizationEngine(df)
 
     result = engine.run()
 
-    assert len(
-
-        result["Percentile"]
-
-    ) == rows
+    assert len(result["Percentile"]) == rows

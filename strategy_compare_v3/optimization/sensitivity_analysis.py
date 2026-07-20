@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from typing import Callable
 
-import numpy as np
 import pandas as pd
 
 from core.logger import get_logger
@@ -34,7 +33,6 @@ class SensitivityAnalysis:
         dataframe: pd.DataFrame,
         objective_function: Callable,
     ):
-
         self.df = dataframe.copy()
 
         self.objective_function = objective_function
@@ -46,152 +44,50 @@ class SensitivityAnalysis:
         parameter_name: str,
         values: list,
     ) -> pd.DataFrame:
-
-        logger.info(
-
-            "Analysing parameter: %s",
-
-            parameter_name
-
-        )
+        logger.info("Analysing parameter: %s", parameter_name)
 
         results = []
 
         for value in values:
+            score = self.objective_function(self.df, {parameter_name: value})
 
-            score = self.objective_function(
-
-                self.df,
-
-                {
-
-                    parameter_name: value
-
-                }
-
+            results.append(
+                {"Parameter": parameter_name, "Value": value, "Objective": score}
             )
-
-            results.append({
-
-                "Parameter":
-
-                    parameter_name,
-
-                "Value":
-
-                    value,
-
-                "Objective":
-
-                    score
-
-            })
 
         return pd.DataFrame(results)
 
     # -----------------------------------------------------
 
-    def analyse_multiple(
-        self,
-        parameter_space: dict
-    ) -> pd.DataFrame:
-
-        logger.info(
-
-            "Running sensitivity analysis..."
-
-        )
+    def analyse_multiple(self, parameter_space: dict) -> pd.DataFrame:
+        logger.info("Running sensitivity analysis...")
 
         frames = []
 
         for parameter, values in parameter_space.items():
+            frames.append(self.analyse_parameter(parameter, values))
 
-            frames.append(
+        results = pd.concat(frames, ignore_index=True)
 
-                self.analyse_parameter(
-
-                    parameter,
-
-                    values
-
-                )
-
-            )
-
-        results = pd.concat(
-
-            frames,
-
-            ignore_index=True
-
-        )
-
-        logger.info(
-
-            "Sensitivity analysis completed."
-
-        )
+        logger.info("Sensitivity analysis completed.")
 
         return results
 
     # -----------------------------------------------------
 
-    def ranking(
-        self,
-        sensitivity_df: pd.DataFrame
-    ) -> pd.DataFrame:
-
+    def ranking(self, sensitivity_df: pd.DataFrame) -> pd.DataFrame:
         grouped = (
-
-            sensitivity_df
-
-            .groupby("Parameter")["Objective"]
-
-            .agg(
-
-                Mean="mean",
-
-                Std="std",
-
-                Min="min",
-
-                Max="max"
-
-            )
-
+            sensitivity_df.groupby("Parameter")["Objective"]
+            .agg(Mean="mean", Std="std", Min="min", Max="max")
             .reset_index()
-
         )
 
-        grouped["Sensitivity"] = (
+        grouped["Sensitivity"] = grouped["Max"] - grouped["Min"]
 
-            grouped["Max"]
+        grouped = grouped.sort_values("Sensitivity", ascending=False)
 
-            -
-
-            grouped["Min"]
-
-        )
-
-        grouped = grouped.sort_values(
-
-            "Sensitivity",
-
-            ascending=False
-
-        )
-
-        return grouped.reset_index(
-
-            drop=True
-
-        )
+        return grouped.reset_index(drop=True)
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside optimization_engine.py"
-
-    )
+    print("Import inside optimization_engine.py")

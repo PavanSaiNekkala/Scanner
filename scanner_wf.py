@@ -35,6 +35,7 @@ import importlib.util
 _here = os.path.dirname(os.path.abspath(__file__))
 _self = os.path.basename(os.path.abspath(__file__)).lower()
 
+
 def _find_engine(folder: str):
     try:
         names = os.listdir(folder)
@@ -45,14 +46,15 @@ def _find_engine(folder: str):
         low = nm.lower()
         if not low.endswith(".py"):
             continue
-        if low == _self:                 # never import ourselves
+        if low == _self:  # never import ourselves
             continue
-        if "screener" not in low:        # case-insensitive match
+        if "screener" not in low:  # case-insensitive match
             continue
         full = os.path.join(folder, nm)
         if os.path.isfile(full):
             cands.append(full)
     return cands, names
+
 
 _matches, _seen = _find_engine(_here)
 if not _matches:
@@ -65,7 +67,7 @@ if not _matches:
         "  Fix: put the swing screener .py file (any name containing 'screener') in this exact "
         "folder, and launch streamlit from this folder."
     )
-_ENGINE_PATH = max(_matches, key=os.path.getmtime)   # newest = current
+_ENGINE_PATH = max(_matches, key=os.path.getmtime)  # newest = current
 ENGINE_FILE = os.path.basename(_ENGINE_PATH)
 _spec = importlib.util.spec_from_file_location("engine", _ENGINE_PATH)
 engine = importlib.util.module_from_spec(_spec)
@@ -82,28 +84,143 @@ except Exception:
 # ======================================================================================
 BUILTIN_UNIVERSE = {
     "LargeCap": [
-        "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "HINDUNILVR", "ITC", "SBIN",
-        "BHARTIARTL", "KOTAKBANK", "LT", "AXISBANK", "BAJFINANCE", "ASIANPAINT", "MARUTI",
-        "SUNPHARMA", "TITAN", "ULTRACEMCO", "WIPRO", "NESTLEIND", "ONGC", "NTPC", "POWERGRID",
-        "M&M", "TATAMOTORS", "TATASTEEL", "JSWSTEEL", "ADANIENT", "ADANIPORTS", "COALINDIA",
-        "HCLTECH", "BAJAJFINSV", "TECHM", "GRASIM", "HINDALCO", "DRREDDY", "CIPLA", "BPCL",
-        "BRITANNIA", "EICHERMOT", "DIVISLAB", "HEROMOTOCO", "INDUSINDBK", "APOLLOHOSP",
-        "TATACONSUM", "BAJAJ-AUTO", "SBILIFE", "HDFCLIFE", "LTIM", "SHRIRAMFIN",
+        "RELIANCE",
+        "TCS",
+        "HDFCBANK",
+        "ICICIBANK",
+        "INFY",
+        "HINDUNILVR",
+        "ITC",
+        "SBIN",
+        "BHARTIARTL",
+        "KOTAKBANK",
+        "LT",
+        "AXISBANK",
+        "BAJFINANCE",
+        "ASIANPAINT",
+        "MARUTI",
+        "SUNPHARMA",
+        "TITAN",
+        "ULTRACEMCO",
+        "WIPRO",
+        "NESTLEIND",
+        "ONGC",
+        "NTPC",
+        "POWERGRID",
+        "M&M",
+        "TATAMOTORS",
+        "TATASTEEL",
+        "JSWSTEEL",
+        "ADANIENT",
+        "ADANIPORTS",
+        "COALINDIA",
+        "HCLTECH",
+        "BAJAJFINSV",
+        "TECHM",
+        "GRASIM",
+        "HINDALCO",
+        "DRREDDY",
+        "CIPLA",
+        "BPCL",
+        "BRITANNIA",
+        "EICHERMOT",
+        "DIVISLAB",
+        "HEROMOTOCO",
+        "INDUSINDBK",
+        "APOLLOHOSP",
+        "TATACONSUM",
+        "BAJAJ-AUTO",
+        "SBILIFE",
+        "HDFCLIFE",
+        "LTIM",
+        "SHRIRAMFIN",
     ],
     "MidCap": [
-        "HUDCO", "IRFC", "RVNL", "BEL", "BHEL", "IOC", "GAIL", "PFC", "RECLTD", "IRCTC",
-        "ABCAPITAL", "ASHOKLEY", "AUROPHARMA", "BANKBARODA", "CANBK", "CGPOWER", "CONCOR",
-        "COFORGE", "CUMMINSIND", "DLF", "GODREJPROP", "HAVELLS", "INDHOTEL", "JUBLFOOD",
-        "LICHSGFIN", "LUPIN", "MRF", "NMDC", "OBEROIRLTY", "PAGEIND", "PERSISTENT",
-        "PIIND", "POLYCAB", "SAIL", "SUZLON", "TATAPOWER", "TORNTPHARM", "TRENT", "VBL",
-        "YESBANK", "IDFCFIRSTB", "PNB", "UNIONBANK", "MAXHEALTH", "LODHA", "HINDZINC",
+        "HUDCO",
+        "IRFC",
+        "RVNL",
+        "BEL",
+        "BHEL",
+        "IOC",
+        "GAIL",
+        "PFC",
+        "RECLTD",
+        "IRCTC",
+        "ABCAPITAL",
+        "ASHOKLEY",
+        "AUROPHARMA",
+        "BANKBARODA",
+        "CANBK",
+        "CGPOWER",
+        "CONCOR",
+        "COFORGE",
+        "CUMMINSIND",
+        "DLF",
+        "GODREJPROP",
+        "HAVELLS",
+        "INDHOTEL",
+        "JUBLFOOD",
+        "LICHSGFIN",
+        "LUPIN",
+        "MRF",
+        "NMDC",
+        "OBEROIRLTY",
+        "PAGEIND",
+        "PERSISTENT",
+        "PIIND",
+        "POLYCAB",
+        "SAIL",
+        "SUZLON",
+        "TATAPOWER",
+        "TORNTPHARM",
+        "TRENT",
+        "VBL",
+        "YESBANK",
+        "IDFCFIRSTB",
+        "PNB",
+        "UNIONBANK",
+        "MAXHEALTH",
+        "LODHA",
+        "HINDZINC",
     ],
     "SmallCap": [
-        "IREDA", "MAZDOCK", "COCHINSHIP", "GRSE", "HAL", "BDL", "MIDHANI", "RITES",
-        "IRCON", "NBCC", "ENGINERSIN", "HFCL", "GMRINFRA", "JWL", "KALYANKJIL", "KAYNES",
-        "TATATECH", "ZOMATO", "NYKAA", "PAYTM", "POLICYBZR", "DELHIVERY", "MAPMYINDIA",
-        "IEX", "CDSL", "BSE", "ANGELONE", "CAMS", "KFINTECH", "MCX", "INTELLECT",
-        "TANLA", "ROUTE", "HAPPSTMNDS", "LATENTVIEW", "SONACOMS", "OLECTRA",
+        "IREDA",
+        "MAZDOCK",
+        "COCHINSHIP",
+        "GRSE",
+        "HAL",
+        "BDL",
+        "MIDHANI",
+        "RITES",
+        "IRCON",
+        "NBCC",
+        "ENGINERSIN",
+        "HFCL",
+        "GMRINFRA",
+        "JWL",
+        "KALYANKJIL",
+        "KAYNES",
+        "TATATECH",
+        "ZOMATO",
+        "NYKAA",
+        "PAYTM",
+        "POLICYBZR",
+        "DELHIVERY",
+        "MAPMYINDIA",
+        "IEX",
+        "CDSL",
+        "BSE",
+        "ANGELONE",
+        "CAMS",
+        "KFINTECH",
+        "MCX",
+        "INTELLECT",
+        "TANLA",
+        "ROUTE",
+        "HAPPSTMNDS",
+        "LATENTVIEW",
+        "SONACOMS",
+        "OLECTRA",
     ],
 }
 BUILTIN_UNIVERSE["Nifty500"] = sorted(set(sum(BUILTIN_UNIVERSE.values(), [])))
@@ -111,14 +228,16 @@ BUILTIN_UNIVERSE["Nifty500"] = sorted(set(sum(BUILTIN_UNIVERSE.values(), [])))
 
 # --- Official NSE index constituent CSVs (the full, current lists) ---
 NSE_INDEX_CSV = {
-    "Nifty500":    "https://archives.nseindia.com/content/indices/ind_nifty500list.csv",
-    "LargeCap":    "https://archives.nseindia.com/content/indices/ind_nifty100list.csv",
-    "MidCap":      "https://archives.nseindia.com/content/indices/ind_niftymidcap150list.csv",
-    "SmallCap":    "https://archives.nseindia.com/content/indices/ind_niftysmallcap250list.csv",
+    "Nifty500": "https://archives.nseindia.com/content/indices/ind_nifty500list.csv",
+    "LargeCap": "https://archives.nseindia.com/content/indices/ind_nifty100list.csv",
+    "MidCap": "https://archives.nseindia.com/content/indices/ind_niftymidcap150list.csv",
+    "SmallCap": "https://archives.nseindia.com/content/indices/ind_niftysmallcap250list.csv",
 }
 _NSE_HEADERS = {
-    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                   "(KHTML, like Gecko) Chrome/122.0 Safari/537.36"),
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/122.0 Safari/537.36"
+    ),
     "Accept": "text/csv,application/csv,application/vnd.ms-excel,*/*",
     "Accept-Language": "en-US,en;q=0.9",
 }
@@ -132,7 +251,7 @@ def _nse_csv(url: str) -> list:
         raise RuntimeError("requests not installed")
     s = requests.Session()
     s.headers.update(_NSE_HEADERS)
-    try:                                   # prime cookies (NSE requires a prior page hit)
+    try:  # prime cookies (NSE requires a prior page hit)
         s.get("https://www.nseindia.com", timeout=10)
     except Exception:
         pass
@@ -149,14 +268,17 @@ def fetch_nse_universe():
     """Build the full universe from live NSE index lists; raise if any core list fails."""
     buckets = {name: _nse_csv(url) for name, url in NSE_INDEX_CSV.items()}
     # 'AllNSE' = union of the three broad indices (dedup)
-    buckets["AllNSE"] = sorted(set(buckets["Nifty500"]) | set(buckets["MidCap"]) | set(buckets["SmallCap"]))
+    buckets["AllNSE"] = sorted(
+        set(buckets["Nifty500"]) | set(buckets["MidCap"]) | set(buckets["SmallCap"])
+    )
     return buckets
 
 
 @st.cache_data(ttl=60 * 60 * 24, show_spinner=False)
 def fetch_sector_map() -> dict:
     """Build {SYMBOL: Industry} from the NSE index CSVs (they carry an 'Industry' column).
-    Free — same source we already use for the universe. Returns {} if NSE is unreachable."""
+    Free — same source we already use for the universe. Returns {} if NSE is unreachable.
+    """
     if requests is None:
         return {}
     smap = {}
@@ -212,8 +334,10 @@ def load_universe():
         try:
             u = pd.read_csv(path)
             u.columns = [c.strip().lower() for c in u.columns]
-            buckets = {b: [str(t).strip().upper() for t in sub["ticker"]]
-                       for b, sub in u.groupby("bucket")}
+            buckets = {
+                b: [str(t).strip().upper() for t in sub["ticker"]]
+                for b, sub in u.groupby("bucket")
+            }
             if "Nifty500" not in buckets:
                 buckets["Nifty500"] = sorted(set(sum(buckets.values(), [])))
             return buckets, "universe.csv (your file)"
@@ -222,8 +346,10 @@ def load_universe():
     try:
         return fetch_nse_universe(), "live NSE index CSVs"
     except Exception as e:
-        st.warning(f"Could not reach NSE ({str(e)[:60]}). Using the built-in sample list. "
-                   "Re-run to retry, or add a universe.csv.")
+        st.warning(
+            f"Could not reach NSE ({str(e)[:60]}). Using the built-in sample list. "
+            "Re-run to retry, or add a universe.csv."
+        )
         return BUILTIN_UNIVERSE, "built-in fallback list"
 
 
@@ -237,12 +363,12 @@ def to_yahoo(sym: str) -> str:
 # ======================================================================================
 MIN_DAYS = 250
 TARGET_YEARS = 10
-RS_WINDOW = 63                       # ~3 months for relative-strength
-BENCH_TICKERS = ["^CRSLDX", "^NSEI"] # Nifty 500 (broad), fallback Nifty 50
+RS_WINDOW = 63  # ~3 months for relative-strength
+BENCH_TICKERS = ["^CRSLDX", "^NSEI"]  # Nifty 500 (broad), fallback Nifty 50
 # Segment indices: your universe lives here, not in the IT mega-caps that can lift the headline.
 # Several candidates each — Yahoo's coverage of Indian segment indices is inconsistent.
 SEGMENT_TICKERS = {
-    "MidCap":   ["^NSEMDCP50", "NIFTY_MIDCAP_100.NS", "^CNXMIDCAP"],
+    "MidCap": ["^NSEMDCP50", "NIFTY_MIDCAP_100.NS", "^CNXMIDCAP"],
     "SmallCap": ["^CNXSC", "NIFTYSMLCAP250.NS", "^CNXSMCAP"],
 }
 
@@ -265,7 +391,9 @@ def fetch_index(start: dt.date, end: dt.date):
         return None, pd.DataFrame()
     for t in BENCH_TICKERS:
         try:
-            df = yf.Ticker(t).history(start=start, end=end, interval="1d", auto_adjust=True)
+            df = yf.Ticker(t).history(
+                start=start, end=end, interval="1d", auto_adjust=True
+            )
             if df is not None and not df.empty:
                 df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
                 df.index = pd.to_datetime(df.index).tz_localize(None)
@@ -284,16 +412,20 @@ def fetch_segments(start: dt.date, end: dt.date) -> dict:
     for seg, candidates in SEGMENT_TICKERS.items():
         for t in candidates:
             try:
-                df = yf.Ticker(t).history(start=start, end=end, interval="1d", auto_adjust=True)
+                df = yf.Ticker(t).history(
+                    start=start, end=end, interval="1d", auto_adjust=True
+                )
                 if df is None or df.empty or len(df) < 210:
                     continue
                 c = df["Close"].dropna()
                 s200 = c.rolling(200).mean().iloc[-1]
                 if not np.isfinite(s200):
                     continue
-                out[seg] = {"ticker": t,
-                            "pct_vs_200": round(float(c.iloc[-1] / s200 - 1) * 100, 2),
-                            "above_200": bool(c.iloc[-1] > s200)}
+                out[seg] = {
+                    "ticker": t,
+                    "pct_vs_200": round(float(c.iloc[-1] / s200 - 1) * 100, 2),
+                    "above_200": bool(c.iloc[-1] > s200),
+                }
                 break
             except Exception:
                 continue
@@ -302,8 +434,13 @@ def fetch_segments(start: dt.date, end: dt.date) -> dict:
 
 def compute_breadth(rows: list) -> dict:
     """Advance/decline breadth computed from the scanned universe itself (no extra fetches).
-    This is the piece that catches a narrow, breadth-negative day behind a green headline index."""
-    ok = [r for r in rows if r.get("status") == "ok" and np.isfinite(r.get("day_chg_%", np.nan))]
+    This is the piece that catches a narrow, breadth-negative day behind a green headline index.
+    """
+    ok = [
+        r
+        for r in rows
+        if r.get("status") == "ok" and np.isfinite(r.get("day_chg_%", np.nan))
+    ]
     n = len(ok)
     if n == 0:
         return {"status": "UNKNOWN", "n": 0}
@@ -320,32 +457,50 @@ def compute_breadth(rows: list) -> dict:
         status = "NEGATIVE"
     else:
         status = "MIXED"
-    return {"status": status, "n": n, "advancers": adv, "decliners": dec,
-            "pct_advancers": round(pct_adv, 1), "pct_above_50dma": round(pct_above50, 1),
-            "ad_ratio": round(ad_ratio, 2)}
+    return {
+        "status": status,
+        "n": n,
+        "advancers": adv,
+        "decliners": dec,
+        "pct_advancers": round(pct_adv, 1),
+        "pct_above_50dma": round(pct_above50, 1),
+        "ad_ratio": round(ad_ratio, 2),
+    }
 
 
 def compute_regime(idx_df: pd.DataFrame) -> dict:
     """Trend/momentum of the broad benchmark (one input to the composite gate)."""
     if idx_df.empty or len(idx_df) < 210:
-        return {"status": "UNKNOWN", "note": "index data unavailable",
-                "idx_ret_window": 0.0, "index_ok": False}
+        return {
+            "status": "UNKNOWN",
+            "note": "index data unavailable",
+            "idx_ret_window": 0.0,
+            "index_ok": False,
+        }
     c = idx_df["Close"]
     s200 = c.rolling(200).mean().iloc[-1]
     last = float(c.iloc[-1])
     above200 = bool(last > s200) if np.isfinite(s200) else True
     pct_vs200 = (last / s200 - 1) * 100 if np.isfinite(s200) else np.nan
     roc10 = (c.iloc[-1] / c.iloc[-11] - 1) * 100 if len(c) > 11 else 0.0
-    idx_ret_window = (c.iloc[-1] / c.iloc[-(RS_WINDOW + 1)] - 1) * 100 if len(c) > RS_WINDOW else 0.0
+    idx_ret_window = (
+        (c.iloc[-1] / c.iloc[-(RS_WINDOW + 1)] - 1) * 100 if len(c) > RS_WINDOW else 0.0
+    )
     if above200 and roc10 > -1.0:
         status = "RISK-ON"
     elif above200 or roc10 > -3.0:
         status = "NEUTRAL"
     else:
         status = "RISK-OFF"
-    return {"status": status, "above_200": above200, "pct_vs_200": round(float(pct_vs200), 2),
-            "roc10": round(float(roc10), 2), "idx_ret_window": float(idx_ret_window),
-            "last": round(last, 2), "index_ok": True}
+    return {
+        "status": status,
+        "above_200": above200,
+        "pct_vs_200": round(float(pct_vs200), 2),
+        "roc10": round(float(roc10), 2),
+        "idx_ret_window": float(idx_ret_window),
+        "last": round(last, 2),
+        "index_ok": True,
+    }
 
 
 def composite_gate(regime: dict, segments: dict, breadth: dict) -> dict:
@@ -359,11 +514,16 @@ def composite_gate(regime: dict, segments: dict, breadth: dict) -> dict:
     seg_below = [s for s, v in segments.items() if not v.get("above_200", True)]
 
     score = 0
-    if idx_state == "RISK-ON":  score += 1
-    elif idx_state == "RISK-OFF": score -= 1
-    if br == "POSITIVE": score += 1
-    elif br == "NEGATIVE": score -= 1          # breadth can veto a green index
-    if seg_below: score -= 1                    # your universe's own segment is in a downtrend
+    if idx_state == "RISK-ON":
+        score += 1
+    elif idx_state == "RISK-OFF":
+        score -= 1
+    if br == "POSITIVE":
+        score += 1
+    elif br == "NEGATIVE":
+        score -= 1  # breadth can veto a green index
+    if seg_below:
+        score -= 1  # your universe's own segment is in a downtrend
 
     if br == "NEGATIVE" and idx_state != "RISK-ON":
         final = "RISK-OFF"
@@ -379,11 +539,17 @@ def composite_gate(regime: dict, segments: dict, breadth: dict) -> dict:
         reasons.append(f"{'/'.join(seg_below)} below 200-DMA")
     elif segments:
         reasons.append("segments above 200-DMA")
-    return {"final": final, "score": score, "reasons": reasons,
-            "breadth_veto": (br == "NEGATIVE" and idx_state == "RISK-ON")}
+    return {
+        "final": final,
+        "score": score,
+        "reasons": reasons,
+        "breadth_veto": (br == "NEGATIVE" and idx_state == "RISK-ON"),
+    }
 
 
-def scan_one(ticker, start, end, strategy, p, bt_kwargs, idx_ret_window=0.0, sector_map=None) -> dict:
+def scan_one(
+    ticker, start, end, strategy, p, bt_kwargs, idx_ret_window=0.0, sector_map=None
+) -> dict:
     try:
         raw = fetch_one(ticker, start, end)
     except Exception as e:
@@ -391,7 +557,10 @@ def scan_one(ticker, start, end, strategy, p, bt_kwargs, idx_ret_window=0.0, sec
     if raw.empty:
         return {"ticker": ticker, "status": "no data"}
     if len(raw) < MIN_DAYS:
-        return {"ticker": ticker, "status": f"insufficient data ({len(raw)}d) - skipped"}
+        return {
+            "ticker": ticker,
+            "status": f"insufficient data ({len(raw)}d) - skipped",
+        }
 
     df = engine.compute_indicators(raw)
     df = engine.generate_signals(df, strategy, p)
@@ -399,8 +568,11 @@ def scan_one(ticker, start, end, strategy, p, bt_kwargs, idx_ret_window=0.0, sec
     stats = engine.summarize(trades)
 
     yrs = (raw.index[-1] - raw.index[0]).days / 365.25
-    remark = "" if yrs >= TARGET_YEARS - 0.5 else \
-             f"limited history: {yrs:.1f}y (<{TARGET_YEARS}y) - lower confidence"
+    remark = (
+        ""
+        if yrs >= TARGET_YEARS - 0.5
+        else f"limited history: {yrs:.1f}y (<{TARGET_YEARS}y) - lower confidence"
+    )
 
     last = df.iloc[-1]
     signals_today = bool(last["signal"])
@@ -409,7 +581,7 @@ def scan_one(ticker, start, end, strategy, p, bt_kwargs, idx_ret_window=0.0, sec
     n = stats.get("trades", 0)
     exp = stats.get("expectancy_%", 0.0)
     winr = stats.get("profitable_%", 0.0)
-    exp_day = stats.get("exp_per_day_%", 0.0)      # return per DAY of capital deployed
+    exp_day = stats.get("exp_per_day_%", 0.0)  # return per DAY of capital deployed
     size_factor = n / (n + 30.0)
     # Confidence is built on expectancy PER DAY, because capital-rotation makes days the scarce
     # resource: a +2% trade in 3 days beats a +3% trade in 10 days.
@@ -421,7 +593,9 @@ def scan_one(ticker, start, end, strategy, p, bt_kwargs, idx_ret_window=0.0, sec
         stock_ret_window = (c_ser.iloc[-1] / c_ser.iloc[-(RS_WINDOW + 1)] - 1) * 100
     else:
         stock_ret_window = (c_ser.iloc[-1] / c_ser.iloc[0] - 1) * 100
-    rel_strength = round(float(stock_ret_window - idx_ret_window), 2)   # >0 = beating the market
+    rel_strength = round(
+        float(stock_ret_window - idx_ret_window), 2
+    )  # >0 = beating the market
     # blended rank: confidence tilted by relative strength (bounded ±50%)
     rs_norm = max(min(rel_strength / 30.0, 0.5), -0.5)
     rank_score = round(confidence * (1 + rs_norm), 2)
@@ -438,14 +612,14 @@ def scan_one(ticker, start, end, strategy, p, bt_kwargs, idx_ret_window=0.0, sec
     limit_pct = bt_kwargs.get("limit_pct", 0.0)
     if entry_mode == "Limit":
         limit_price = round(entry_ref * (1 - limit_pct / 100.0), 2)
-        plan_entry = limit_price                # stop/target computed off the price you'd pay
+        plan_entry = limit_price  # stop/target computed off the price you'd pay
     else:
         limit_price = np.nan
         plan_entry = entry_ref
 
     stop_price = plan_entry - stop_mult * atr_now
     floor = plan_entry * (1 - max_stop_pct / 100)
-    stop_price = max(stop_price, floor)                       # respect max-loss cap
+    stop_price = max(stop_price, floor)  # respect max-loss cap
     stop_pct = round((stop_price / plan_entry - 1) * 100, 2)
     target_price = round(plan_entry * (1 + tgt_pct / 100), 2)
 
@@ -460,32 +634,59 @@ def scan_one(ticker, start, end, strategy, p, bt_kwargs, idx_ret_window=0.0, sec
         days_to_target = f"{med_days:.0f}d"
 
     return {
-        "ticker": ticker.replace(".NS", "").replace(".BO", ""), "yahoo": ticker, "status": "ok",
-        "sector": (sector_map or {}).get(ticker.replace(".NS", "").replace(".BO", "").upper(), "UNKNOWN"),
-        "signals_today": signals_today, "regime_today": regime_today,
-        "bt_from": raw.index[0].date(), "bt_to": raw.index[-1].date(), "years": round(yrs, 1),
-        "hist_trades": n, "win_%": winr, "expectancy_%": exp,
-        "avg_win_%": stats.get("avg_win_%", 0.0), "avg_loss_%": stats.get("avg_loss_%", 0.0),
-        "avg_days": stats.get("avg_days", 0.0), "confidence": confidence,
-        "exp_per_day_%": exp_day, "cut_exits": stats.get("cut_exits", 0),
+        "ticker": ticker.replace(".NS", "").replace(".BO", ""),
+        "yahoo": ticker,
+        "status": "ok",
+        "sector": (sector_map or {}).get(
+            ticker.replace(".NS", "").replace(".BO", "").upper(), "UNKNOWN"
+        ),
+        "signals_today": signals_today,
+        "regime_today": regime_today,
+        "bt_from": raw.index[0].date(),
+        "bt_to": raw.index[-1].date(),
+        "years": round(yrs, 1),
+        "hist_trades": n,
+        "win_%": winr,
+        "expectancy_%": exp,
+        "avg_win_%": stats.get("avg_win_%", 0.0),
+        "avg_loss_%": stats.get("avg_loss_%", 0.0),
+        "avg_days": stats.get("avg_days", 0.0),
+        "confidence": confidence,
+        "exp_per_day_%": exp_day,
+        "cut_exits": stats.get("cut_exits", 0),
         "trail_exits": stats.get("trail_exits", 0),
-        "rel_strength": rel_strength, "rank_score": rank_score,
+        "rel_strength": rel_strength,
+        "rank_score": rank_score,
         # --- breadth inputs (free: computed from data already fetched) ---
-        "day_chg_%": round(float(c_ser.iloc[-1] / c_ser.iloc[-2] - 1) * 100, 2) if len(c_ser) > 1 else np.nan,
-        "above_50dma": bool(last["Close"] > last["sma50"]) if np.isfinite(last["sma50"]) else False,
-        "last_close": round(entry_ref, 2), "last_atr_pct": round(float(last["atr_pct"]), 2),
+        "day_chg_%": (
+            round(float(c_ser.iloc[-1] / c_ser.iloc[-2] - 1) * 100, 2)
+            if len(c_ser) > 1
+            else np.nan
+        ),
+        "above_50dma": (
+            bool(last["Close"] > last["sma50"]) if np.isfinite(last["sma50"]) else False
+        ),
+        "last_close": round(entry_ref, 2),
+        "last_atr_pct": round(float(last["atr_pct"]), 2),
         # point 1 outputs
-        "entry_ref": round(entry_ref, 2), "limit_price": limit_price, "plan_entry": round(plan_entry, 2),
-        "stop_price": round(stop_price, 2), "stop_%": stop_pct,
+        "entry_ref": round(entry_ref, 2),
+        "limit_price": limit_price,
+        "plan_entry": round(plan_entry, 2),
+        "stop_price": round(stop_price, 2),
+        "stop_%": stop_pct,
         "target_price": target_price,
         # point 2 output
         "exp_days_to_target": days_to_target,
         # point 3 outputs (counts + %)
-        "target_hits": stats.get("target_hits", 0), "target_%": stats.get("target_pct_of_all", 0.0),
-        "stop_hits": stats.get("stop_hits", 0), "stop_hit_%": stats.get("stop_pct_of_all", 0.0),
-         "trail_%": stats.get("trail_pct_of_all", 0.0),
-        "time_exits": stats.get("time_exits", 0), "time_%": stats.get("time_pct_of_all", 0.0),
-        "time_win": stats.get("time_win", 0), "time_loss": stats.get("time_loss", 0),
+        "target_hits": stats.get("target_hits", 0),
+        "target_%": stats.get("target_pct_of_all", 0.0),
+        "stop_hits": stats.get("stop_hits", 0),
+        "stop_hit_%": stats.get("stop_pct_of_all", 0.0),
+        "trail_%": stats.get("trail_pct_of_all", 0.0),
+        "time_exits": stats.get("time_exits", 0),
+        "time_%": stats.get("time_pct_of_all", 0.0),
+        "time_win": stats.get("time_win", 0),
+        "time_loss": stats.get("time_loss", 0),
         "remark": remark,
     }
 
@@ -497,6 +698,7 @@ def build_stock_chart(yahoo_ticker, start, end, strategy, p, bt_kwargs):
     """Recompute one stock and return a plotly price+trades figure + its trade log."""
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
+
     raw = fetch_one(yahoo_ticker, start, end)
     if raw.empty:
         return None, None
@@ -504,29 +706,75 @@ def build_stock_chart(yahoo_ticker, start, end, strategy, p, bt_kwargs):
     df = engine.generate_signals(df, strategy, p)
     trades = engine.run_backtest(df, **bt_kwargs)
 
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.72, 0.28],
-                        vertical_spacing=0.05,
-                        subplot_titles=("Close price with entries", "Cumulative net return (overlapping proxy)"))
-    fig.add_trace(go.Scatter(x=df.index, y=df["Close"], name="Close",
-                             line=dict(color="#334155", width=1)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df.index, y=df["sma200"], name="200-DMA",
-                             line=dict(color="#f59e0b", width=1, dash="dot")), row=1, col=1)
-    colors = {"TARGET": "#16a34a", "TRAIL": "#86efac", "STOP": "#dc2626", "TIME": "#94a3b8"}
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        shared_xaxes=True,
+        row_heights=[0.72, 0.28],
+        vertical_spacing=0.05,
+        subplot_titles=(
+            "Close price with entries",
+            "Cumulative net return (overlapping proxy)",
+        ),
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df.index, y=df["Close"], name="Close", line=dict(color="#334155", width=1)
+        ),
+        row=1,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df["sma200"],
+            name="200-DMA",
+            line=dict(color="#f59e0b", width=1, dash="dot"),
+        ),
+        row=1,
+        col=1,
+    )
+    colors = {
+        "TARGET": "#16a34a",
+        "TRAIL": "#86efac",
+        "STOP": "#dc2626",
+        "TIME": "#94a3b8",
+    }
     if not trades.empty:
         for oc, cl in colors.items():
             sub = trades[trades["outcome"] == oc]
             if not sub.empty:
-                fig.add_trace(go.Scatter(x=pd.to_datetime(sub["entry_date"]), y=sub["entry_price"],
-                                         mode="markers", name=oc,
-                                         marker=dict(color=cl, size=6, line=dict(width=0.4, color="white"))),
-                              row=1, col=1)
+                fig.add_trace(
+                    go.Scatter(
+                        x=pd.to_datetime(sub["entry_date"]),
+                        y=sub["entry_price"],
+                        mode="markers",
+                        name=oc,
+                        marker=dict(
+                            color=cl, size=6, line=dict(width=0.4, color="white")
+                        ),
+                    ),
+                    row=1,
+                    col=1,
+                )
         eq = trades.sort_values("entry_date").copy()
         eq["cum"] = eq["net_return_%"].cumsum()
-        fig.add_trace(go.Scatter(x=pd.to_datetime(eq["entry_date"]), y=eq["cum"],
-                                 name="Cumulative net %", line=dict(color="#2563eb", width=1.4)),
-                      row=2, col=1)
-    fig.update_layout(height=560, hovermode="x unified", legend_orientation="h",
-                      margin=dict(t=40, b=10))
+        fig.add_trace(
+            go.Scatter(
+                x=pd.to_datetime(eq["entry_date"]),
+                y=eq["cum"],
+                name="Cumulative net %",
+                line=dict(color="#2563eb", width=1.4),
+            ),
+            row=2,
+            col=1,
+        )
+    fig.update_layout(
+        height=560,
+        hovermode="x unified",
+        legend_orientation="h",
+        margin=dict(t=40, b=10),
+    )
     return fig, trades
 
 
@@ -536,142 +784,251 @@ def build_stock_chart(yahoo_ticker, start, end, strategy, p, bt_kwargs):
 def main():
     st.set_page_config(page_title="NSE Daily Swing Scanner", layout="wide")
     st.title("NSE Market-Wide Daily Swing Scanner")
-    st.caption("Runs the swing engine across a universe of NSE stocks and shortlists names "
-               "signalling today - candidates for a 10%+ move in 7-15 days. Educational tool, "
-               "not investment advice. Run after market close.")
-    st.caption(f"⚙️ Strategy engine loaded: **{ENGINE_FILE}** (newest `*screener*.py` in this folder)")
+    st.caption(
+        "Runs the swing engine across a universe of NSE stocks and shortlists names "
+        "signalling today - candidates for a 10%+ move in 7-15 days. Educational tool, "
+        "not investment advice. Run after market close."
+    )
+    st.caption(
+        f"⚙️ Strategy engine loaded: **{ENGINE_FILE}** (newest `*screener*.py` in this folder)"
+    )
 
     universe, src = load_universe()
 
     with st.sidebar:
         st.header("1 - Universe")
-        bucket = st.selectbox("Segment",
-                              ["LargeCap", "MidCap", "SmallCap", "Nifty500", "AllNSE", "Enter manually"])
+        bucket = st.selectbox(
+            "Segment",
+            ["LargeCap", "MidCap", "SmallCap", "Nifty500", "AllNSE", "Enter manually"],
+        )
         if bucket == "Enter manually":
-            txt = st.text_area("Tickers (comma/space separated)", "HUDCO, IRFC, RVNL, BEL")
+            txt = st.text_area(
+                "Tickers (comma/space separated)", "HUDCO, IRFC, RVNL, BEL"
+            )
             tickers = [t for t in txt.replace(",", " ").split()]
         else:
             tickers = universe.get(bucket, [])
         st.caption(f"Source: {src}. {len(tickers)} stocks in {bucket}.")
         if len(tickers) > 200:
-            st.warning(f"{len(tickers)} stocks is a heavy run on free Yahoo data (expect several "
-                       "minutes and some fetch failures). Consider running in batches via the limit below.")
-        max_n = st.slider("Limit stocks this run", 5, max(5, len(tickers)), min(50, len(tickers)),
-                          help="Yahoo rate-limits large runs. Start small; raise once stable.")
+            st.warning(
+                f"{len(tickers)} stocks is a heavy run on free Yahoo data (expect several "
+                "minutes and some fetch failures). Consider running in batches via the limit below."
+            )
+        max_n = st.slider(
+            "Limit stocks this run",
+            5,
+            max(5, len(tickers)),
+            min(50, len(tickers)),
+            help="Yahoo rate-limits large runs. Start small; raise once stable.",
+        )
 
         st.header("2 - Backtest window")
-        yrs = st.slider("Years of history (target)", 3, 15, TARGET_YEARS,
-                        help="Expert default 10y - spans multiple bull/bear cycles. Stocks with "
-                             "less history use what's available and are flagged.")
+        yrs = st.slider(
+            "Years of history (target)",
+            3,
+            15,
+            TARGET_YEARS,
+            help="Expert default 10y - spans multiple bull/bear cycles. Stocks with "
+            "less history use what's available and are flagged.",
+        )
         end = dt.date.today()
         start = end - dt.timedelta(days=int(yrs * 365.25) + 300)
 
         st.header("3 - Strategy & rules")
-        strategy = st.selectbox("Strategy", ["PASS_combined", "PASS_recommended", "PASS_tight",
-                                             "PASS_balanced", "PASS_reversal"], index=0)
+        strategy = st.selectbox(
+            "Strategy",
+            [
+                "PASS_combined",
+                "PASS_recommended",
+                "PASS_tight",
+                "PASS_balanced",
+                "PASS_reversal",
+            ],
+            index=0,
+        )
         target_pct = st.number_input("Target (%)", 1.0, 100.0, 15.0, 0.5)
         cA, cB = st.columns(2)
         min_hold = cA.number_input("Min hold (d)", 1, 60, 1)
         max_hold = cB.number_input("Max hold (d)", 1, 120, 30)
-        entry_choice = st.radio("Entry style",
-                                ["Limit near signal close (recommended)", "Market at next open"], index=0,
-                                help="Market buys whatever the open gives — a gap-up means a worse fill. "
-                                     "Limit places a resting buy and skips the trade if price never returns.")
+        entry_choice = st.radio(
+            "Entry style",
+            ["Limit near signal close (recommended)", "Market at next open"],
+            index=0,
+            help="Market buys whatever the open gives — a gap-up means a worse fill. "
+            "Limit places a resting buy and skips the trade if price never returns.",
+        )
         if entry_choice.startswith("Limit"):
             entry_mode = "Limit"
-            limit_pct = st.slider("Limit below signal close (%)", 0.0, 5.0, 0.5, 0.1,
-                                  help="0 = order at the signal close. Higher = wait for a deeper "
-                                       "pullback: better fills, but more signals never fill.")
+            limit_pct = st.slider(
+                "Limit below signal close (%)",
+                0.0,
+                5.0,
+                0.5,
+                0.1,
+                help="0 = order at the signal close. Higher = wait for a deeper "
+                "pullback: better fills, but more signals never fill.",
+            )
             fill_days = st.number_input("Order valid for (sessions)", 1, 5, 1)
         else:
             entry_mode, limit_pct, fill_days = "Market open", 0.0, 1
-        exit_mode = st.radio("Exit style", ["Trailing", "Fixed target"], index=1,
-                             help="Trailing lets winners run past the target.")
-        trail_mult = st.slider("Trailing x ATR", 0.5, 5.0, 2.0, 0.5) if exit_mode == "Trailing" else 2.0
-        lock_pct = st.slider("Lock profit once objective hit (%)", 0.0, 30.0, 7.0, 0.5,
-                             help="After +10% is touched, the stop never falls below this. "
-                                  "Protects the objective while letting the trade run to 20-30%.") \
-                   if exit_mode == "Trailing" else None
-        cut_on = st.checkbox("Cut dead trades early (conviction exit)", value=False,
-                             help="Still red after N days -> free the capital for the next signal.")
+        exit_mode = st.radio(
+            "Exit style",
+            ["Trailing", "Fixed target"],
+            index=1,
+            help="Trailing lets winners run past the target.",
+        )
+        trail_mult = (
+            st.slider("Trailing x ATR", 0.5, 5.0, 2.0, 0.5)
+            if exit_mode == "Trailing"
+            else 2.0
+        )
+        lock_pct = (
+            st.slider(
+                "Lock profit once objective hit (%)",
+                0.0,
+                30.0,
+                7.0,
+                0.5,
+                help="After +10% is touched, the stop never falls below this. "
+                "Protects the objective while letting the trade run to 20-30%.",
+            )
+            if exit_mode == "Trailing"
+            else None
+        )
+        cut_on = st.checkbox(
+            "Cut dead trades early (conviction exit)",
+            value=False,
+            help="Still red after N days -> free the capital for the next signal.",
+        )
         cut_day = st.number_input("Cut on day", 1, 10, 2) if cut_on else None
-        cut_threshold = st.slider("if return below (%)", -8.0, 2.0, 0.0, 0.5) if cut_on else 0.0
+        cut_threshold = (
+            st.slider("if return below (%)", -8.0, 2.0, 0.0, 0.5) if cut_on else 0.0
+        )
 
         st.header("4 - Risk")
-        stop_anchor = st.radio("Stop anchoring", ["ATR distance", "Structure (swing low)"],
-                               help="Structure = below recent support; survives normal pullbacks "
-                                    "in a channel. ATR = fixed volatility distance.")
+        stop_anchor = st.radio(
+            "Stop anchoring",
+            ["ATR distance", "Structure (swing low)"],
+            help="Structure = below recent support; survives normal pullbacks "
+            "in a channel. ATR = fixed volatility distance.",
+        )
         stop_anchor = "Structure" if stop_anchor.startswith("Structure") else "ATR"
-        trail_anchor = st.radio("Trail anchoring", ["ATR distance", "Structure (rising swing low)"],
-                                help="Structure trailing: bigger winners per trade, longer holds.")
+        trail_anchor = st.radio(
+            "Trail anchoring",
+            ["ATR distance", "Structure (rising swing low)"],
+            help="Structure trailing: bigger winners per trade, longer holds.",
+        )
         trail_anchor = "Structure" if trail_anchor.startswith("Structure") else "ATR"
         stop_value = st.slider("Stop (x ATR)", 0.5, 5.0, 2.0, 0.5)
         max_stop_pct = st.slider("Max loss cap (%)", 2.0, 20.0, 10.0, 0.5)
         max_atr_pct = st.slider("Skip if ATR% above", 3.0, 15.0, 8.0, 0.5)
         cost_pct = st.number_input("Round-trip cost (%)", 0.0, 5.0, 0.20, 0.05)
-        apply_stcg = st.checkbox("Apply 20% STCG on gains", value=True,
-                                 help="ON by default: ignoring tax overstates the edge.")
+        apply_stcg = st.checkbox(
+            "Apply 20% STCG on gains",
+            value=True,
+            help="ON by default: ignoring tax overstates the edge.",
+        )
 
         st.header("7 - Market regime")
-        use_gate = st.checkbox("Apply market-regime gate", value=True,
-                               help="On RISK-OFF days, show only stocks beating the market "
-                                    "(positive relative strength) instead of a full basket of longs.")
+        use_gate = st.checkbox(
+            "Apply market-regime gate",
+            value=True,
+            help="On RISK-OFF days, show only stocks beating the market "
+            "(positive relative strength) instead of a full basket of longs.",
+        )
 
         st.header("8 - Diversification")
-        max_per_sector = st.slider("Max names per sector", 0, 10, 3,
-                                   help="Caps how many stocks from one industry can enter the "
-                                        "shortlist (highest-ranked kept). 0 = no cap. Prevents "
-                                        "one sector's bad day from sinking the whole book.")
+        max_per_sector = st.slider(
+            "Max names per sector",
+            0,
+            10,
+            3,
+            help="Caps how many stocks from one industry can enter the "
+            "shortlist (highest-ranked kept). 0 = no cap. Prevents "
+            "one sector's bad day from sinking the whole book.",
+        )
 
         with st.expander("Advanced filter thresholds"):
             p = {
                 "regime": st.slider("Uptrend: % above 200-DMA", 0.0, 50.0, 15.0, 1.0),
-                "atr":    st.slider("Volatility floor: ATR%", 0.0, 10.0, 3.5, 0.5),
-                "roc":    st.slider("Breakout ROC(10) >", 0.0, 15.0, 3.0, 0.5),
-                "volr":   st.slider("Breakout volume ratio >", 0.5, 4.0, 1.2, 0.1),
+                "atr": st.slider("Volatility floor: ATR%", 0.0, 10.0, 3.5, 0.5),
+                "roc": st.slider("Breakout ROC(10) >", 0.0, 15.0, 3.0, 0.5),
+                "volr": st.slider("Breakout volume ratio >", 0.5, 4.0, 1.2, 0.1),
                 "rsi_os": st.slider("Reversal oversold RSI <", 10.0, 45.0, 30.0, 1.0),
             }
         run = st.button("Scan market", type="primary", use_container_width=True)
 
     if not run and "scan" not in st.session_state:
-        st.info("Pick a segment and click Scan market. Tip: for a nightly full run, schedule this "
-                "after 4pm IST once you've confirmed a small run works.")
+        st.info(
+            "Pick a segment and click Scan market. Tip: for a nightly full run, schedule this "
+            "after 4pm IST once you've confirmed a small run works."
+        )
         return
 
     if run:
-        bt_kwargs = dict(target_pct=target_pct, max_hold=int(max_hold), stop_method="ATR",
-                         stop_value=stop_value, cost_pct=cost_pct, apply_stcg=apply_stcg,
-                         rev_target_pct=6.0, rev_stop_value=1.5,
-                         exit_mode=("Trailing" if exit_mode == "Trailing" else "Fixed target"),
-                         trail_mult=trail_mult, max_stop_pct=max_stop_pct, max_atr_pct=max_atr_pct,
-                         entry_mode=entry_mode, limit_pct=limit_pct, fill_days=int(fill_days),
-                         lock_pct=lock_pct, cut_day=(int(cut_day) if cut_day else None),
-                         cut_threshold=cut_threshold, partial_frac=0.0, partial_atr=3.0,
-                         stop_anchor=stop_anchor, trail_anchor=trail_anchor)
+        bt_kwargs = dict(
+            target_pct=target_pct,
+            max_hold=int(max_hold),
+            stop_method="ATR",
+            stop_value=stop_value,
+            cost_pct=cost_pct,
+            apply_stcg=apply_stcg,
+            rev_target_pct=6.0,
+            rev_stop_value=1.5,
+            exit_mode=("Trailing" if exit_mode == "Trailing" else "Fixed target"),
+            trail_mult=trail_mult,
+            max_stop_pct=max_stop_pct,
+            max_atr_pct=max_atr_pct,
+            entry_mode=entry_mode,
+            limit_pct=limit_pct,
+            fill_days=int(fill_days),
+            lock_pct=lock_pct,
+            cut_day=(int(cut_day) if cut_day else None),
+            cut_threshold=cut_threshold,
+            partial_frac=0.0,
+            partial_atr=3.0,
+            stop_anchor=stop_anchor,
+            trail_anchor=trail_anchor,
+        )
 
         # --- market regime + relative-strength benchmark (fetched once) ---
         bench_name, idx_df = fetch_index(start, end)
         regime = compute_regime(idx_df)
         if not regime.get("index_ok"):
-            st.warning("⚠️ Benchmark index unavailable — relative strength falls back to ABSOLUTE "
-                       "momentum (not market-relative), and the index leg of the gate is skipped. "
-                       "Breadth is still computed from the scanned stocks.")
+            st.warning(
+                "⚠️ Benchmark index unavailable — relative strength falls back to ABSOLUTE "
+                "momentum (not market-relative), and the index leg of the gate is skipped. "
+                "Breadth is still computed from the scanned stocks."
+            )
         idx_ret_window = regime.get("idx_ret_window", 0.0)
         segments = fetch_segments(start, end)
         sector_map = fetch_sector_map()
         if not sector_map:
-            st.warning("⚠️ Sector data unavailable (NSE unreachable) — sector caps cannot be applied "
-                       "this run. All stocks will show sector UNKNOWN.")
+            st.warning(
+                "⚠️ Sector data unavailable (NSE unreachable) — sector caps cannot be applied "
+                "this run. All stocks will show sector UNKNOWN."
+            )
 
         run_list = tickers[:max_n]
         rows, prog, status = [], st.progress(0.0), st.empty()
         for k, sym in enumerate(run_list):
-            status.write(f"Scanning {sym}  ({k+1}/{len(run_list)}) ...")
-            rows.append(scan_one(to_yahoo(sym), start, end, strategy, p, bt_kwargs,
-                                 idx_ret_window, sector_map))
+            status.write(f"Scanning {sym}  ({k + 1}/{len(run_list)}) ...")
+            rows.append(
+                scan_one(
+                    to_yahoo(sym),
+                    start,
+                    end,
+                    strategy,
+                    p,
+                    bt_kwargs,
+                    idx_ret_window,
+                    sector_map,
+                )
+            )
             prog.progress((k + 1) / len(run_list))
             time.sleep(0.05)
-        status.empty(); prog.empty()
+        status.empty()
+        prog.empty()
 
         # breadth from the scanned universe, then the composite verdict
         breadth = compute_breadth(rows)
@@ -679,15 +1036,33 @@ def main():
 
         # persist so row-clicks (which rerun the script) don't trigger a re-scan
         st.session_state["scan"] = {
-            "res": pd.DataFrame(rows), "start": start, "end": end, "strategy": strategy,
-            "p": p, "bt_kwargs": bt_kwargs, "yrs": yrs, "exit_mode": exit_mode,
-            "trail_mult": trail_mult, "target_pct": target_pct, "min_hold": min_hold,
-            "max_hold": max_hold, "stop_value": stop_value, "max_stop_pct": max_stop_pct,
-            "max_atr_pct": max_atr_pct, "cost_pct": cost_pct, "apply_stcg": apply_stcg,
-            "regime": regime, "bench_name": bench_name or "index n/a", "use_gate": use_gate,
-            "segments": segments, "breadth": breadth, "gate": gate,
+            "res": pd.DataFrame(rows),
+            "start": start,
+            "end": end,
+            "strategy": strategy,
+            "p": p,
+            "bt_kwargs": bt_kwargs,
+            "yrs": yrs,
+            "exit_mode": exit_mode,
+            "trail_mult": trail_mult,
+            "target_pct": target_pct,
+            "min_hold": min_hold,
+            "max_hold": max_hold,
+            "stop_value": stop_value,
+            "max_stop_pct": max_stop_pct,
+            "max_atr_pct": max_atr_pct,
+            "cost_pct": cost_pct,
+            "apply_stcg": apply_stcg,
+            "regime": regime,
+            "bench_name": bench_name or "index n/a",
+            "use_gate": use_gate,
+            "segments": segments,
+            "breadth": breadth,
+            "gate": gate,
             "max_per_sector": max_per_sector,
-            "entry_mode": entry_mode, "limit_pct": limit_pct, "fill_days": fill_days,
+            "entry_mode": entry_mode,
+            "limit_pct": limit_pct,
+            "fill_days": fill_days,
         }
 
     render_results()
@@ -695,24 +1070,29 @@ def main():
 
 def render_stock_backtest(row, S, key_prefix=""):
     """Full drill-down for one analyzed stock: chart + every backtest trade with all
-    technical parameters at entry. `row` is a scan_one result row (needs 'yahoo'/'ticker')."""
+    technical parameters at entry. `row` is a scan_one result row (needs 'yahoo'/'ticker').
+    """
     tick = row["ticker"]
     st.markdown(f"### 📈 {tick}  —  price, entries & outcomes")
     cc = st.columns(5)
     cc[0].metric("Last close", f"₹{row.get('entry_ref', row.get('last_close', '—'))}")
     cc[1].metric("Objective", f"₹{row.get('target_price', '—')}")
-    cc[2].metric("Stop-loss", f"₹{row.get('stop_price', '—')}",
-                 f"{row.get('stop_%', '')}%")
+    cc[2].metric(
+        "Stop-loss", f"₹{row.get('stop_price', '—')}", f"{row.get('stop_%', '')}%"
+    )
     cc[3].metric("Exp. days→objective", row.get("exp_days_to_target", "—"))
     cc[4].metric("Exp/DAY", f"{row.get('exp_per_day_%', 0)}%")
 
     with st.spinner(f"Building {tick} backtest…"):
-        fig, trades_one = build_stock_chart(row["yahoo"], S["start"], S["end"],
-                                            S["strategy"], S["p"], S["bt_kwargs"])
+        fig, trades_one = build_stock_chart(
+            row["yahoo"], S["start"], S["end"], S["strategy"], S["p"], S["bt_kwargs"]
+        )
     if fig is not None:
         st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}fig_{tick}")
-        st.caption("Green = objective hit · light green = trailing profit · red = stop · grey = time exit. "
-                   "Lower panel = cumulative net % of all historical trades.")
+        st.caption(
+            "Green = objective hit · light green = trailing profit · red = stop · grey = time exit. "
+            "Lower panel = cumulative net % of all historical trades."
+        )
 
     if trades_one is None or trades_one.empty:
         st.info("No historical trades for this stock under the current settings.")
@@ -723,30 +1103,68 @@ def render_stock_backtest(row, S, key_prefix=""):
     wins = (t["net_return_%"] > 0).sum()
     q = st.columns(6)
     q[0].metric("Trades", len(t))
-    q[1].metric("Profitable", f"{100*wins/len(t):.0f}%")
-    q[2].metric("Hit objective", f"{100*(t['outcome']=='TARGET').mean():.0f}%")
+    q[1].metric("Profitable", f"{100 * wins / len(t):.0f}%")
+    q[2].metric("Hit objective", f"{100 * (t['outcome'] == 'TARGET').mean():.0f}%")
     q[3].metric("Avg net / trade", f"{t['net_return_%'].mean():+.2f}%")
-    q[4].metric("Best / Worst", f"{t['net_return_%'].max():+.0f}% / {t['net_return_%'].min():+.0f}%")
+    q[4].metric(
+        "Best / Worst",
+        f"{t['net_return_%'].max():+.0f}% / {t['net_return_%'].min():+.0f}%",
+    )
     q[5].metric("Avg hold", f"{t['days_held'].mean():.1f}d")
 
-    facts = ["signal_date", "entry_date", "exit_date", "days_held", "outcome",
-             "trade_type", "signal_close", "limit_price", "entry_price",
-             "target_price", "stop_price", "exit_price",
-             "gross_return_%", "net_return_%", "hit_target", "partial_taken", "peak_gain_%"]
-    tech = [c for c in ["pct_vs_sma200", "pct_vs_sma20", "rsi14", "roc10", "atr_pct",
-                        "vol_ratio", "macd_hist", "adx14", "bb_pctB", "dist_52wH",
-                        "obv_slope10"] if c in t.columns]
+    facts = [
+        "signal_date",
+        "entry_date",
+        "exit_date",
+        "days_held",
+        "outcome",
+        "trade_type",
+        "signal_close",
+        "limit_price",
+        "entry_price",
+        "target_price",
+        "stop_price",
+        "exit_price",
+        "gross_return_%",
+        "net_return_%",
+        "hit_target",
+        "partial_taken",
+        "peak_gain_%",
+    ]
+    tech = [
+        c
+        for c in [
+            "pct_vs_sma200",
+            "pct_vs_sma20",
+            "rsi14",
+            "roc10",
+            "atr_pct",
+            "vol_ratio",
+            "macd_hist",
+            "adx14",
+            "bb_pctB",
+            "dist_52wH",
+            "obv_slope10",
+        ]
+        if c in t.columns
+    ]
     ordered = [c for c in facts if c in t.columns] + tech
     ordered += [c for c in t.columns if c not in ordered]
     t = t[ordered].sort_values("entry_date", ascending=False).reset_index(drop=True)
     st.dataframe(t, use_container_width=True, height=380, key=f"{key_prefix}tbl_{tick}")
-    st.caption("Trade facts first (dates, entry/limit/objective/stop/exit, return, holding days, "
-               "outcome), then the **technical parameters at entry** — trend (%vs 200/20-DMA, ADX), "
-               "momentum (RSI, ROC, MACD), volatility (ATR%), volume ratio, Bollinger %B, distance "
-               "from 52-week high, OBV slope. Exactly what the signal saw on the day it fired.")
-    st.download_button(f"⬇️ Download {tick} full backtest", t.to_csv(index=False).encode(),
-                       file_name=f"{tick}_backtest_trades.csv", mime="text/csv",
-                       key=f"{key_prefix}dl_{tick}")
+    st.caption(
+        "Trade facts first (dates, entry/limit/objective/stop/exit, return, holding days, "
+        "outcome), then the **technical parameters at entry** — trend (%vs 200/20-DMA, ADX), "
+        "momentum (RSI, ROC, MACD), volatility (ATR%), volume ratio, Bollinger %B, distance "
+        "from 52-week high, OBV slope. Exactly what the signal saw on the day it fired."
+    )
+    st.download_button(
+        f"⬇️ Download {tick} full backtest",
+        t.to_csv(index=False).encode(),
+        file_name=f"{tick}_backtest_trades.csv",
+        mime="text/csv",
+        key=f"{key_prefix}dl_{tick}",
+    )
     with st.expander("What each technical column means"):
         st.markdown(
             "- **pct_vs_sma200 / sma20** — % above the 200- and 20-day moving average\n"
@@ -777,32 +1195,59 @@ def render_results():
     segments = S.get("segments", {})
     breadth = S.get("breadth", {"status": "UNKNOWN"})
     gate = S.get("gate", {"final": regime.get("status", "UNKNOWN"), "reasons": []})
-    rstat = gate.get("final", "UNKNOWN")          # composite verdict drives the gate
+    rstat = gate.get("final", "UNKNOWN")  # composite verdict drives the gate
 
-    seg_txt = " · ".join(f"{s} {v['pct_vs_200']:+.1f}% vs 200-DMA" for s, v in segments.items()) \
-              or "segment indices unavailable"
-    br_txt = (f"breadth {breadth.get('status')} "
-              f"({breadth.get('advancers','?')} adv / {breadth.get('decliners','?')} dec, "
-              f"{breadth.get('pct_above_50dma','?')}% above 50-DMA)")
-    idx_txt = (f"{bench} {regime.get('pct_vs_200','?')}% vs 200-DMA, 10d {regime.get('roc10','?')}%"
-               if regime.get("index_ok") else f"{bench} unavailable")
+    seg_txt = (
+        " · ".join(
+            f"{s} {v['pct_vs_200']:+.1f}% vs 200-DMA" for s, v in segments.items()
+        )
+        or "segment indices unavailable"
+    )
+    br_txt = (
+        f"breadth {breadth.get('status')} "
+        f"({breadth.get('advancers', '?')} adv / {breadth.get('decliners', '?')} dec, "
+        f"{breadth.get('pct_above_50dma', '?')}% above 50-DMA)"
+    )
+    idx_txt = (
+        f"{bench} {regime.get('pct_vs_200', '?')}% vs 200-DMA, 10d {regime.get('roc10', '?')}%"
+        if regime.get("index_ok")
+        else f"{bench} unavailable"
+    )
 
     if rstat == "RISK-ON":
-        st.success(f"🟢 Market: **RISK-ON** — {idx_txt} · {br_txt} · {seg_txt}. "
-                   "Long setups favoured; full shortlist shown.")
+        st.success(
+            f"🟢 Market: **RISK-ON** — {idx_txt} · {br_txt} · {seg_txt}. "
+            "Long setups favoured; full shortlist shown."
+        )
     elif rstat == "NEUTRAL":
-        st.warning(f"🟡 Market: **NEUTRAL** — {idx_txt} · {br_txt} · {seg_txt}. "
-                   + ("Gate ON: list trimmed to relative-strength leaders (RS > 0)."
-                      if use_gate else "Gate OFF: full list shown."))
+        st.warning(
+            f"🟡 Market: **NEUTRAL** — {idx_txt} · {br_txt} · {seg_txt}. "
+            + (
+                "Gate ON: list trimmed to relative-strength leaders (RS > 0)."
+                if use_gate
+                else "Gate OFF: full list shown."
+            )
+        )
     elif rstat == "RISK-OFF":
         veto = gate.get("breadth_veto")
-        st.error(f"🔴 Market: **RISK-OFF** — {idx_txt} · {br_txt} · {seg_txt}. "
-                 + ("⚠️ **Breadth veto**: the headline index is green but the broad market is falling — "
-                    "exactly the trap that sinks a basket of longs. " if veto else "")
-                 + ("Gate ON: only stocks beating the market (RS > 0) are shown."
-                    if use_gate else "Gate OFF: full basket of longs shown (higher risk)."))
+        st.error(
+            f"🔴 Market: **RISK-OFF** — {idx_txt} · {br_txt} · {seg_txt}. "
+            + (
+                "⚠️ **Breadth veto**: the headline index is green but the broad market is falling — "
+                "exactly the trap that sinks a basket of longs. "
+                if veto
+                else ""
+            )
+            + (
+                "Gate ON: only stocks beating the market (RS > 0) are shown."
+                if use_gate
+                else "Gate OFF: full basket of longs shown (higher risk)."
+            )
+        )
     else:
-        st.info("⚪ Market state unknown (index + breadth unavailable) — gate not applied this run.")
+        st.info(
+            "⚪ Market state unknown (index + breadth unavailable) — gate not applied this run."
+        )
     if gate.get("reasons"):
         st.caption("Gate inputs → " + " | ".join(gate["reasons"]))
 
@@ -831,15 +1276,19 @@ def render_results():
         st.warning("No stocks scanned successfully. Re-run (Yahoo can be patchy).")
     else:
         # ======= TABLE 1: TONIGHT'S INVESTMENT ANALYSIS (action) =======
-        st.subheader("🎯 Tonight's Investment Analysis  —  what to do if you buy tomorrow")
+        st.subheader(
+            "🎯 Tonight's Investment Analysis  —  what to do if you buy tomorrow"
+        )
         cand = ok[ok["signals_today"]].copy()
         # apply composite gate: on RISK-OFF and NEUTRAL, keep only market-beating (positive RS) names
         gate_note = ""
         if use_gate and rstat in ("RISK-OFF", "NEUTRAL") and not cand.empty:
             before = len(cand)
             cand = cand[cand["rel_strength"] > 0]
-            gate_note = (f"{rstat} gate: removed {before - len(cand)} laggard(s), "
-                         f"kept {len(cand)} name(s) beating the market.")
+            gate_note = (
+                f"{rstat} gate: removed {before - len(cand)} laggard(s), "
+                f"kept {len(cand)} name(s) beating the market."
+            )
         cand = cand.sort_values("rank_score", ascending=False).reset_index(drop=True)
 
         # --- SECTOR-EXPOSURE CAP: keep at most N per industry (best-ranked survive) ---
@@ -850,13 +1299,20 @@ def render_results():
             cand, dropped = apply_sector_caps(cand, max_per_sector)
             cand = cand.reset_index(drop=True)
             if dropped:
-                det = ", ".join(f"{s} (−{n})" for s, n in sorted(dropped.items(), key=lambda x: -x[1]))
-                sector_note = (f"Sector cap ({max_per_sector}/sector): trimmed "
-                               f"{sum(dropped.values())} correlated name(s) → {det}")
+                det = ", ".join(
+                    f"{s} (−{n})"
+                    for s, n in sorted(dropped.items(), key=lambda x: -x[1])
+                )
+                sector_note = (
+                    f"Sector cap ({max_per_sector}/sector): trimmed "
+                    f"{sum(dropped.values())} correlated name(s) → {det}"
+                )
 
         if cand.empty:
-            st.info("No qualifying candidate after the regime gate. On a risk-off day with no "
-                    "market-beating setups, standing aside is the correct output — check tomorrow.")
+            st.info(
+                "No qualifying candidate after the regime gate. On a risk-off day with no "
+                "market-beating setups, standing aside is the correct output — check tomorrow."
+            )
         else:
             if gate_note:
                 st.caption("🔴 " + gate_note)
@@ -866,32 +1322,79 @@ def render_results():
             if max_per_sector > 0 and not pre_cap.empty and "sector" in pre_cap.columns:
                 top_pre = pre_cap["sector"].value_counts()
                 if len(top_pre) and top_pre.iloc[0] > max_per_sector:
-                    st.caption(f"Concentration: before cap, **{top_pre.index[0]}** alone held "
-                               f"{top_pre.iloc[0]} of {len(pre_cap)} names "
-                               f"({100*top_pre.iloc[0]/len(pre_cap):.0f}%). "
-                               f"After cap: {len(cand)} names across {cand['sector'].nunique()} sector(s).")
-            inv = cand[["ticker", "sector", "regime_today", "rank_score", "confidence", "rel_strength",
-                        "entry_ref", "plan_entry", "target_price", "stop_price", "stop_%",
-                        "exp_days_to_target", "last_atr_pct", "remark"]].copy()
+                    st.caption(
+                        f"Concentration: before cap, **{top_pre.index[0]}** alone held "
+                        f"{top_pre.iloc[0]} of {len(pre_cap)} names "
+                        f"({100 * top_pre.iloc[0] / len(pre_cap):.0f}%). "
+                        f"After cap: {len(cand)} names across {cand['sector'].nunique()} sector(s)."
+                    )
+            inv = cand[
+                [
+                    "ticker",
+                    "sector",
+                    "regime_today",
+                    "rank_score",
+                    "confidence",
+                    "rel_strength",
+                    "entry_ref",
+                    "plan_entry",
+                    "target_price",
+                    "stop_price",
+                    "stop_%",
+                    "exp_days_to_target",
+                    "last_atr_pct",
+                    "remark",
+                ]
+            ].copy()
             _em = S.get("entry_mode", "Market open")
             _entry_label = "BUY limit ₹" if _em == "Limit" else "Entry (open)"
-            inv.columns = ["Stock", "Sector", "Signal", "Rank", "Conf(/day)", "RS%", "Last close",
-                           _entry_label, "Objective ₹", "Stop ₹", "Stop %", "Exp. days→objective", "ATR%", "Remark"]
+            inv.columns = [
+                "Stock",
+                "Sector",
+                "Signal",
+                "Rank",
+                "Conf(/day)",
+                "RS%",
+                "Last close",
+                _entry_label,
+                "Objective ₹",
+                "Stop ₹",
+                "Stop %",
+                "Exp. days→objective",
+                "ATR%",
+                "Remark",
+            ]
             if S.get("entry_mode") == "Limit":
-                st.caption(f"📥 **Place a BUY LIMIT at the 'BUY limit ₹' price** "
-                           f"({S.get('limit_pct',0)}% below the signal close), valid "
-                           f"{S.get('fill_days',1)} session(s). If it never fills, **skip the trade** — "
-                           f"do not chase the open. Target/Stop are computed off that limit price.")
+                st.caption(
+                    f"📥 **Place a BUY LIMIT at the 'BUY limit ₹' price** "
+                    f"({S.get('limit_pct', 0)}% below the signal close), valid "
+                    f"{S.get('fill_days', 1)} session(s). If it never fills, **skip the trade** — "
+                    f"do not chase the open. Target/Stop are computed off that limit price."
+                )
             else:
-                st.caption("⚠️ Market-at-open: you accept whatever the open gives, including gap-ups. "
-                           "Switch to Limit entry to avoid chasing.")
-            st.caption("Ranked by blended score (confidence × relative-strength). RS% > 0 = beating the "
-                       "market. Click a row for the chart. Stop ₹ respects your max-loss cap.")
-            sel = st.dataframe(inv, use_container_width=True, height=340, hide_index=True,
-                               on_select="rerun", selection_mode="single-row",
-                               key="inv_table")
-            st.download_button("⬇️ Download tonight's analysis", inv.to_csv(index=False).encode(),
-                               file_name=f"investment_analysis_{dt.date.today()}.csv", mime="text/csv")
+                st.caption(
+                    "⚠️ Market-at-open: you accept whatever the open gives, including gap-ups. "
+                    "Switch to Limit entry to avoid chasing."
+                )
+            st.caption(
+                "Ranked by blended score (confidence × relative-strength). RS% > 0 = beating the "
+                "market. Click a row for the chart. Stop ₹ respects your max-loss cap."
+            )
+            sel = st.dataframe(
+                inv,
+                use_container_width=True,
+                height=340,
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+                key="inv_table",
+            )
+            st.download_button(
+                "⬇️ Download tonight's analysis",
+                inv.to_csv(index=False).encode(),
+                file_name=f"investment_analysis_{dt.date.today()}.csv",
+                mime="text/csv",
+            )
 
             # ---------- point 4: click a row -> chart ----------
             picked = None
@@ -903,33 +1406,94 @@ def render_results():
         # ======= TABLE 2: BACKTEST TRACK RECORD (evidence) =======
         st.subheader("📊 Backtest Track Record  —  historical proof behind each stock")
         bt = ok.sort_values("rank_score", ascending=False).reset_index(drop=True)
-        rec = bt[["ticker", "signals_today", "rank_score", "exp_per_day_%", "rel_strength", "hist_trades", "win_%",
-                  "target_hits", "target_%", "trail_exits", "trail_%", "stop_hits", "stop_hit_%",
-                  "time_exits", "time_%", "time_win", "time_loss",
-                  "expectancy_%", "avg_win_%", "avg_loss_%", "avg_days",
-                  "bt_from", "bt_to", "years", "remark"]].copy()
-        rec.columns = ["Stock", "Signals today", "Rank", "Exp/DAY%", "RS%", "Trades", "Win%",
-                       "Target #", "Target %", "Trail #", "Trail %", "Stop #", "Stop %",
-                       "Time #", "Time %", "Time-win", "Time-loss",
-                       "Expectancy%", "Avg win%", "Avg loss%", "Avg days",
-                       "BT from", "BT to", "Years", "Remark"]
-        st.caption("Point 3 breakdown: Win% / Target = trades that truly hit 10%. "
-                   "Trail = profitable trailing exits below 10%. Stop = losses. "
-                   "Time = held to max days (split into win/loss). Profit trades = Target + Trail + Time-win.")
-        st.caption("**Click any row to open that stock's full backtest** — every trade, entry/exit/"
-                   "stop prices, returns, holding days, and the technical parameters at entry.")
-        sel_rec = st.dataframe(rec, use_container_width=True, height=340, hide_index=True,
-                               on_select="rerun", selection_mode="single-row", key="rec_table")
+        rec = bt[
+            [
+                "ticker",
+                "signals_today",
+                "rank_score",
+                "exp_per_day_%",
+                "rel_strength",
+                "hist_trades",
+                "win_%",
+                "target_hits",
+                "target_%",
+                "trail_exits",
+                "trail_%",
+                "stop_hits",
+                "stop_hit_%",
+                "time_exits",
+                "time_%",
+                "time_win",
+                "time_loss",
+                "expectancy_%",
+                "avg_win_%",
+                "avg_loss_%",
+                "avg_days",
+                "bt_from",
+                "bt_to",
+                "years",
+                "remark",
+            ]
+        ].copy()
+        rec.columns = [
+            "Stock",
+            "Signals today",
+            "Rank",
+            "Exp/DAY%",
+            "RS%",
+            "Trades",
+            "Win%",
+            "Target #",
+            "Target %",
+            "Trail #",
+            "Trail %",
+            "Stop #",
+            "Stop %",
+            "Time #",
+            "Time %",
+            "Time-win",
+            "Time-loss",
+            "Expectancy%",
+            "Avg win%",
+            "Avg loss%",
+            "Avg days",
+            "BT from",
+            "BT to",
+            "Years",
+            "Remark",
+        ]
+        st.caption(
+            "Point 3 breakdown: Win% / Target = trades that truly hit 10%. "
+            "Trail = profitable trailing exits below 10%. Stop = losses. "
+            "Time = held to max days (split into win/loss). Profit trades = Target + Trail + Time-win."
+        )
+        st.caption(
+            "**Click any row to open that stock's full backtest** — every trade, entry/exit/"
+            "stop prices, returns, holding days, and the technical parameters at entry."
+        )
+        sel_rec = st.dataframe(
+            rec,
+            use_container_width=True,
+            height=340,
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="rec_table",
+        )
         if sel_rec and sel_rec.get("selection", {}).get("rows"):
             picked_rec = bt.iloc[sel_rec["selection"]["rows"][0]]
             render_stock_backtest(picked_rec, S, key_prefix="rec_")
-        st.download_button("⬇️ Download backtest track record", rec.to_csv(index=False).encode(),
-                           file_name=f"backtest_record_{dt.date.today()}.csv", mime="text/csv")
+        st.download_button(
+            "⬇️ Download backtest track record",
+            rec.to_csv(index=False).encode(),
+            file_name=f"backtest_record_{dt.date.today()}.csv",
+            mime="text/csv",
+        )
 
         c1, c2, c3 = st.columns(3)
         c1.metric("Stocks scanned OK", len(ok))
         c2.metric("Signalling today", int(ok["signals_today"].sum()))
-        c3.metric("Avg expectancy (segment)", f'{ok["expectancy_%"].mean():.2f}%')
+        c3.metric("Avg expectancy (segment)", f"{ok['expectancy_%'].mean():.2f}%")
 
     with st.expander("📐 What the scan uses (parameters, indicators, risk)"):
         st.markdown(
@@ -947,15 +1511,22 @@ def render_results():
 
     if not bad.empty:
         with st.expander(f"⚠️ {len(bad)} stocks skipped or failed"):
-            st.dataframe(bad[["ticker", "status"]].reset_index(drop=True),
-                         use_container_width=True, hide_index=True)
-            st.caption("'insufficient data' = recent listing below the 1-year bar. "
-                       "'fetch error/no data' = Yahoo hiccup or wrong symbol; re-run to retry.")
+            st.dataframe(
+                bad[["ticker", "status"]].reset_index(drop=True),
+                use_container_width=True,
+                hide_index=True,
+            )
+            st.caption(
+                "'insufficient data' = recent listing below the 1-year bar. "
+                "'fetch error/no data' = Yahoo hiccup or wrong symbol; re-run to retry."
+            )
 
     st.divider()
-    st.caption("Signals are historical-edge candidates, not guarantees. ~1/3 of trades hit target and "
-               "some lose; size positions and honour stops. Yahoo data can be delayed/patchy. "
-               "Educational tool - not investment advice.")
+    st.caption(
+        "Signals are historical-edge candidates, not guarantees. ~1/3 of trades hit target and "
+        "some lose; size positions and honour stops. Yahoo data can be delayed/patchy. "
+        "Educational tool - not investment advice."
+    )
 
 
 if __name__ == "__main__":

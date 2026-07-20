@@ -8,7 +8,7 @@
 ![Version](https://img.shields.io/badge/Version-1.0.0-orange.svg)
 ![Status](https://img.shields.io/badge/Status-Production-success.svg)
 
----
+______________________________________________________________________
 
 # Overview
 
@@ -27,7 +27,7 @@ Instead of relying solely on traditional statistics such as Win Rate or CAGR, th
 
 The platform produces institutional-grade rankings suitable for professional quantitative research.
 
----
+______________________________________________________________________
 
 # Features
 
@@ -42,7 +42,7 @@ The platform produces institutional-grade rankings suitable for professional qua
 - Loss Rate
 - Profit Velocity
 
----
+______________________________________________________________________
 
 ## Risk Analytics
 
@@ -52,7 +52,7 @@ The platform produces institutional-grade rankings suitable for professional qua
 - Consistency Analysis
 - Risk Adjusted Performance
 
----
+______________________________________________________________________
 
 ## Exit Analysis
 
@@ -63,7 +63,7 @@ The platform produces institutional-grade rankings suitable for professional qua
 - Target Exit %
 - Stop Loss Exit %
 
----
+______________________________________________________________________
 
 ## Efficiency Analytics
 
@@ -73,7 +73,7 @@ The platform produces institutional-grade rankings suitable for professional qua
 - Capital Efficiency
 - Opportunity Score
 
----
+______________________________________________________________________
 
 ## Composite Scoring
 
@@ -86,7 +86,7 @@ The platform automatically calculates:
 
 followed by an institutional ranking.
 
----
+______________________________________________________________________
 
 ## Portfolio Construction
 
@@ -100,7 +100,7 @@ Supports multiple allocation techniques.
 
 Risk filtering is also included.
 
----
+______________________________________________________________________
 
 ## Reporting
 
@@ -112,7 +112,7 @@ Automatically generates:
 - Rankings
 - Portfolio Summary
 
----
+______________________________________________________________________
 
 # Project Structure
 
@@ -140,7 +140,7 @@ strategy_compare_v4/
 └── README.md
 ```
 
----
+______________________________________________________________________
 
 # Installation
 
@@ -188,7 +188,7 @@ or
 pip install -r requirements.txt
 ```
 
----
+______________________________________________________________________
 
 # Quick Start
 
@@ -210,7 +210,7 @@ Launch dashboard
 streamlit run reports/dashboard.py
 ```
 
----
+______________________________________________________________________
 
 # Input Data
 
@@ -233,7 +233,7 @@ Typical columns
 | Profit Factor | Profit Factor |
 | Reward Risk | Reward Risk Ratio |
 
----
+______________________________________________________________________
 
 # Generated Metrics
 
@@ -250,7 +250,7 @@ The platform computes over 25 institutional metrics including:
 - Efficiency Score
 - Composite Score
 
----
+______________________________________________________________________
 
 # Portfolio Allocation
 
@@ -262,7 +262,7 @@ Available allocation methods
 - Reliability Weight
 - Blended Weight
 
----
+______________________________________________________________________
 
 # Output
 
@@ -275,7 +275,7 @@ The generated report includes
 - Charts
 - Excel Workbook
 
----
+______________________________________________________________________
 
 # Reports
 
@@ -287,7 +287,7 @@ Generated automatically
 - Recommendation Distribution
 - Correlation Heatmap
 
----
+______________________________________________________________________
 
 # Testing
 
@@ -303,7 +303,7 @@ Run coverage
 pytest --cov
 ```
 
----
+______________________________________________________________________
 
 # Development Tools
 
@@ -325,7 +325,7 @@ Type Checking
 mypy .
 ```
 
----
+______________________________________________________________________
 
 # Technologies Used
 
@@ -338,7 +338,7 @@ mypy .
 - XlsxWriter
 - PyTest
 
----
+______________________________________________________________________
 
 # Future Roadmap
 
@@ -362,13 +362,13 @@ Version 3.0
 - Kubernetes
 - Real-time Data Pipeline
 
----
+______________________________________________________________________
 
 # License
 
 MIT License
 
----
+______________________________________________________________________
 
 # Author
 
@@ -376,7 +376,7 @@ MIT License
 
 Mechanical Engineer | SAP PM Consultant | Quantitative Trading Enthusiast
 
----
+______________________________________________________________________
 
 # Contributing
 
@@ -384,21 +384,21 @@ Contributions are welcome.
 
 1. Fork the repository
 
-2. Create a feature branch
+1. Create a feature branch
 
-3. Commit your changes
+1. Commit your changes
 
-4. Push the branch
+1. Push the branch
 
-5. Open a Pull Request
+1. Open a Pull Request
 
----
+______________________________________________________________________
 
 # Acknowledgements
 
 Special thanks to the Python open-source community for the outstanding ecosystem that powers this project.
 
----
+______________________________________________________________________
 
 # Version
 

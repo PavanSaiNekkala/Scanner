@@ -27,4 +27,3 @@ cache/
 data/*.csv
 data/*.xlsx
 data/duckdb/
-

@@ -2,29 +2,29 @@
 
 ## Institutional Strategy Comparison Platform V4
 
----
+______________________________________________________________________
 
 # Table of Contents
 
 1. Introduction
-2. Development Environment
-3. Project Structure
-4. Architecture Overview
-5. Coding Standards
-6. Module Development
-7. Adding a New Metric
-8. Adding a New Comparison Engine
-9. Adding a Portfolio Model
-10. Adding a Report
-11. Configuration Management
-12. Logging
-13. Testing
-14. Documentation
-15. Debugging
-16. Performance Guidelines
-17. Release Process
+1. Development Environment
+1. Project Structure
+1. Architecture Overview
+1. Coding Standards
+1. Module Development
+1. Adding a New Metric
+1. Adding a New Comparison Engine
+1. Adding a Portfolio Model
+1. Adding a Report
+1. Configuration Management
+1. Logging
+1. Testing
+1. Documentation
+1. Debugging
+1. Performance Guidelines
+1. Release Process
 
----
+______________________________________________________________________
 
 # 1. Introduction
 
@@ -32,7 +32,7 @@ This guide explains how to develop and extend the Institutional Strategy Compari
 
 The platform has been designed with modularity as the primary objective. Every feature should belong to exactly one module and have a single responsibility.
 
----
+______________________________________________________________________
 
 # 2. Development Environment
 
@@ -75,7 +75,7 @@ Run tests
 pytest
 ```
 
----
+______________________________________________________________________
 
 # 3. Project Structure
 
@@ -92,7 +92,7 @@ docs/
 
 Each package has a clearly defined responsibility.
 
----
+______________________________________________________________________
 
 # 4. Architecture Overview
 
@@ -114,7 +114,7 @@ Reporting
 
 Never bypass this processing flow.
 
----
+______________________________________________________________________
 
 # 5. Coding Standards
 
@@ -134,7 +134,7 @@ Rules
 - Keep functions small
 - Prefer composition over inheritance
 
----
+______________________________________________________________________
 
 # 6. Module Development
 
@@ -147,7 +147,7 @@ Each module should:
 - Raise meaningful exceptions.
 - Include unit tests.
 
----
+______________________________________________________________________
 
 # 7. Adding a New Metric
 
@@ -172,7 +172,7 @@ Requirements
 - Add unit tests
 - Update metric documentation
 
----
+______________________________________________________________________
 
 # 8. Adding a New Comparison Algorithm
 
@@ -196,7 +196,7 @@ Responsibilities
 - Preserve schema
 - Avoid modifying inputs
 
----
+______________________________________________________________________
 
 # 9. Adding a Portfolio Model
 
@@ -219,7 +219,7 @@ Guidelines
 - Return percentage weights
 - Sum should equal 100%
 
----
+______________________________________________________________________
 
 # 10. Adding Reports
 
@@ -243,7 +243,7 @@ Every report should
 - Handle empty datasets
 - Raise clear exceptions
 
----
+______________________________________________________________________
 
 # 11. Configuration
 
@@ -262,7 +262,7 @@ Examples
 - Recommendation limits
 - Constants
 
----
+______________________________________________________________________
 
 # 12. Logging
 
@@ -280,7 +280,7 @@ logger.info("Starting comparison...")
 
 Do not use `print()` for application logging.
 
----
+______________________________________________________________________
 
 # 13. Testing
 
@@ -305,7 +305,7 @@ Test types
 - Regression
 - Error Handling
 
----
+______________________________________________________________________
 
 # 14. Documentation
 
@@ -324,7 +324,7 @@ Keep
 
 synchronized with the code.
 
----
+______________________________________________________________________
 
 # 15. Debugging
 
@@ -354,7 +354,7 @@ Run tests
 pytest
 ```
 
----
+______________________________________________________________________
 
 # 16. Performance Guidelines
 
@@ -371,7 +371,7 @@ Avoid
 - Hard-coded values
 - Global mutable state
 
----
+______________________________________________________________________
 
 # 17. Release Process
 
@@ -392,7 +392,7 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
----
+______________________________________________________________________
 
 # Best Practices
 
@@ -403,7 +403,7 @@ git push origin v1.0.0
 - Document every public function.
 - Maintain backward compatibility where practical.
 
----
+______________________________________________________________________
 
 # Directory Ownership
 
@@ -418,7 +418,7 @@ git push origin v1.0.0
 | tests | Automated testing |
 | docs | Project documentation |
 
----
+______________________________________________________________________
 
 # Conclusion
 

@@ -16,18 +16,13 @@ import pytest
 
 from pipeline.analysis_pipeline import AnalysisPipeline
 
-
 # ==========================================================
 # Constructor
 # ==========================================================
 
+
 def test_pipeline_creation(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     assert pipeline is not None
 
@@ -36,65 +31,39 @@ def test_pipeline_creation(sample_dataframe):
 # Run Pipeline
 # ==========================================================
 
+
 def test_pipeline_run(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     result = pipeline.run()
 
-    assert isinstance(
-
-        result,
-
-        dict
-
-    )
+    assert isinstance(result, dict)
 
 
 # ==========================================================
 # Expected Sections
 # ==========================================================
 
+
 def test_pipeline_sections(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     result = pipeline.run()
 
     expected = [
-
         "Profiling",
-
         "Relationships",
-
         "Features",
-
         "Normalization",
-
         "Scoring",
-
         "Recommendation",
-
         "Optimization",
-
         "Visualization",
-
         "Reports",
-
-        "Execution Time"
-
+        "Execution Time",
     ]
 
     for section in expected:
-
         assert section in result
 
 
@@ -102,163 +71,93 @@ def test_pipeline_sections(sample_dataframe):
 # Profiling Output
 # ==========================================================
 
+
 def test_pipeline_profiling(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     result = pipeline.run()
 
-    assert isinstance(
-
-        result["Profiling"],
-
-        dict
-
-    )
+    assert isinstance(result["Profiling"], dict)
 
 
 # ==========================================================
 # Relationship Output
 # ==========================================================
 
+
 def test_pipeline_relationships(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     result = pipeline.run()
 
-    assert isinstance(
-
-        result["Relationships"],
-
-        dict
-
-    )
+    assert isinstance(result["Relationships"], dict)
 
 
 # ==========================================================
 # Feature Output
 # ==========================================================
 
+
 def test_pipeline_features(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     result = pipeline.run()
 
-    assert isinstance(
-
-        result["Features"],
-
-        pd.DataFrame
-
-    )
+    assert isinstance(result["Features"], pd.DataFrame)
 
 
 # ==========================================================
 # Normalization Output
 # ==========================================================
 
+
 def test_pipeline_normalization(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     result = pipeline.run()
 
-    assert isinstance(
-
-        result["Normalization"],
-
-        dict
-
-    )
+    assert isinstance(result["Normalization"], dict)
 
 
 # ==========================================================
 # Recommendation Output
 # ==========================================================
 
+
 def test_pipeline_recommendation(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     result = pipeline.run()
 
-    assert isinstance(
-
-        result["Recommendation"],
-
-        pd.DataFrame
-
-    )
+    assert isinstance(result["Recommendation"], pd.DataFrame)
 
 
 # ==========================================================
 # Reports Output
 # ==========================================================
 
+
 def test_pipeline_reports(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     result = pipeline.run()
 
-    assert isinstance(
-
-        result["Reports"],
-
-        dict
-
-    )
+    assert isinstance(result["Reports"], dict)
 
 
 # ==========================================================
 # Summary
 # ==========================================================
 
+
 def test_pipeline_summary(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     pipeline.run()
 
     summary = pipeline.summary()
 
-    assert isinstance(
-
-        summary,
-
-        dict
-
-    )
+    assert isinstance(summary, dict)
 
     assert "Execution Time" in summary
 
@@ -267,16 +166,11 @@ def test_pipeline_summary(sample_dataframe):
 # Empty DataFrame
 # ==========================================================
 
+
 def test_pipeline_empty_dataframe():
-
-    pipeline = AnalysisPipeline(
-
-        pd.DataFrame()
-
-    )
+    pipeline = AnalysisPipeline(pd.DataFrame())
 
     with pytest.raises(Exception):
-
         pipeline.run()
 
 
@@ -284,13 +178,9 @@ def test_pipeline_empty_dataframe():
 # Repeatability
 # ==========================================================
 
+
 def test_pipeline_repeatability(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     first = pipeline.run()
 
@@ -303,62 +193,35 @@ def test_pipeline_repeatability(sample_dataframe):
 # Large Dataset
 # ==========================================================
 
-def test_pipeline_large_dataset():
 
+def test_pipeline_large_dataset():
     rows = 5000
 
-    df = pd.DataFrame({
-
-        "Stock":
-
-            [f"S{i}" for i in range(rows)],
-
-        "Expectancy%":
-
-            range(rows),
-
-        "Profit Factor":
-
-            range(rows),
-
-        "Reward Risk":
-
-            range(rows),
-
-        "Trades":
-
-            range(rows),
-
-        "Win %":
-
-            range(rows)
-
-    })
+    df = pd.DataFrame(
+        {
+            "Stock": [f"S{i}" for i in range(rows)],
+            "Expectancy%": range(rows),
+            "Profit Factor": range(rows),
+            "Reward Risk": range(rows),
+            "Trades": range(rows),
+            "Win %": range(rows),
+        }
+    )
 
     pipeline = AnalysisPipeline(df)
 
     result = pipeline.run()
 
-    assert isinstance(
-
-        result,
-
-        dict
-
-    )
+    assert isinstance(result, dict)
 
 
 # ==========================================================
 # Execution Time
 # ==========================================================
 
+
 def test_pipeline_execution_time(sample_dataframe):
-
-    pipeline = AnalysisPipeline(
-
-        sample_dataframe
-
-    )
+    pipeline = AnalysisPipeline(sample_dataframe)
 
     result = pipeline.run()
 

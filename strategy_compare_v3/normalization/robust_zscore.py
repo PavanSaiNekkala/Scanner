@@ -42,135 +42,57 @@ class RobustZScoreNormalization:
 
     CONSISTENCY_CONSTANT = 1.4826
 
-    def __init__(
-        self,
-        dataframe: pd.DataFrame
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
 
-        self.numeric_columns = self.df.select_dtypes(
-            include=np.number
-        ).columns.tolist()
+        self.numeric_columns = self.df.select_dtypes(include=np.number).columns.tolist()
 
         self.statistics_df = pd.DataFrame()
 
     # -----------------------------------------------------
 
     def generate(self) -> pd.DataFrame:
-
-        logger.info(
-            "Running Robust Z-Score Normalization..."
-        )
+        logger.info("Running Robust Z-Score Normalization...")
 
         normalized = self.df.copy()
 
         statistics = []
 
         for column in self.numeric_columns:
-
             series = normalized[column].astype(float)
 
             median = series.median()
 
-            mad = median_abs_deviation(
-
-                series,
-
-                nan_policy="omit",
-
-                scale=1
-
-            )
+            mad = median_abs_deviation(series, nan_policy="omit", scale=1)
 
             if np.isnan(mad) or mad == 0:
-
-                logger.warning(
-
-                    "Skipping %s (MAD = %.6f)",
-
-                    column,
-
-                    mad
-
-                )
+                logger.warning("Skipping %s (MAD = %.6f)", column, mad)
 
                 normalized[column] = np.nan
 
-                statistics.append({
-
-                    "Feature":
-
-                        column,
-
-                    "Median":
-
-                        median,
-
-                    "MAD":
-
-                        mad,
-
-                    "Scale":
-
-                        np.nan
-
-                })
+                statistics.append(
+                    {"Feature": column, "Median": median, "MAD": mad, "Scale": np.nan}
+                )
 
                 continue
 
-            scale = (
+            scale = self.CONSISTENCY_CONSTANT * mad
 
-                self.CONSISTENCY_CONSTANT
+            normalized[column] = (series - median) / scale
 
-                * mad
-
+            statistics.append(
+                {"Feature": column, "Median": median, "MAD": mad, "Scale": scale}
             )
 
-            normalized[column] = (
+        self.statistics_df = pd.DataFrame(statistics)
 
-                series - median
-
-            ) / scale
-
-            statistics.append({
-
-                "Feature":
-
-                    column,
-
-                "Median":
-
-                    median,
-
-                "MAD":
-
-                    mad,
-
-                "Scale":
-
-                    scale
-
-            })
-
-        self.statistics_df = pd.DataFrame(
-
-            statistics
-
-        )
-
-        logger.info(
-
-            "Robust Z-Score normalization completed."
-
-        )
+        logger.info("Robust Z-Score normalization completed.")
 
         return normalized
 
     # -----------------------------------------------------
 
     def statistics(self) -> pd.DataFrame:
-
         """
         Returns normalization statistics.
         """
@@ -180,34 +102,12 @@ class RobustZScoreNormalization:
     # -----------------------------------------------------
 
     def summary(self) -> dict:
-
         return {
-
-            "Method":
-
-                "Robust Z-Score",
-
-            "Numeric Features":
-
-                len(
-
-                    self.numeric_columns
-
-                ),
-
-            "Normalized Features":
-
-                len(
-
-                    self.statistics_df
-
-                )
-
+            "Method": "Robust Z-Score",
+            "Numeric Features": len(self.numeric_columns),
+            "Normalized Features": len(self.statistics_df),
         }
 
 
 if __name__ == "__main__":
-
-    print(
-        "Import inside normalization_engine.py"
-    )
+    print("Import inside normalization_engine.py")

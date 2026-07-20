@@ -28,11 +28,7 @@ from profiling.distribution_statistics import DistributionStatistics
 from profiling.missing_value_profiler import MissingValueProfiler
 from profiling.data_quality import DataQuality
 
-
-
 logger = get_logger(__name__)
-
-
 
 
 class DataProfiler:
@@ -63,176 +59,80 @@ class DataProfiler:
 
     """
 
-
-
-    def __init__(
-
-        self,
-
-        dataframe: pd.DataFrame
-
-    ):
-
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
 
-
         self.results: Dict[str, pd.DataFrame] = {}
-
-
 
     # ==================================================
     # MAIN PROFILING ENGINE
     # ==================================================
 
     def run(self):
-
-
         logger.info("=" * 80)
 
-
-        logger.info(
-
-            "Starting Profiling Engine..."
-
-        )
-
-
+        logger.info("Starting Profiling Engine...")
 
         # ----------------------------------------------
         # Dataset Summary
         # ----------------------------------------------
 
-        dataset_summary = DatasetSummary(
-
-            self.df
-
-        ).generate()
-
-
+        dataset_summary = DatasetSummary(self.df).generate()
 
         # ----------------------------------------------
         # Column Profiling
         # ----------------------------------------------
 
-        column_profile = ColumnProfiler(
-
-            self.df
-
-        ).profile()
-
-
+        column_profile = ColumnProfiler(self.df).profile()
 
         # ----------------------------------------------
         # Descriptive Statistics
         # ----------------------------------------------
 
-        descriptive = DescriptiveStatistics(
-
-            column_profile
-
-        ).generate()
-
-
+        descriptive = DescriptiveStatistics(column_profile).generate()
 
         # ----------------------------------------------
         # Distribution Statistics
         # ----------------------------------------------
 
-        distribution = DistributionStatistics(
-
-            self.df
-
-        ).generate()
-
-
+        distribution = DistributionStatistics(self.df).generate()
 
         # ----------------------------------------------
         # Missing Values
         # ----------------------------------------------
 
-        missing = MissingValueProfiler(
-
-            self.df
-
-        ).generate()
-
-
+        missing = MissingValueProfiler(self.df).generate()
 
         # ----------------------------------------------
         # Data Quality
         # ----------------------------------------------
 
-        quality = DataQuality(
-
-            self.df
-
-        ).generate()
-
-
+        quality = DataQuality(self.df).generate()
 
         # ----------------------------------------------
         # Store Results
         # ----------------------------------------------
 
         self.results = {
-
-
-            "Dataset Summary":
-
-                dataset_summary,
-
-
-            "Column Profile":
-
-                column_profile,
-
-
-            "Descriptive Statistics":
-
-                descriptive,
-
-
-            "Distribution Statistics":
-
-                distribution,
-
-
-            "Missing Values":
-
-                missing,
-
-
-            "Data Quality":
-
-                quality
-
+            "Dataset Summary": dataset_summary,
+            "Column Profile": column_profile,
+            "Descriptive Statistics": descriptive,
+            "Distribution Statistics": distribution,
+            "Missing Values": missing,
+            "Data Quality": quality,
         }
 
-
-
-        logger.info(
-
-            "Profiling completed successfully."
-
-        )
-
+        logger.info("Profiling completed successfully.")
 
         logger.info("=" * 80)
 
-
-
         return self.results
-
-
-
 
     # ==================================================
     # PIPELINE COMPATIBILITY METHOD
     # ==================================================
 
     def generate(self):
-
         """
         Standard pipeline entry point.
 
@@ -245,48 +145,21 @@ class DataProfiler:
 
         """
 
-
         return self.run()
-
-
-
 
     # ==================================================
     # REPORT ACCESS
     # ==================================================
 
-    def get_report(
-
-        self,
-
-        name: str
-
-    ) -> pd.DataFrame:
-
-
-        return self.results.get(
-
-            name
-
-        )
-
-
-
+    def get_report(self, name: str) -> pd.DataFrame:
+        return self.results.get(name)
 
     # ==================================================
     # AVAILABLE REPORTS
     # ==================================================
 
     def report_names(self):
-
-
-        return list(
-
-            self.results.keys()
-
-        )
-
-
+        return list(self.results.keys())
 
 
 # ==========================================================
@@ -294,10 +167,4 @@ class DataProfiler:
 # ==========================================================
 
 if __name__ == "__main__":
-
-
-    print(
-
-        "Use this module from main.py"
-
-    )
+    print("Use this module from main.py")

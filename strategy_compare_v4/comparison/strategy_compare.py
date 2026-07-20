@@ -19,41 +19,31 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-import pandas as pd
 import numpy as np
-
-from typing import Dict
-from typing import List
-from typing import Optional
-
+import pandas as pd
 from strategy_compare_v4.config.constants import (
-    STRATEGY_FOLDERS,
-    REQUIRED_COMPARISON_COLUMNS,
     COMPOSITE_SCORE,
     INSTITUTION_RANK,
     RECOMMENDATION,
+    REQUIRED_COMPARISON_COLUMNS,
+    STRATEGY_FOLDERS,
 )
-
 from strategy_compare_v4.config.recommendations import (
     assign_recommendations,
 )
-
 from strategy_compare_v4.utils.helpers import (
     require_columns,
 )
-
-from strategy_compare_v4.utils.math_utils import (
-    numeric,
-    normalize,
-)
-
 from strategy_compare_v4.utils.io_utils import (
     read_excel,
 )
-
 from strategy_compare_v4.utils.logger import (
-    get_logger,
     banner,
+    get_logger,
+)
+from strategy_compare_v4.utils.math_utils import (
+    normalize,
+    numeric,
 )
 
 logger = get_logger(__name__)
@@ -62,6 +52,7 @@ logger = get_logger(__name__)
 # ============================================================
 # Strategy Comparison Engine
 # ============================================================
+
 
 class StrategyComparisonEngine:
     """
@@ -83,12 +74,11 @@ class StrategyComparisonEngine:
         self,
         root_directory: str,
     ):
-
         self.root = Path(root_directory)
 
-        self.strategy_data: Dict[str, pd.DataFrame] = {}
+        self.strategy_data: dict[str, pd.DataFrame] = {}
 
-        self.strategy_folders: List[Path] = []
+        self.strategy_folders: list[Path] = []
 
         self.comparison_df = pd.DataFrame()
 
@@ -102,34 +92,28 @@ class StrategyComparisonEngine:
 
         self.top_opportunities_df = pd.DataFrame()
 
-        self.diagnostics_report = {}
+        from typing import Any
+
+        self.diagnostics_report: dict[str, Any] = {}
 
     # ---------------------------------------------------------
     # Discover Strategies
     # ---------------------------------------------------------
 
     def discover_strategies(self):
-
         """
         Discover available strategy folders.
         """
 
         self.strategy_folders = [
-
             self.root / folder
-
             for folder in STRATEGY_FOLDERS
-
             if (self.root / folder).exists()
-
         ]
 
         logger.info(
-
             "Discovered %d strategy folders.",
-
             len(self.strategy_folders),
-
         )
 
         return self
@@ -141,40 +125,16 @@ class StrategyComparisonEngine:
     def locate_output_file(
         self,
         folder: Path,
-    ) -> Optional[Path]:
-
-        """
-        Locate institutional workbook
-        inside a strategy folder.
-        """
-
-        institutional = sorted(
-
-            folder.glob(
-
-                "*Institutional*.xlsx"
-
-            )
-
-        )
+    ) -> Path | None:
+        institutional = sorted(folder.glob("*_Institutional.csv"))
 
         if institutional:
-
             return institutional[0]
 
-        excel = sorted(
+        institutional = sorted(folder.glob("*Institutional*.csv"))
 
-            folder.glob(
-
-                "*.xlsx"
-
-            )
-
-        )
-
-        if excel:
-
-            return excel[0]
+        if institutional:
+            return institutional[0]
 
         return None
 
@@ -185,60 +145,42 @@ class StrategyComparisonEngine:
     def load_strategy(
         self,
         folder: Path,
-    ) -> Optional[pd.DataFrame]:
-
+    ) -> pd.DataFrame | None:
         """
         Load a single strategy report.
         """
 
-        workbook = self.locate_output_file(
-
-            folder
-
-        )
+        workbook = self.locate_output_file(folder)
 
         if workbook is None:
-
             logger.warning(
-
                 "Skipping %s (no workbook found).",
-
                 folder.name,
-
             )
 
             return None
 
         try:
+            if workbook.suffix.lower() == ".csv":
+                df = pd.read_csv(workbook)
 
-            df = read_excel(
-
-                workbook
-
-            )
+            else:
+                df = read_excel(workbook)
 
             df["Strategy"] = folder.name
 
             logger.info(
-
                 "%-25s %6d rows",
-
                 folder.name,
-
                 len(df),
-
             )
 
             return df
 
         except Exception:
-
             logger.exception(
-
                 "Failed loading %s",
-
                 workbook,
-
             )
 
             return None
@@ -248,43 +190,26 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def load_all_strategies(self):
-
         """
         Load every available strategy.
         """
 
         banner(
-
             logger,
-
             "Loading Strategy Reports",
-
         )
 
         for folder in self.strategy_folders:
-
-            df = self.load_strategy(
-
-                folder
-
-            )
+            df = self.load_strategy(folder)
 
             if df is None:
-
                 continue
 
-            self.strategy_data[
-
-                folder.name
-
-            ] = df
+            self.strategy_data[folder.name] = df
 
         logger.info(
-
             "Loaded %d strategy datasets.",
-
             len(self.strategy_data),
-
         )
 
         return self
@@ -294,40 +219,24 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def validate_inputs(self):
-
         """
         Validate every loaded strategy dataset.
         """
 
-        logger.info(
-
-            "Validating strategy datasets..."
-
-        )
+        logger.info("Validating strategy datasets...")
 
         for strategy, df in self.strategy_data.items():
-
             require_columns(
-
                 df,
-
                 REQUIRED_COMPARISON_COLUMNS,
-
             )
 
             logger.info(
-
                 "%-25s Validation Passed",
-
                 strategy,
-
             )
 
-        logger.info(
-
-            "All strategy datasets validated."
-
-        )
+        logger.info("All strategy datasets validated.")
 
         return self
 
@@ -336,60 +245,34 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def merge_strategies(self):
-
         """
         Merge all strategies into one
         institutional comparison dataframe.
         """
 
-        logger.info(
-
-            "Merging strategy reports..."
-
-        )
+        logger.info("Merging strategy reports...")
 
         frames = []
 
         for strategy, df in self.strategy_data.items():
-
             temp = df.copy()
 
             temp["Strategy"] = strategy
 
-            frames.append(
-
-                temp
-
-            )
+            frames.append(temp)
 
         if not frames:
+            raise ValueError("No strategy reports available.")
 
-            raise ValueError(
-
-                "No strategy reports available."
-
-            )
-
-        self.comparison_df = (
-
-            pd.concat(
-
-                frames,
-
-                ignore_index=True,
-
-            )
-
+        self.comparison_df = pd.concat(
+            frames,
+            ignore_index=True,
         )
 
         logger.info(
-
             "Merged %d rows from %d strategies.",
-
             len(self.comparison_df),
-
             len(frames),
-
         )
 
         return self
@@ -399,56 +282,33 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def standardize_columns(self):
-
         """
         Convert institutional metrics
         into numeric format.
         """
 
         numeric_columns = [
-
             COMPOSITE_SCORE,
-
             "Expectancy",
-
             "Profit Factor",
-
             "Reward Risk",
-
             "Edge Score",
-
             "Reliability Score",
-
             "Efficiency Score",
-
             "Opportunity Score",
-
             "Risk Score",
-
             "Return Score",
-
             "Confidence Score",
-
             INSTITUTION_RANK,
-
         ]
 
         for column in numeric_columns:
-
             if column in self.comparison_df.columns:
-
-                self.comparison_df[column] = numeric(
-
-                    self.comparison_df[column]
-
-                )
+                self.comparison_df[column] = numeric(self.comparison_df[column])
 
         logger.info(
-
             "Standardized %d numeric columns.",
-
             len(numeric_columns),
-
         )
 
         return self
@@ -458,50 +318,29 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def normalize_scores(self):
-
         """
         Normalize institutional scores.
         """
 
         score_columns = [
-
             COMPOSITE_SCORE,
-
             "Edge Score",
-
             "Reliability Score",
-
             "Efficiency Score",
-
             "Opportunity Score",
-
             "Risk Score",
-
             "Return Score",
-
         ]
 
         for column in score_columns:
-
             if column not in self.comparison_df.columns:
-
                 continue
 
-            self.comparison_df[
-
-                f"{column} Normalized"
-
-            ] = normalize(
-
+            self.comparison_df[f"{column} Normalized"] = normalize(
                 self.comparison_df[column]
-
             )
 
-        logger.info(
-
-            "Normalized institutional scores."
-
-        )
+        logger.info("Normalized institutional scores.")
 
         return self
 
@@ -510,38 +349,17 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def build_keys(self):
-
         """
         Create unique comparison keys.
         """
 
-        self.comparison_df[
-
-            "Comparison ID"
-
-        ] = (
-
-            self.comparison_df["Stock"]
-
-            .astype(str)
-
-            +
-
-            "_"
-
-            +
-
-            self.comparison_df["Strategy"]
-
-            .astype(str)
-
+        self.comparison_df["Comparison ID"] = (
+            self.comparison_df["Stock"].astype(str)
+            + "_"
+            + self.comparison_df["Strategy"].astype(str)
         )
 
-        logger.info(
-
-            "Comparison IDs generated."
-
-        )
+        logger.info("Comparison IDs generated.")
 
         return self
 
@@ -550,45 +368,19 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def compare_by_stock(self):
-
         """
         Rank competing strategies
         within each stock.
         """
 
-        self.comparison_df[
-
-            "Strategy Rank"
-
-        ] = (
-
-            self.comparison_df
-
-            .groupby(
-
-                "Stock"
-
-            )[
-
-                COMPOSITE_SCORE
-
-            ]
-
-            .rank(
-
-                ascending=False,
-
-                method="dense",
-
-            )
-
+        self.comparison_df["Strategy Rank"] = self.comparison_df.groupby("Stock")[
+            COMPOSITE_SCORE
+        ].rank(
+            ascending=False,
+            method="dense",
         )
 
-        logger.info(
-
-            "Calculated strategy rank per stock."
-
-        )
+        logger.info("Calculated strategy rank per stock.")
 
         return self
 
@@ -597,98 +389,45 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def compare_stocks(self):
-
         """
         Global institutional ranking.
         """
 
-        self.comparison_df[
-
-            "Global Rank"
-
-        ] = (
-
-            self.comparison_df[
-
-                COMPOSITE_SCORE
-
-            ]
-
-            .rank(
-
-                ascending=False,
-
-                method="dense",
-
-            )
-
+        self.comparison_df["Global Rank"] = self.comparison_df[COMPOSITE_SCORE].rank(
+            ascending=False,
+            method="dense",
         )
 
-        logger.info(
-
-            "Calculated global rankings."
-
-        )
+        logger.info("Calculated global rankings.")
 
         return self
-    
+
     # ---------------------------------------------------------
     # Best Strategy Per Stock
     # ---------------------------------------------------------
 
     def best_strategy_per_stock(self):
-
         """
         Select the highest ranked strategy
         for each stock.
         """
 
-        idx = (
-
-            self.comparison_df
-
-            .groupby(
-
-                "Stock"
-
-            )[
-
-                COMPOSITE_SCORE
-
-            ]
-
-            .idxmax()
-
-        )
+        idx = self.comparison_df.groupby("Stock")[COMPOSITE_SCORE].idxmax()
 
         self.stock_ranking_df = (
-
-            self.comparison_df
-
-            .loc[idx]
-
+            self.comparison_df.loc[idx]
             .sort_values(
-
                 COMPOSITE_SCORE,
-
                 ascending=False,
-
             )
-
             .reset_index(
-
                 drop=True,
-
             )
-
         )
 
         logger.info(
-
             "Selected best strategy for %d stocks.",
-
             len(self.stock_ranking_df),
-
         )
 
         return self
@@ -698,59 +437,33 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def strategy_summary(self):
-
         """
         Generate institutional summary
         for each strategy.
         """
 
         self.strategy_ranking_df = (
-
-            self.comparison_df
-
-            .groupby(
-
+            self.comparison_df.groupby(
                 "Strategy",
-
                 as_index=False,
-
             )
-
             .agg(
-
                 {
-
                     COMPOSITE_SCORE: "mean",
-
                     "Expectancy": "mean",
-
                     "Profit Factor": "mean",
-
                     "Reward Risk": "mean",
-
                     "Strategy": "count",
-
                 }
-
             )
-
             .rename(
-
                 columns={
-
                     "Strategy": "Trades",
-
                 }
-
             )
-
         )
 
-        logger.info(
-
-            "Generated strategy summary."
-
-        )
+        logger.info("Generated strategy summary.")
 
         return self
 
@@ -759,58 +472,26 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def rank_strategies(self):
-
         """
         Rank strategies using
         average composite score.
         """
 
-        self.strategy_ranking_df = (
-
-            self.strategy_ranking_df
-
-            .sort_values(
-
-                COMPOSITE_SCORE,
-
-                ascending=False,
-
-            )
-
-            .reset_index(
-
-                drop=True,
-
-            )
-
+        self.strategy_ranking_df = self.strategy_ranking_df.sort_values(
+            COMPOSITE_SCORE,
+            ascending=False,
+        ).reset_index(
+            drop=True,
         )
 
-        self.strategy_ranking_df[
-
-            "Strategy Rank"
-
-        ] = np.arange(
-
+        self.strategy_ranking_df["Strategy Rank"] = np.arange(
             1,
-
-            len(
-
-                self.strategy_ranking_df
-
-            ) + 1,
-
+            len(self.strategy_ranking_df) + 1,
         )
 
         logger.info(
-
             "Ranked %d strategies.",
-
-            len(
-
-                self.strategy_ranking_df
-
-            ),
-
+            len(self.strategy_ranking_df),
         )
 
         return self
@@ -820,45 +501,30 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def generate_recommendations(self):
-
         """
         Generate institutional
         recommendations.
         """
 
-        recommendation_df = (
-
-            assign_recommendations(
-
-                self.comparison_df[
-
-                    [
-
-                        COMPOSITE_SCORE,
-
-                    ]
-
-                ].copy()
-
-            )
-
+        recommendation_df = assign_recommendations(
+            self.comparison_df[
+                [
+                    COMPOSITE_SCORE,
+                    "Edge Score",
+                    "Reliability Score",
+                    "Efficiency Score",
+                    "Risk Score",
+                    "Opportunity Score",
+                    "Return Score",
+                ]
+            ].copy()
         )
 
-        self.comparison_df[
-
-            "Institution Recommendation"
-
-        ] = recommendation_df[
-
+        self.comparison_df["Institution Recommendation"] = recommendation_df[
             RECOMMENDATION
-
         ]
 
-        logger.info(
-
-            "Recommendations generated."
-
-        )
+        logger.info("Recommendations generated.")
 
         return self
 
@@ -867,98 +533,41 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def generate_summary(self):
-
         """
         Generate executive summary.
         """
 
         self.summary_df = pd.DataFrame(
-
             {
-
                 "Metric": [
-
                     "Strategies",
-
                     "Stocks",
-
                     "Records",
-
                     "Average Composite",
-
                     "Highest Composite",
-
                     "Lowest Composite",
-
                 ],
-
                 "Value": [
-
-                    self.comparison_df[
-
-                        "Strategy"
-
-                    ].nunique(),
-
-                    self.comparison_df[
-
-                        "Stock"
-
-                    ].nunique(),
-
-                    len(
-
-                        self.comparison_df
-
-                    ),
-
+                    self.comparison_df["Strategy"].nunique(),
+                    self.comparison_df["Stock"].nunique(),
+                    len(self.comparison_df),
                     round(
-
-                        self.comparison_df[
-
-                            COMPOSITE_SCORE
-
-                        ].mean(),
-
+                        self.comparison_df[COMPOSITE_SCORE].mean(),
                         2,
-
                     ),
-
                     round(
-
-                        self.comparison_df[
-
-                            COMPOSITE_SCORE
-
-                        ].max(),
-
+                        self.comparison_df[COMPOSITE_SCORE].max(),
                         2,
-
                     ),
-
                     round(
-
-                        self.comparison_df[
-
-                            COMPOSITE_SCORE
-
-                        ].min(),
-
+                        self.comparison_df[COMPOSITE_SCORE].min(),
                         2,
-
                     ),
-
                 ],
-
             }
-
         )
 
-        logger.info(
-
-            "Executive summary created."
-
-        )
+        logger.info("Executive summary created.")
 
         return self
 
@@ -967,86 +576,29 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def diagnostics(self):
-
         """
         Generate diagnostics.
         """
 
         self.diagnostics_report = {
-
-            "Rows":
-
-                len(
-
-                    self.comparison_df
-
-                ),
-
-            "Strategies":
-
-                self.comparison_df[
-
-                    "Strategy"
-
-                ].nunique(),
-
-            "Stocks":
-
-                self.comparison_df[
-
-                    "Stock"
-
-                ].nunique(),
-
-            "Top Composite":
-
-                round(
-
-                    self.comparison_df[
-
-                        COMPOSITE_SCORE
-
-                    ].max(),
-
-                    2,
-
-                ),
-
-            "Average Composite":
-
-                round(
-
-                    self.comparison_df[
-
-                        COMPOSITE_SCORE
-
-                    ].mean(),
-
-                    2,
-
-                ),
-
-            "Lowest Composite":
-
-                round(
-
-                    self.comparison_df[
-
-                        COMPOSITE_SCORE
-
-                    ].min(),
-
-                    2,
-
-                ),
-
+            "Rows": len(self.comparison_df),
+            "Strategies": self.comparison_df["Strategy"].nunique(),
+            "Stocks": self.comparison_df["Stock"].nunique(),
+            "Top Composite": round(
+                self.comparison_df[COMPOSITE_SCORE].max(),
+                2,
+            ),
+            "Average Composite": round(
+                self.comparison_df[COMPOSITE_SCORE].mean(),
+                2,
+            ),
+            "Lowest Composite": round(
+                self.comparison_df[COMPOSITE_SCORE].min(),
+                2,
+            ),
         }
 
-        logger.info(
-
-            "Diagnostics generated."
-
-        )
+        logger.info("Diagnostics generated.")
 
         return self
 
@@ -1055,50 +607,28 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def top_opportunities(
-
         self,
-
         top_n: int = 20,
-
     ):
-
         """
         Select top institutional
         opportunities.
         """
 
         self.top_opportunities_df = (
-
-            self.comparison_df
-
-            .sort_values(
-
+            self.comparison_df.sort_values(
                 COMPOSITE_SCORE,
-
                 ascending=False,
-
             )
-
-            .head(
-
-                top_n
-
-            )
-
+            .head(top_n)
             .reset_index(
-
                 drop=True,
-
             )
-
         )
 
         logger.info(
-
             "Selected top %d opportunities.",
-
             top_n,
-
         )
 
         return self
@@ -1108,85 +638,49 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def recommendation_summary(self):
-
         """
         Summarize recommendation
         distribution.
         """
 
         self.recommendation_df = (
-
-            self.comparison_df
-
-            .groupby(
-
-                "Institution Recommendation"
-
-            )
-
+            self.comparison_df.groupby("Institution Recommendation")
             .size()
-
-            .reset_index(
-
-                name="Count"
-
-            )
-
+            .reset_index(name="Count")
             .sort_values(
-
                 "Count",
-
                 ascending=False,
-
             )
-
         )
 
-        logger.info(
-
-            "Recommendation summary generated."
-
-        )
+        logger.info("Recommendation summary generated.")
 
         return self
-    
+
     # ---------------------------------------------------------
     # Execution Report
     # ---------------------------------------------------------
 
     def execution_report(self):
-
         """
         Log comparison pipeline summary.
         """
 
         banner(
-
             logger,
-
             "Institutional Strategy Comparison Completed",
-
         )
 
         for key, value in self.diagnostics_report.items():
-
             logger.info(
-
                 "%-30s : %s",
-
                 key,
-
                 value,
-
             )
 
         logger.info("")
 
-        logger.info(
-
-            "Strategy Comparison Pipeline Completed Successfully."
-
-        )
+        logger.info("Strategy Comparison Pipeline Completed Successfully.")
 
         return self
 
@@ -1195,37 +689,17 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def get_results(self):
-
         """
         Return every comparison dataframe.
         """
 
         return {
-
-            "comparison":
-
-                self.comparison_df,
-
-            "stock_ranking":
-
-                self.stock_ranking_df,
-
-            "strategy_ranking":
-
-                self.strategy_ranking_df,
-
-            "summary":
-
-                self.summary_df,
-
-            "recommendation":
-
-                self.recommendation_df,
-
-            "top":
-
-                self.top_opportunities_df,
-
+            "comparison": self.comparison_df,
+            "stock_ranking": self.stock_ranking_df,
+            "strategy_ranking": self.strategy_ranking_df,
+            "summary": self.summary_df,
+            "recommendation": self.recommendation_df,
+            "top": self.top_opportunities_df,
         }
 
     # ---------------------------------------------------------
@@ -1233,13 +707,9 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def export_results(
-
         self,
-
         output_file: str = "Strategy_Comparison.xlsx",
-
     ):
-
         """
         Export institutional reports.
         """
@@ -1249,47 +719,22 @@ class StrategyComparisonEngine:
         )
 
         sheets = {
-
-            "Comparison":
-
-                self.comparison_df,
-
-            "Best Strategy Per Stock":
-
-                self.stock_ranking_df,
-
-            "Strategy Ranking":
-
-                self.strategy_ranking_df,
-
-            "Top Opportunities":
-
-                self.top_opportunities_df,
-
-            "Recommendations":
-
-                self.recommendation_df,
-
-            "Summary":
-
-                self.summary_df,
-
+            "Comparison": self.comparison_df,
+            "Best Strategy Per Stock": self.stock_ranking_df,
+            "Strategy Ranking": self.strategy_ranking_df,
+            "Top Opportunities": self.top_opportunities_df,
+            "Recommendations": self.recommendation_df,
+            "Summary": self.summary_df,
         }
 
         write_excel(
-
             sheets,
-
             output_file,
-
         )
 
         logger.info(
-
             "Results exported -> %s",
-
             output_file,
-
         )
 
         return self
@@ -1299,7 +744,6 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
 
     def run(self):
-
         """
         Execute complete institutional
         strategy comparison pipeline.
@@ -1308,78 +752,38 @@ class StrategyComparisonEngine:
         start = time.perf_counter()
 
         try:
-
             (
-
-                self
-
-                .discover_strategies()
-
+                self.discover_strategies()
                 .load_all_strategies()
-
                 .validate_inputs()
-
                 .merge_strategies()
-
                 .standardize_columns()
-
                 .normalize_scores()
-
                 .build_keys()
-
                 .compare_by_stock()
-
                 .compare_stocks()
-
                 .best_strategy_per_stock()
-
                 .strategy_summary()
-
                 .rank_strategies()
-
                 .generate_recommendations()
-
                 .generate_summary()
-
                 .diagnostics()
-
                 .top_opportunities()
-
                 .recommendation_summary()
-
             )
 
         except Exception as exc:
+            logger.exception("Strategy Comparison Engine failed.")
 
-            logger.exception(
-
-                "Strategy Comparison Engine failed."
-
-            )
-
-            raise RuntimeError(
-
-                f"Strategy Comparison Engine failed:\n{exc}"
-
-            ) from exc
+            raise RuntimeError(f"Strategy Comparison Engine failed:\n{exc}") from exc
 
         finally:
-
             self.execution_time = round(
-
-                time.perf_counter()
-
-                - start,
-
+                time.perf_counter() - start,
                 3,
-
             )
 
-        self.diagnostics_report[
-
-            "Execution Time (s)"
-
-        ] = self.execution_time
+        self.diagnostics_report["Execution Time (s)"] = self.execution_time
 
         self.execution_report()
 
@@ -1390,35 +794,22 @@ class StrategyComparisonEngine:
 # Convenience Function
 # ============================================================
 
+
 def compare_strategies(
-
     root_directory: str,
-
     output_file: str = "Strategy_Comparison.xlsx",
-
 ) -> StrategyComparisonEngine:
-
     """
     Execute the complete institutional
     strategy comparison engine.
     """
 
-    engine = (
-
-        StrategyComparisonEngine(
-
-            root_directory,
-
-        )
-
-        .run()
-
-    )
+    engine = StrategyComparisonEngine(
+        root_directory,
+    ).run()
 
     engine.export_results(
-
         output_file,
-
     )
 
     return engine
@@ -1428,53 +819,33 @@ def compare_strategies(
 # Main
 # ============================================================
 
-def main():
 
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-
-        description=(
-
-            "Institutional Strategy "
-
-            "Comparison Engine V4"
-
-        )
-
+        description=("Institutional Strategy Comparison Engine V4")
     )
 
     parser.add_argument(
-
         "--root",
-
         default=".",
-
         help="Root strategy directory",
-
     )
 
     parser.add_argument(
-
         "--output",
-
         default="Strategy_Comparison.xlsx",
-
         help="Output Excel workbook",
-
     )
 
     args = parser.parse_args()
 
     compare_strategies(
-
         root_directory=args.root,
-
         output_file=args.output,
-
     )
 
 
 if __name__ == "__main__":
-
     main()

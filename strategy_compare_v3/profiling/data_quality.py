@@ -19,76 +19,39 @@ logger = get_logger(__name__)
 
 
 class DataQuality:
-
     """
     Comprehensive data quality assessment.
     """
 
-    def __init__(self,
-                 dataframe: pd.DataFrame):
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
 
     # -----------------------------------------------------
 
     def missing_analysis(self):
-
         total_cells = self.df.size
 
-        missing_cells = int(
-            self.df.isna().sum().sum()
-        )
+        missing_cells = int(self.df.isna().sum().sum())
 
-        missing_pct = (
-            missing_cells /
-            total_cells
-        ) * 100
+        missing_pct = (missing_cells / total_cells) * 100
 
-        return {
-
-            "Missing Cells":
-                missing_cells,
-
-            "Missing %":
-                round(
-                    missing_pct,
-                    2
-                )
-
-        }
+        return {"Missing Cells": missing_cells, "Missing %": round(missing_pct, 2)}
 
     # -----------------------------------------------------
 
     def duplicate_analysis(self):
-
         return {
-
-            "Duplicate Rows":
-
-                int(
-                    self.df.duplicated().sum()
-                ),
-
-            "Duplicate Columns":
-
-                int(
-                    self.df.columns.duplicated().sum()
-                )
-
+            "Duplicate Rows": int(self.df.duplicated().sum()),
+            "Duplicate Columns": int(self.df.columns.duplicated().sum()),
         }
 
     # -----------------------------------------------------
 
     def constant_columns(self):
-
         constant = []
 
         for c in self.df.columns:
-
-            if self.df[c].nunique(
-                dropna=False
-            ) <= 1:
-
+            if self.df[c].nunique(dropna=False) <= 1:
                 constant.append(c)
 
         return constant
@@ -96,42 +59,28 @@ class DataQuality:
     # -----------------------------------------------------
 
     def infinite_values(self):
+        numeric = self.df.select_dtypes(include=np.number)
 
-        numeric = self.df.select_dtypes(
-            include=np.number
-        )
-
-        return int(
-
-            np.isinf(
-                numeric
-            ).sum().sum()
-
-        )
+        return int(np.isinf(numeric).sum().sum())
 
     # -----------------------------------------------------
 
     def outliers(self):
-
         report = {}
 
-        numeric = self.df.select_dtypes(
-            include=np.number
-        )
+        numeric = self.df.select_dtypes(include=np.number)
 
         for col in numeric.columns:
-
             s = numeric[col].dropna()
 
             if len(s) == 0:
-
                 report[col] = 0
 
                 continue
 
-            q1 = s.quantile(.25)
+            q1 = s.quantile(0.25)
 
-            q3 = s.quantile(.75)
+            q3 = s.quantile(0.75)
 
             iqr = q3 - q1
 
@@ -139,152 +88,55 @@ class DataQuality:
 
             upper = q3 + 1.5 * iqr
 
-            report[col] = int(
-
-                ((s < lower) |
-                 (s > upper)).sum()
-
-            )
+            report[col] = int(((s < lower) | (s > upper)).sum())
 
         return report
 
     # -----------------------------------------------------
 
     def quality_score(self):
-
         score = 100.0
 
         missing = self.missing_analysis()
 
         duplicates = self.duplicate_analysis()
 
-        constants = len(
-            self.constant_columns()
-        )
+        constants = len(self.constant_columns())
 
         infs = self.infinite_values()
 
-        outliers = sum(
+        outliers = sum(self.outliers().values())
 
-            self.outliers().values()
+        score -= min(missing["Missing %"] * 0.5, 30)
 
-        )
+        score -= min(duplicates["Duplicate Rows"] * 0.05, 20)
 
-        score -= min(
+        score -= min(constants * 2, 15)
 
-            missing["Missing %"] * 0.5,
+        score -= min(infs, 15)
 
-            30
+        score -= min(outliers * 0.01, 20)
 
-        )
-
-        score -= min(
-
-            duplicates["Duplicate Rows"] * 0.05,
-
-            20
-
-        )
-
-        score -= min(
-
-            constants * 2,
-
-            15
-
-        )
-
-        score -= min(
-
-            infs,
-
-            15
-
-        )
-
-        score -= min(
-
-            outliers * 0.01,
-
-            20
-
-        )
-
-        return round(
-
-            max(score, 0),
-
-            2
-
-        )
+        return round(max(score, 0), 2)
 
     # -----------------------------------------------------
 
     def generate(self):
-
-        logger.info(
-
-            "Generating data quality report..."
-
-        )
+        logger.info("Generating data quality report...")
 
         report = {
-
             **self.missing_analysis(),
-
             **self.duplicate_analysis(),
-
-            "Constant Columns":
-
-                len(
-
-                    self.constant_columns()
-
-                ),
-
-            "Infinite Values":
-
-                self.infinite_values(),
-
-            "Total Outliers":
-
-                sum(
-
-                    self.outliers().values()
-
-                ),
-
-            "Quality Score":
-
-                self.quality_score()
-
+            "Constant Columns": len(self.constant_columns()),
+            "Infinite Values": self.infinite_values(),
+            "Total Outliers": sum(self.outliers().values()),
+            "Quality Score": self.quality_score(),
         }
 
-        logger.info(
+        logger.info("Data quality completed.")
 
-            "Data quality completed."
-
-        )
-
-        return pd.DataFrame(
-
-            report.items(),
-
-            columns=[
-
-                "Metric",
-
-                "Value"
-
-            ]
-
-        )
+        return pd.DataFrame(report.items(), columns=["Metric", "Value"])
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside profiler.py"
-
-    )
+    print("Import inside profiler.py")

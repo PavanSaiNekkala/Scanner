@@ -40,10 +40,7 @@ class Multicollinearity:
         self,
         dataframe: pd.DataFrame,
     ):
-
-        df = dataframe.select_dtypes(
-            include=np.number
-        ).copy()
+        df = dataframe.select_dtypes(include=np.number).copy()
 
         # -----------------------------------------
         # Clean dataset
@@ -62,19 +59,11 @@ class Multicollinearity:
         )
 
         if not df.empty:
-
-            df = df.fillna(
-                df.median(
-                    numeric_only=True
-                )
-            )
+            df = df.fillna(df.median(numeric_only=True))
 
             # Remove constant columns
 
-            df = df.loc[
-                :,
-                df.nunique(dropna=False) > 1
-            ]
+            df = df.loc[:, df.nunique(dropna=False) > 1]
 
         self.df = df
 
@@ -83,25 +72,15 @@ class Multicollinearity:
     # ==================================================
 
     def vif(self):
-
-        logger.info(
-            "Calculating VIF..."
-        )
+        logger.info("Calculating VIF...")
 
         if self.df.shape[1] < 2:
-
-            logger.warning(
-                "Insufficient columns for VIF."
-            )
+            logger.warning("Insufficient columns for VIF.")
 
             return pd.DataFrame(
                 {
-                    "Information": [
-                        "VIF skipped"
-                    ],
-                    "Reason": [
-                        "Less than two usable numeric columns."
-                    ],
+                    "Information": ["VIF skipped"],
+                    "Reason": ["Less than two usable numeric columns."],
                 }
             )
 
@@ -110,16 +89,13 @@ class Multicollinearity:
         X = self.df.astype(float)
 
         for i, col in enumerate(X.columns):
-
             try:
-
                 vif_value = variance_inflation_factor(
                     X.values,
                     i,
                 )
 
             except Exception as exc:
-
                 logger.warning(
                     "Unable to compute VIF for %s : %s",
                     col,
@@ -131,12 +107,14 @@ class Multicollinearity:
             report.append(
                 {
                     "Feature": col,
-                    "VIF": round(
-                        float(vif_value),
-                        4,
-                    )
-                    if pd.notna(vif_value)
-                    else np.nan,
+                    "VIF": (
+                        round(
+                            float(vif_value),
+                            4,
+                        )
+                        if pd.notna(vif_value)
+                        else np.nan
+                    ),
                 }
             )
 
@@ -168,9 +146,7 @@ class Multicollinearity:
         self,
         threshold=0.95,
     ):
-
         if self.df.shape[1] < 2:
-
             return pd.DataFrame()
 
         corr = self.df.corr().abs()
@@ -185,19 +161,13 @@ class Multicollinearity:
         redundant = []
 
         for column in upper.columns:
-
-            correlated = upper.index[
-                upper[column] >= threshold
-            ].tolist()
+            correlated = upper.index[upper[column] >= threshold].tolist()
 
             if correlated:
-
                 redundant.append(
                     {
                         "Feature": column,
-                        "Highly Correlated With": ", ".join(
-                            correlated
-                        ),
+                        "Highly Correlated With": ", ".join(correlated),
                     }
                 )
 
@@ -208,23 +178,16 @@ class Multicollinearity:
     # ==================================================
 
     def eigenvalues(self):
-
         if self.df.shape[1] < 2:
-
             return pd.DataFrame()
 
         try:
-
             corr = self.df.corr()
 
             values = eigvals(corr)
 
             return (
-                pd.DataFrame(
-                    {
-                        "Eigenvalue": values.real
-                    }
-                )
+                pd.DataFrame({"Eigenvalue": values.real})
                 .sort_values(
                     "Eigenvalue",
                     ascending=False,
@@ -233,7 +196,6 @@ class Multicollinearity:
             )
 
         except Exception as exc:
-
             logger.warning(
                 "Eigenvalue computation failed: %s",
                 exc,
@@ -246,36 +208,25 @@ class Multicollinearity:
     # ==================================================
 
     def condition_number(self):
-
         if self.df.shape[1] < 2:
-
             return np.nan
 
         try:
-
             corr = self.df.corr()
 
-            eig = np.real(
-                eigvals(corr)
-            )
+            eig = np.real(eigvals(corr))
 
             eig = eig[eig > 1e-12]
 
             if len(eig) == 0:
-
                 return np.nan
 
             return round(
-                float(
-                    np.sqrt(
-                        eig.max() / eig.min()
-                    )
-                ),
+                float(np.sqrt(eig.max() / eig.min())),
                 4,
             )
 
         except Exception as exc:
-
             logger.warning(
                 "Condition number failed: %s",
                 exc,
@@ -288,38 +239,20 @@ class Multicollinearity:
     # ==================================================
 
     def generate(self):
-
-        logger.info(
-            "Generating multicollinearity report..."
-        )
+        logger.info("Generating multicollinearity report...")
 
         return {
-
-            "VIF":
-                self.vif(),
-
-            "Redundant Features":
-                self.correlation_redundancy(),
-
-            "Eigenvalues":
-                self.eigenvalues(),
-
-            "Condition Number":
-                pd.DataFrame(
-                    {
-                        "Metric": [
-                            "Condition Number"
-                        ],
-                        "Value": [
-                            self.condition_number()
-                        ],
-                    }
-                ),
+            "VIF": self.vif(),
+            "Redundant Features": self.correlation_redundancy(),
+            "Eigenvalues": self.eigenvalues(),
+            "Condition Number": pd.DataFrame(
+                {
+                    "Metric": ["Condition Number"],
+                    "Value": [self.condition_number()],
+                }
+            ),
         }
 
 
 if __name__ == "__main__":
-
-    print(
-        "Import Multicollinearity from relationship_engine.py"
-    )
+    print("Import Multicollinearity from relationship_engine.py")

@@ -1,0 +1,55 @@
+/* ==========================================================
+   Institutional Strategy Platform
+   Light Theme
+   ========================================================== */
+
+:root {
+    --primary: #2563eb;
+    --secondary: #64748b;
+    --success: #16a34a;
+    --warning: #eab308;
+    --danger: #dc2626;
+
+    --background: #f8fafc;
+    --surface: #ffffff;
+
+    --text: #1e293b;
+    --border: #cbd5e1;
+}
+
+/* Main App */
+
+.stApp {
+    background: var(--background);
+    color: var(--text);
+}
+
+/* Metric Cards */
+
+div[data-testid="metric-container"] {
+
+    background: var(--surface);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    padding: 12px;
+
+}
+
+/* Tables */
+
+thead tr th {
+
+    background: var(--primary);
+
+    color: white;
+
+}
+
+tbody tr:hover {
+
+    background: #eef4ff;
+
+}

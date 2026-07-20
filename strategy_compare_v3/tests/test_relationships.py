@@ -16,13 +16,12 @@ import pytest
 
 from relationships.relationship_engine import RelationshipEngine
 
-
 # ==========================================================
 # Constructor
 # ==========================================================
 
-def test_relationship_engine_creation(sample_dataframe):
 
+def test_relationship_engine_creation(sample_dataframe):
     engine = RelationshipEngine(sample_dataframe)
 
     assert engine is not None
@@ -32,8 +31,8 @@ def test_relationship_engine_creation(sample_dataframe):
 # Generate Relationships
 # ==========================================================
 
-def test_generate_relationships(sample_dataframe):
 
+def test_generate_relationships(sample_dataframe):
     engine = RelationshipEngine(sample_dataframe)
 
     result = engine.generate()
@@ -45,14 +44,13 @@ def test_generate_relationships(sample_dataframe):
 # Correlation Matrix
 # ==========================================================
 
-def test_correlation_matrix(sample_dataframe):
 
+def test_correlation_matrix(sample_dataframe):
     engine = RelationshipEngine(sample_dataframe)
 
     report = engine.generate()
 
     if "Correlation Matrix" in report:
-
         matrix = report["Correlation Matrix"]
 
         assert isinstance(matrix, pd.DataFrame)
@@ -64,14 +62,13 @@ def test_correlation_matrix(sample_dataframe):
 # Dependency Matrix
 # ==========================================================
 
-def test_dependency_matrix(sample_dataframe):
 
+def test_dependency_matrix(sample_dataframe):
     engine = RelationshipEngine(sample_dataframe)
 
     report = engine.generate()
 
     if "Dependency Matrix" in report:
-
         matrix = report["Dependency Matrix"]
 
         assert isinstance(matrix, pd.DataFrame)
@@ -81,14 +78,13 @@ def test_dependency_matrix(sample_dataframe):
 # Multicollinearity
 # ==========================================================
 
-def test_multicollinearity(sample_dataframe):
 
+def test_multicollinearity(sample_dataframe):
     engine = RelationshipEngine(sample_dataframe)
 
     report = engine.generate()
 
     if "Multicollinearity" in report:
-
         vif = report["Multicollinearity"]
 
         assert isinstance(vif, pd.DataFrame)
@@ -98,14 +94,13 @@ def test_multicollinearity(sample_dataframe):
 # Feature Selection
 # ==========================================================
 
-def test_feature_selection(sample_dataframe):
 
+def test_feature_selection(sample_dataframe):
     engine = RelationshipEngine(sample_dataframe)
 
     report = engine.generate()
 
     if "Feature Selection" in report:
-
         features = report["Feature Selection"]
 
         assert isinstance(features, pd.DataFrame)
@@ -115,16 +110,11 @@ def test_feature_selection(sample_dataframe):
 # Empty DataFrame
 # ==========================================================
 
+
 def test_empty_dataframe():
-
-    engine = RelationshipEngine(
-
-        pd.DataFrame()
-
-    )
+    engine = RelationshipEngine(pd.DataFrame())
 
     with pytest.raises(Exception):
-
         engine.generate()
 
 
@@ -132,13 +122,9 @@ def test_empty_dataframe():
 # Single Numeric Column
 # ==========================================================
 
+
 def test_single_numeric_column():
-
-    df = pd.DataFrame({
-
-        "A": [1, 2, 3, 4]
-
-    })
+    df = pd.DataFrame({"A": [1, 2, 3, 4]})
 
     engine = RelationshipEngine(df)
 
@@ -151,8 +137,8 @@ def test_single_numeric_column():
 # Duplicate Columns
 # ==========================================================
 
-def test_duplicate_columns(sample_dataframe):
 
+def test_duplicate_columns(sample_dataframe):
     df = sample_dataframe.copy()
 
     df["Expectancy_Copy"] = df["Expectancy%"]
@@ -168,21 +154,13 @@ def test_duplicate_columns(sample_dataframe):
 # Performance
 # ==========================================================
 
-def test_large_relationship_dataset():
 
+def test_large_relationship_dataset():
     rows = 5000
 
-    df = pd.DataFrame({
-
-        "A": range(rows),
-
-        "B": range(rows),
-
-        "C": range(rows),
-
-        "D": range(rows)
-
-    })
+    df = pd.DataFrame(
+        {"A": range(rows), "B": range(rows), "C": range(rows), "D": range(rows)}
+    )
 
     engine = RelationshipEngine(df)
 

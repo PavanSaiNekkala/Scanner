@@ -21,119 +21,58 @@ from reports.institutional_report import InstitutionalReport
 from reports.excel_report import ExcelReport
 from reports.report_engine import ReportEngine
 
-
 # ==========================================================
 # Summary Report
 # ==========================================================
 
+
 def test_summary_report(scored_dataframe):
-
-    report = SummaryReport(
-
-        scored_dataframe
-
-    )
+    report = SummaryReport(scored_dataframe)
 
     result = report.generate()
 
-    assert isinstance(
-
-        result,
-
-        dict
-
-    )
+    assert isinstance(result, dict)
 
 
 # ==========================================================
 # Institutional Report
 # ==========================================================
 
+
 def test_institutional_report(scored_dataframe):
-
-    report = InstitutionalReport(
-
-        scored_dataframe
-
-    )
+    report = InstitutionalReport(scored_dataframe)
 
     result = report.generate()
 
-    assert isinstance(
-
-        result,
-
-        dict
-
-    )
+    assert isinstance(result, dict)
 
 
 # ==========================================================
 # Excel Report
 # ==========================================================
 
-def test_excel_report(
 
-    scored_dataframe,
+def test_excel_report(scored_dataframe, tmp_path):
+    report = SummaryReport(scored_dataframe).generate()
 
-    tmp_path
+    exporter = ExcelReport(output_directory=tmp_path)
 
-):
+    file = exporter.generate(report)
 
-    report = SummaryReport(
-
-        scored_dataframe
-
-    ).generate()
-
-    exporter = ExcelReport(
-
-        output_directory=tmp_path
-
-    )
-
-    file = exporter.generate(
-
-        report
-
-    )
-
-    assert Path(
-
-        file
-
-    ).exists()
+    assert Path(file).exists()
 
 
 # ==========================================================
 # Report Engine
 # ==========================================================
 
-def test_report_engine(
 
-    scored_dataframe,
-
-    tmp_path
-
-):
-
-    engine = ReportEngine(
-
-        scored_dataframe,
-
-        output_directory=tmp_path
-
-    )
+def test_report_engine(scored_dataframe, tmp_path):
+    engine = ReportEngine(scored_dataframe, output_directory=tmp_path)
 
     result = engine.run()
 
-    assert isinstance(
-
-        result,
-
-        dict
-
-    )
+    assert isinstance(result, dict)
 
     assert "Summary Report" in result
 
@@ -146,45 +85,24 @@ def test_report_engine(
 # Excel Workbook Exists
 # ==========================================================
 
-def test_excel_file_created(
 
-    scored_dataframe,
-
-    tmp_path
-
-):
-
-    engine = ReportEngine(
-
-        scored_dataframe,
-
-        output_directory=tmp_path
-
-    )
+def test_excel_file_created(scored_dataframe, tmp_path):
+    engine = ReportEngine(scored_dataframe, output_directory=tmp_path)
 
     result = engine.run()
 
-    assert Path(
-
-        result["Excel File"]
-
-    ).exists()
+    assert Path(result["Excel File"]).exists()
 
 
 # ==========================================================
 # Empty Dataset
 # ==========================================================
 
+
 def test_empty_dataframe():
-
-    engine = ReportEngine(
-
-        pd.DataFrame()
-
-    )
+    engine = ReportEngine(pd.DataFrame())
 
     with pytest.raises(Exception):
-
         engine.run()
 
 
@@ -192,58 +110,31 @@ def test_empty_dataframe():
 # Single Row
 # ==========================================================
 
+
 def test_single_row(tmp_path):
-
-    df = pd.DataFrame({
-
-        "Stock": ["ABC"],
-
-        "Composite Score": [90],
-
-        "Institutional Score": [88],
-
-        "Recommendation": ["BUY"]
-
-    })
-
-    engine = ReportEngine(
-
-        df,
-
-        output_directory=tmp_path
-
+    df = pd.DataFrame(
+        {
+            "Stock": ["ABC"],
+            "Composite Score": [90],
+            "Institutional Score": [88],
+            "Recommendation": ["BUY"],
+        }
     )
+
+    engine = ReportEngine(df, output_directory=tmp_path)
 
     result = engine.run()
 
-    assert isinstance(
-
-        result,
-
-        dict
-
-    )
+    assert isinstance(result, dict)
 
 
 # ==========================================================
 # Repeatability
 # ==========================================================
 
-def test_repeatability(
 
-    scored_dataframe,
-
-    tmp_path
-
-):
-
-    engine = ReportEngine(
-
-        scored_dataframe,
-
-        output_directory=tmp_path
-
-    )
+def test_repeatability(scored_dataframe, tmp_path):
+    engine = ReportEngine(scored_dataframe, output_directory=tmp_path)
 
     first = engine.run()
 
@@ -256,126 +147,51 @@ def test_repeatability(
 # Summary Sections
 # ==========================================================
 
-def test_summary_sections(
 
-    scored_dataframe
+def test_summary_sections(scored_dataframe):
+    report = SummaryReport(scored_dataframe).generate()
 
-):
-
-    report = SummaryReport(
-
-        scored_dataframe
-
-    ).generate()
-
-    expected = [
-
-        "Dataset Information",
-
-        "Score Summary",
-
-        "Recommendation Summary"
-
-    ]
+    expected = ["Dataset Information", "Score Summary", "Recommendation Summary"]
 
     for section in expected:
-
         if section in report:
-
-            assert isinstance(
-
-                report[section],
-
-                pd.DataFrame
-
-            )
+            assert isinstance(report[section], pd.DataFrame)
 
 
 # ==========================================================
 # Institutional Sections
 # ==========================================================
 
-def test_institutional_sections(
 
-    scored_dataframe
+def test_institutional_sections(scored_dataframe):
+    report = InstitutionalReport(scored_dataframe).generate()
 
-):
-
-    report = InstitutionalReport(
-
-        scored_dataframe
-
-    ).generate()
-
-    expected = [
-
-        "Executive Summary",
-
-        "Recommendation Distribution",
-
-        "Top Strategies"
-
-    ]
+    expected = ["Executive Summary", "Recommendation Distribution", "Top Strategies"]
 
     for section in expected:
-
         if section in report:
-
-            assert isinstance(
-
-                report[section],
-
-                pd.DataFrame
-
-            )
+            assert isinstance(report[section], pd.DataFrame)
 
 
 # ==========================================================
 # Performance
 # ==========================================================
 
-def test_large_dataset(
 
-    tmp_path
-
-):
-
+def test_large_dataset(tmp_path):
     rows = 5000
 
-    df = pd.DataFrame({
-
-        "Stock":
-
-            [f"S{i}" for i in range(rows)],
-
-        "Composite Score":
-
-            [80] * rows,
-
-        "Institutional Score":
-
-            [75] * rows,
-
-        "Recommendation":
-
-            ["BUY"] * rows
-
-    })
-
-    engine = ReportEngine(
-
-        df,
-
-        output_directory=tmp_path
-
+    df = pd.DataFrame(
+        {
+            "Stock": [f"S{i}" for i in range(rows)],
+            "Composite Score": [80] * rows,
+            "Institutional Score": [75] * rows,
+            "Recommendation": ["BUY"] * rows,
+        }
     )
+
+    engine = ReportEngine(df, output_directory=tmp_path)
 
     result = engine.run()
 
-    assert isinstance(
-
-        result,
-
-        dict
-
-    )
+    assert isinstance(result, dict)

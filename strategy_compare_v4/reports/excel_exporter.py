@@ -28,11 +28,12 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Dict
 
 import openpyxl
 import pandas as pd
-
+from openpyxl.formatting.rule import (
+    ColorScaleRule,
+)
 from openpyxl.styles import (
     Alignment,
     Border,
@@ -40,19 +41,12 @@ from openpyxl.styles import (
     PatternFill,
     Side,
 )
-
 from openpyxl.utils import (
     get_column_letter,
 )
-
-from openpyxl.formatting.rule import (
-    ColorScaleRule,
-)
-
 from strategy_compare_v4.config.constants import (
     RECOMMENDATION,
 )
-
 from strategy_compare_v4.utils.logger import (
     banner,
     get_logger,
@@ -65,17 +59,20 @@ logger = get_logger(__name__)
 # Excel Export Engine
 # ============================================================
 
+
 class ExcelExporter:
     """
     Institutional Excel
     Export Engine.
     """
 
+    from pathlib import Path
+
     def __init__(
         self,
-        output_file: str = "Institutional_Report.xlsx",
+        output_file: str | Path,
     ):
-
+        self.filename = Path(output_file)
         self.output = output_file
 
         self.writer: pd.ExcelWriter | None = None
@@ -84,7 +81,7 @@ class ExcelExporter:
 
         self.execution_time: float = 0.0
 
-        self.diagnostic_report: Dict = {}
+        self.diagnostic_report: dict = {}
 
     # ---------------------------------------------------------
     # Create Workbook
@@ -98,33 +95,20 @@ class ExcelExporter:
         """
 
         banner(
-
             logger,
-
             "Creating Excel Workbook",
-
         )
 
         self.writer = pd.ExcelWriter(
-
             self.output,
-
             engine="openpyxl",
-
         )
 
-        logger.info(
-
-            "Workbook created."
-
-        )
+        logger.info("Workbook created.")
 
         logger.info(
-
             "Output : %s",
-
             self.output,
-
         )
 
         return self
@@ -144,35 +128,20 @@ class ExcelExporter:
         """
 
         if self.writer is None:
-
-            raise RuntimeError(
-
-                "Workbook has not been created."
-
-            )
+            raise RuntimeError("Workbook has not been created.")
 
         dataframe.to_excel(
-
             self.writer,
-
             sheet_name=sheet_name,
-
             index=False,
-
         )
 
         logger.info(
-
             "Sheet Added : %-25s Rows=%d",
-
             sheet_name,
-
             len(
-
                 dataframe,
-
             ),
-
         )
 
         return self
@@ -189,20 +158,11 @@ class ExcelExporter:
         """
 
         if self.writer is None:
-
-            raise RuntimeError(
-
-                "Workbook has not been created."
-
-            )
+            raise RuntimeError("Workbook has not been created.")
 
         self.writer.close()
 
-        logger.info(
-
-            "Workbook saved."
-
-        )
+        logger.info("Workbook saved.")
 
         return self
 
@@ -220,39 +180,24 @@ class ExcelExporter:
         """
 
         banner(
-
             logger,
-
             "Loading Workbook",
-
         )
 
         self.workbook = openpyxl.load_workbook(
-
             self.output,
-
         )
 
-        logger.info(
-
-            "Workbook loaded."
-
-        )
+        logger.info("Workbook loaded.")
 
         logger.info(
-
             "Worksheets : %d",
-
             len(
-
                 self.workbook.sheetnames,
-
             ),
-
         )
 
         return self
-
 
     # ---------------------------------------------------------
     # Style Headers
@@ -268,43 +213,28 @@ class ExcelExporter:
         """
 
         header_fill = PatternFill(
-
             fill_type="solid",
-
             fgColor="1F4E78",
-
         )
 
         header_font = Font(
-
             bold=True,
-
             color="FFFFFF",
-
         )
 
         thin = Side(
-
             style="thin",
-
         )
 
         border = Border(
-
             left=thin,
-
             right=thin,
-
             top=thin,
-
             bottom=thin,
-
         )
 
         for worksheet in self.workbook.worksheets:
-
             for cell in worksheet[1]:
-
                 cell.fill = header_fill
 
                 cell.font = header_font
@@ -312,21 +242,13 @@ class ExcelExporter:
                 cell.border = border
 
                 cell.alignment = Alignment(
-
                     horizontal="center",
-
                     vertical="center",
-
                 )
 
-        logger.info(
-
-            "Headers formatted."
-
-        )
+        logger.info("Headers formatted.")
 
         return self
-
 
     # ---------------------------------------------------------
     # Freeze Headers
@@ -341,17 +263,11 @@ class ExcelExporter:
         """
 
         for worksheet in self.workbook.worksheets:
-
             worksheet.freeze_panes = "A2"
 
-        logger.info(
-
-            "Freeze panes applied."
-
-        )
+        logger.info("Freeze panes applied.")
 
         return self
-
 
     # ---------------------------------------------------------
     # Auto Filter
@@ -366,21 +282,11 @@ class ExcelExporter:
         """
 
         for worksheet in self.workbook.worksheets:
+            worksheet.auto_filter.ref = worksheet.dimensions
 
-            worksheet.auto_filter.ref = (
-
-                worksheet.dimensions
-
-            )
-
-        logger.info(
-
-            "Auto filters enabled."
-
-        )
+        logger.info("Auto filters enabled.")
 
         return self
-
 
     # ---------------------------------------------------------
     # Auto Column Width
@@ -395,75 +301,41 @@ class ExcelExporter:
         """
 
         for worksheet in self.workbook.worksheets:
-
             for column in worksheet.columns:
-
                 max_length = 0
 
-                column_letter = (
-
-                    get_column_letter(
-
-                        column[0].column,
-
-                    )
-
+                column_letter = get_column_letter(
+                    column[0].column,
                 )
 
                 for cell in column:
-
                     try:
-
                         value = (
-
                             ""
-
                             if cell.value is None
-
                             else str(
-
                                 cell.value,
-
                             )
-
                         )
 
                         max_length = max(
-
                             max_length,
-
                             len(
-
                                 value,
-
                             ),
-
                         )
 
                     except Exception:
-
                         continue
 
-                worksheet.column_dimensions[
-
-                    column_letter
-
-                ].width = min(
-
+                worksheet.column_dimensions[column_letter].width = min(
                     max_length + 3,
-
                     40,
-
                 )
 
-        logger.info(
-
-            "Column widths adjusted."
-
-        )
+        logger.info("Column widths adjusted.")
 
         return self
-
 
     # ---------------------------------------------------------
     # Number Formatting
@@ -478,36 +350,20 @@ class ExcelExporter:
         """
 
         for worksheet in self.workbook.worksheets:
-
             for row in worksheet.iter_rows(
-
                 min_row=2,
-
             ):
-
                 for cell in row:
-
                     if isinstance(
-
                         cell.value,
-
                         (
-
                             int,
-
                             float,
-
                         ),
-
                     ):
-
                         cell.number_format = "0.00"
 
-        logger.info(
-
-            "Number formatting applied."
-
-        )
+        logger.info("Number formatting applied.")
 
         return self
 
@@ -525,69 +381,42 @@ class ExcelExporter:
         """
 
         rule = ColorScaleRule(
-
             start_type="min",
-
             start_color="F8696B",
-
             mid_type="percentile",
-
             mid_value=50,
-
             mid_color="FFEB84",
-
             end_type="max",
-
             end_color="63BE7B",
-
         )
 
         formatted_columns = 0
 
         for worksheet in self.workbook.worksheets:
-
             if worksheet.max_row <= 2:
-
                 continue
 
             for column in range(
-
                 2,
-
                 worksheet.max_column + 1,
-
             ):
-
                 worksheet.conditional_formatting.add(
-
                     (
-
                         f"{get_column_letter(column)}2:"
-
                         f"{get_column_letter(column)}"
-
                         f"{worksheet.max_row}"
-
                     ),
-
                     rule,
-
                 )
 
                 formatted_columns += 1
 
         logger.info(
-
-            "Conditional formatting applied "
-
-            "to %d column(s).",
-
+            "Conditional formatting applied to %d column(s).",
             formatted_columns,
-
         )
 
         return self
-
 
     # ---------------------------------------------------------
     # Alternate Row Colors
@@ -602,51 +431,30 @@ class ExcelExporter:
         """
 
         alternate_fill = PatternFill(
-
             fill_type="solid",
-
             fgColor="F7F7F7",
-
         )
 
         for worksheet in self.workbook.worksheets:
-
             for row in range(
-
                 2,
-
                 worksheet.max_row + 1,
-
             ):
-
                 if row % 2 != 0:
-
                     continue
 
                 for column in range(
-
                     1,
-
                     worksheet.max_column + 1,
-
                 ):
-
                     worksheet.cell(
-
                         row=row,
-
                         column=column,
-
                     ).fill = alternate_fill
 
-        logger.info(
-
-            "Alternate row formatting applied."
-
-        )
+        logger.info("Alternate row formatting applied.")
 
         return self
-
 
     # ---------------------------------------------------------
     # Highlight Recommendations
@@ -662,105 +470,59 @@ class ExcelExporter:
         """
 
         recommendation_colors = {
-
             "Strong Buy": "00B050",
-
             "Buy": "92D050",
-
             "Watch": "FFD966",
-
             "Improve": "F4B183",
-
             "Avoid": "FF9999",
-
             "Reject": "FF0000",
-
         }
 
         highlighted = 0
 
         for worksheet in self.workbook.worksheets:
-
-            headers = [
-
-                cell.value
-
-                for cell in worksheet[1]
-
-            ]
+            headers = [cell.value for cell in worksheet[1]]
 
             if RECOMMENDATION not in headers:
-
                 continue
 
             recommendation_column = (
-
                 headers.index(
-
                     RECOMMENDATION,
-
                 )
-
                 + 1
-
             )
 
             for row in range(
-
                 2,
-
                 worksheet.max_row + 1,
-
             ):
-
                 cell = worksheet.cell(
-
                     row=row,
-
                     column=recommendation_column,
-
                 )
 
                 if cell.value not in recommendation_colors:
-
                     continue
 
                 cell.fill = PatternFill(
-
                     fill_type="solid",
-
-                    fgColor=(
-
-                        recommendation_colors[
-
-                            cell.value
-
-                        ]
-
-                    ),
-
+                    fgColor=(recommendation_colors[cell.value]),
                 )
 
                 cell.font = Font(
-
                     bold=True,
-
                     color="FFFFFF",
-
                 )
 
                 highlighted += 1
 
         logger.info(
-
             "Highlighted %d recommendation cells.",
-
             highlighted,
-
         )
 
         return self
-
 
     # ---------------------------------------------------------
     # Summary Sheet
@@ -775,75 +537,42 @@ class ExcelExporter:
         """
 
         if "Summary" in self.workbook.sheetnames:
-
-            del self.workbook[
-
-                "Summary"
-
-            ]
+            del self.workbook["Summary"]
 
         worksheet = self.workbook.create_sheet(
-
             "Summary",
-
             0,
-
         )
 
-        worksheet["A1"] = (
-
-            "Institutional Strategy "
-
-            "Comparison Report"
-
-        )
+        worksheet["A1"] = "Institutional Strategy Comparison Report"
 
         worksheet["A1"].font = Font(
-
             bold=True,
-
             size=16,
-
         )
 
         worksheet["A3"] = "Workbook"
 
         worksheet["B3"] = Path(
-
             self.output,
-
         ).name
 
         worksheet["A4"] = "Worksheets"
 
         worksheet["B4"] = (
-
             len(
-
                 self.workbook.sheetnames,
-
             )
-
             - 1
-
         )
 
         worksheet["A5"] = "Generated"
 
-        worksheet["B5"] = (
+        worksheet["B5"] = pd.Timestamp.now()
 
-            pd.Timestamp.now()
-
-        )
-
-        logger.info(
-
-            "Summary sheet created."
-
-        )
+        logger.info("Summary sheet created.")
 
         return self
-
 
     # ---------------------------------------------------------
     # Workbook Properties
@@ -857,41 +586,17 @@ class ExcelExporter:
         metadata.
         """
 
-        properties = (
+        properties = self.workbook.properties
 
-            self.workbook.properties
+        properties.creator = "Strategy Comparison Engine"
 
-        )
+        properties.title = "Institutional Strategy Report"
 
-        properties.creator = (
+        properties.subject = "Strategy Analytics"
 
-            "Strategy Comparison Engine"
+        properties.category = "Trading Analytics"
 
-        )
-
-        properties.title = (
-
-            "Institutional Strategy Report"
-
-        )
-
-        properties.subject = (
-
-            "Strategy Analytics"
-
-        )
-
-        properties.category = (
-
-            "Trading Analytics"
-
-        )
-
-        logger.info(
-
-            "Workbook metadata configured."
-
-        )
+        logger.info("Workbook metadata configured.")
 
         return self
 
@@ -908,47 +613,25 @@ class ExcelExporter:
         """
 
         self.workbook.save(
-
             self.output,
-
         )
 
         self.diagnostic_report = {
-
-            "output_file":
-
-                self.output,
-
-            "worksheets":
-
-                len(
-
-                    self.workbook.sheetnames,
-
-                ),
-
-            "status":
-
-                "Success",
-
+            "output_file": self.output,
+            "worksheets": len(
+                self.workbook.sheetnames,
+            ),
+            "status": "Success",
         }
 
-        logger.info(
-
-            "Workbook finalized."
-
-        )
+        logger.info("Workbook finalized.")
 
         logger.info(
-
             "Saved As : %s",
-
             self.output,
-
         )
 
         return self
-
 
     # ---------------------------------------------------------
     # Execution Report
@@ -963,43 +646,28 @@ class ExcelExporter:
         """
 
         banner(
-
             logger,
-
             "Excel Export Report",
-
         )
 
         logger.info(
-
             "Execution Time : %.3f seconds",
-
             self.execution_time,
-
         )
 
         logger.info(
-
             "Workbook       : %s",
-
             self.output,
-
         )
 
         logger.info(
-
             "Worksheets     : %d",
-
             len(
-
                 self.workbook.sheetnames,
-
             ),
-
         )
 
         return self
-
 
     # ---------------------------------------------------------
     # Run Formatting Pipeline
@@ -1016,56 +684,28 @@ class ExcelExporter:
         start = time.perf_counter()
 
         try:
-
             (
-
-                self
-
-                .load_workbook()
-
+                self.load_workbook()
                 .style_headers()
-
                 .freeze_headers()
-
                 .auto_filter()
-
                 .auto_width()
-
                 .number_format()
-
                 .apply_color_scale()
-
                 .alternate_row_colors()
-
                 .highlight_recommendations()
-
                 .add_summary_sheet()
-
                 .workbook_properties()
-
                 .finalize()
-
             )
 
         except Exception:
-
-            logger.exception(
-
-                "Excel export failed."
-
-            )
+            logger.exception("Excel export failed.")
 
             raise
 
         finally:
-
-            self.execution_time = (
-
-                time.perf_counter()
-
-                - start
-
-            )
+            self.execution_time = time.perf_counter() - start
 
             self.execution_report()
 
@@ -1076,9 +716,10 @@ class ExcelExporter:
 # Convenience Function
 # ============================================================
 
+
 def export_excel(
     output_file: str,
-    sheets: Dict[str, pd.DataFrame],
+    sheets: dict[str, pd.DataFrame],
 ):
     """
     Export multiple
@@ -1098,50 +739,33 @@ def export_excel(
     """
 
     exporter = ExcelExporter(
-
         output_file,
-
     )
 
     exporter.create_workbook()
 
     for sheet_name, dataframe in sheets.items():
-
         if not isinstance(
-
             dataframe,
-
             pd.DataFrame,
-
         ):
-
             logger.warning(
-
                 "Skipped '%s' (not a DataFrame).",
-
                 sheet_name,
-
             )
 
             continue
 
         exporter.add_sheet(
-
             dataframe,
-
             sheet_name,
-
         )
 
     exporter.save()
 
     exporter.run()
 
-    logger.info(
-
-        "Excel export completed successfully."
-
-    )
+    logger.info("Excel export completed successfully.")
 
     return exporter
 
@@ -1151,11 +775,4 @@ def export_excel(
 # ============================================================
 
 if __name__ == "__main__":
-
-    logger.info(
-
-        "Import export_excel() into the "
-
-        "reporting pipeline."
-
-    )
+    logger.info("Import export_excel() into the reporting pipeline.")

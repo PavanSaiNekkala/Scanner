@@ -48,11 +48,7 @@ class ProfitabilityEngine:
     Profitability Grade
     """
 
-    def __init__(
-        self,
-        dataframe: pd.DataFrame
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
 
     # ==================================================
@@ -61,68 +57,34 @@ class ProfitabilityEngine:
 
     @staticmethod
     def safe_divide(a, b):
-
-        return np.where(
-            b == 0,
-            np.nan,
-            a / b
-        )
+        return np.where(b == 0, np.nan, a / b)
 
     # ==================================================
     # STANDARDIZE PROFIT FACTOR
     # ==================================================
 
     def standardize_profit_factor(self):
-
         if "Profit_Factor" in self.df.columns:
-
-            self.df["Profit Factor"] = (
-
-                self.df["Profit_Factor"]
-
-            )
+            self.df["Profit Factor"] = self.df["Profit_Factor"]
 
     # ==================================================
     # STANDARDIZE WIN %
     # ==================================================
 
     def standardize_win_rate(self):
-
         if "Win_Pct" in self.df.columns:
-
-            self.df["Win %"] = (
-
-                self.df["Win_Pct"]
-
-            )
+            self.df["Win %"] = self.df["Win_Pct"]
 
     # ==================================================
     # PROFIT PER TRADE
     # ==================================================
 
     def profit_per_trade(self):
-
-        if not {
-
-            "ExpectancyPct",
-
-            "Trades"
-
-        }.issubset(self.df.columns):
-
+        if not {"ExpectancyPct", "Trades"}.issubset(self.df.columns):
             return
 
-
-        self.df["Profit Per Trade"] = (
-
-            self.safe_divide(
-
-                self.df["ExpectancyPct"],
-
-                self.df["Trades"]
-
-            )
-
+        self.df["Profit Per Trade"] = self.safe_divide(
+            self.df["ExpectancyPct"], self.df["Trades"]
         )
 
     # ==================================================
@@ -130,30 +92,11 @@ class ProfitabilityEngine:
     # ==================================================
 
     def profitability_index(self):
-
-        if not {
-
-            "Profit Factor",
-
-            "Win %"
-
-        }.issubset(self.df.columns):
-
+        if not {"Profit Factor", "Win %"}.issubset(self.df.columns):
             return
 
-
         self.df["Profitability Index"] = (
-
-            self.df["Profit Factor"]
-
-            *
-
-            self.df["Win %"]
-
-            /
-
-            100
-
+            self.df["Profit Factor"] * self.df["Win %"] / 100
         )
 
     # ==================================================
@@ -161,28 +104,11 @@ class ProfitabilityEngine:
     # ==================================================
 
     def gross_profit_ratio(self):
-
-        if not {
-
-            "Avg_winPct",
-
-            "Avg_lossPct"
-
-        }.issubset(self.df.columns):
-
+        if not {"Avg_winPct", "Avg_lossPct"}.issubset(self.df.columns):
             return
 
-
-        self.df["Gross Profit Ratio"] = (
-
-            self.safe_divide(
-
-                self.df["Avg_winPct"],
-
-                self.df["Avg_lossPct"].abs()
-
-            )
-
+        self.df["Gross Profit Ratio"] = self.safe_divide(
+            self.df["Avg_winPct"], self.df["Avg_lossPct"].abs()
         )
 
     # ==================================================
@@ -190,26 +116,11 @@ class ProfitabilityEngine:
     # ==================================================
 
     def profitability_score(self):
-
-        if not {
-
-            "Profitability Index",
-
-            "ExpectancyPct"
-
-        }.issubset(self.df.columns):
-
+        if not {"Profitability Index", "ExpectancyPct"}.issubset(self.df.columns):
             return
 
-
         self.df["Profitability Score"] = (
-
-            self.df["Profitability Index"]
-
-            *
-
-            self.df["ExpectancyPct"]
-
+            self.df["Profitability Index"] * self.df["ExpectancyPct"]
         )
 
     # ==================================================
@@ -217,26 +128,11 @@ class ProfitabilityEngine:
     # ==================================================
 
     def profit_consistency(self):
-
-        if not {
-
-            "Profit Factor",
-
-            "Reward Risk Ratio"
-
-        }.issubset(self.df.columns):
-
+        if not {"Profit Factor", "Reward Risk Ratio"}.issubset(self.df.columns):
             return
 
-
         self.df["Profit Consistency"] = (
-
-            self.df["Profit Factor"]
-
-            *
-
-            self.df["Reward Risk Ratio"]
-
+            self.df["Profit Factor"] * self.df["Reward Risk Ratio"]
         )
 
     # ==================================================
@@ -244,82 +140,37 @@ class ProfitabilityEngine:
     # ==================================================
 
     def expected_gross_profit(self):
-
-        if not {
-
-            "Win %",
-
-            "Avg_winPct"
-
-        }.issubset(self.df.columns):
-
+        if not {"Win %", "Avg_winPct"}.issubset(self.df.columns):
             return
 
-
-        self.df["Expected Gross Profit"] = (
-
-            self.df["Win %"]
-
-            /
-
-            100
-
-        ) * self.df["Avg_winPct"]
+        self.df["Expected Gross Profit"] = (self.df["Win %"] / 100) * self.df[
+            "Avg_winPct"
+        ]
 
     # ==================================================
     # EXPECTED GROSS LOSS
     # ==================================================
 
     def expected_gross_loss(self):
-
-        if not {
-
-            "Win %",
-
-            "Avg_lossPct"
-
-        }.issubset(self.df.columns):
-
+        if not {"Win %", "Avg_lossPct"}.issubset(self.df.columns):
             return
 
-
-        self.df["Expected Gross Loss"] = (
-
-            1 -
-
-            self.df["Win %"]
-
-            /
-
-            100
-
-        ) * self.df["Avg_lossPct"].abs()
+        self.df["Expected Gross Loss"] = (1 - self.df["Win %"] / 100) * self.df[
+            "Avg_lossPct"
+        ].abs()
 
     # ==================================================
     # NET EXPECTED PROFIT
     # ==================================================
 
     def net_expected_profit(self):
-
-        if not {
-
-            "Expected Gross Profit",
-
-            "Expected Gross Loss"
-
-        }.issubset(self.df.columns):
-
+        if not {"Expected Gross Profit", "Expected Gross Loss"}.issubset(
+            self.df.columns
+        ):
             return
 
-
         self.df["Net Expected Profit"] = (
-
-            self.df["Expected Gross Profit"]
-
-            -
-
-            self.df["Expected Gross Loss"]
-
+            self.df["Expected Gross Profit"] - self.df["Expected Gross Loss"]
         )
 
     # ==================================================
@@ -327,63 +178,23 @@ class ProfitabilityEngine:
     # ==================================================
 
     def profitability_grade(self):
-
         if "Profitability Score" not in self.df.columns:
-
             return
-
 
         score = self.df["Profitability Score"]
 
+        conditions = [score >= 200, score >= 100, score >= 50, score >= 20]
 
-        conditions = [
+        choices = ["Excellent", "Good", "Average", "Below Average"]
 
-            score >= 200,
-
-            score >= 100,
-
-            score >= 50,
-
-            score >= 20
-
-        ]
-
-
-        choices = [
-
-            "Excellent",
-
-            "Good",
-
-            "Average",
-
-            "Below Average"
-
-        ]
-
-
-        self.df["Profitability Grade"] = np.select(
-
-            conditions,
-
-            choices,
-
-            default="Poor"
-
-        )
+        self.df["Profitability Grade"] = np.select(conditions, choices, default="Poor")
 
     # ==================================================
     # GENERATE
     # ==================================================
 
     def generate(self):
-
-        logger.info(
-
-            "Generating Profitability Features..."
-
-        )
-
+        logger.info("Generating Profitability Features...")
 
         self.standardize_profit_factor()
 
@@ -407,19 +218,10 @@ class ProfitabilityEngine:
 
         self.profitability_grade()
 
-
-        logger.info(
-
-            "Profitability feature engineering completed."
-
-        )
-
+        logger.info("Profitability feature engineering completed.")
 
         return self.df
 
 
 if __name__ == "__main__":
-
-    print(
-        "Import ProfitabilityEngine inside feature_engine.py"
-    )
+    print("Import ProfitabilityEngine inside feature_engine.py")

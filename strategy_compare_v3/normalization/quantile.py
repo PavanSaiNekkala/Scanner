@@ -44,16 +44,13 @@ class QuantileNormalization:
         output_distribution: str = "uniform",
         random_state: int = 42,
     ):
-
         self.df = dataframe.copy()
 
         self.output_distribution = output_distribution
 
         self.random_state = random_state
 
-        self.numeric_columns = self.df.select_dtypes(
-            include=np.number
-        ).columns.tolist()
+        self.numeric_columns = self.df.select_dtypes(include=np.number).columns.tolist()
 
         self.transformer = QuantileTransformer(
             output_distribution=output_distribution,
@@ -65,104 +62,56 @@ class QuantileNormalization:
     # --------------------------------------------------
 
     def generate(self) -> pd.DataFrame:
-
-        logger.info(
-            "Running Quantile Normalization..."
-        )
+        logger.info("Running Quantile Normalization...")
 
         normalized = self.df.copy()
 
         if not self.numeric_columns:
-
-            logger.warning(
-                "No numeric columns found."
-            )
+            logger.warning("No numeric columns found.")
 
             return normalized
 
-        transformed = self.transformer.fit_transform(
-
-            normalized[self.numeric_columns]
-
-        )
+        transformed = self.transformer.fit_transform(normalized[self.numeric_columns])
 
         normalized[self.numeric_columns] = transformed
 
         stats = []
 
         for column in self.numeric_columns:
-
             series = normalized[column]
 
-            stats.append({
-
-                "Feature":
-
-                    column,
-
-                "Minimum":
-
-                    round(series.min(), 6),
-
-                "Maximum":
-
-                    round(series.max(), 6),
-
-                "Mean":
-
-                    round(series.mean(), 6),
-
-                "Std":
-
-                    round(series.std(), 6),
-
-                "Distribution":
-
-                    self.output_distribution
-
-            })
+            stats.append(
+                {
+                    "Feature": column,
+                    "Minimum": round(series.min(), 6),
+                    "Maximum": round(series.max(), 6),
+                    "Mean": round(series.mean(), 6),
+                    "Std": round(series.std(), 6),
+                    "Distribution": self.output_distribution,
+                }
+            )
 
         self.statistics_df = pd.DataFrame(stats)
 
-        logger.info(
-            "Quantile normalization completed."
-        )
+        logger.info("Quantile normalization completed.")
 
         return normalized
 
     # --------------------------------------------------
 
     def statistics(self) -> pd.DataFrame:
-
         return self.statistics_df.copy()
 
     # --------------------------------------------------
 
     def summary(self):
-
         return {
-
-            "Method":
-
-                "Quantile",
-
-            "Distribution":
-
-                self.output_distribution,
-
-            "Numeric Features":
-
-                len(self.numeric_columns),
-
-            "Normalized Features":
-
-                len(self.statistics_df)
-
+            "Method": "Quantile",
+            "Distribution": self.output_distribution,
+            "Numeric Features": len(self.numeric_columns),
+            "Normalized Features": len(self.statistics_df),
         }
 
 
 if __name__ == "__main__":
-
-    print(
-        "Import inside normalization_engine.py"
-    )
+    print("Import inside normalization_engine.py")

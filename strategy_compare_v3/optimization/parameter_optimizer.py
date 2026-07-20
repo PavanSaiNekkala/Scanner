@@ -14,7 +14,6 @@ from __future__ import annotations
 import itertools
 from typing import Dict, List
 
-import numpy as np
 import pandas as pd
 
 from core.logger import get_logger
@@ -41,7 +40,6 @@ class ParameterOptimizer:
         dataframe: pd.DataFrame,
         target_column: str,
     ):
-
         self.df = dataframe.copy()
 
         self.target_column = target_column
@@ -49,40 +47,23 @@ class ParameterOptimizer:
     # -----------------------------------------------------
 
     def validate(self):
-
         if self.target_column not in self.df.columns:
-
-            raise ValueError(
-
-                f"'{self.target_column}' not found."
-
-            )
+            raise ValueError(f"'{self.target_column}' not found.")
 
     # -----------------------------------------------------
 
     @staticmethod
-    def parameter_grid(
-        parameter_space: Dict[str, List]
-    ):
-
+    def parameter_grid(parameter_space: Dict[str, List]):
         keys = parameter_space.keys()
 
         values = parameter_space.values()
 
         for combination in itertools.product(*values):
-
-            yield dict(
-
-                zip(keys, combination)
-
-            )
+            yield dict(zip(keys, combination))
 
     # -----------------------------------------------------
 
-    def evaluate(
-        self,
-        parameters: Dict
-    ) -> float:
+    def evaluate(self, parameters: Dict) -> float:
         """
         Override this method for
         custom optimization logic.
@@ -92,86 +73,32 @@ class ParameterOptimizer:
         of the target column.
         """
 
-        return float(
-
-            self.df[
-
-                self.target_column
-
-            ].mean()
-
-        )
+        return float(self.df[self.target_column].mean())
 
     # -----------------------------------------------------
 
-    def optimize(
-        self,
-        parameter_space: Dict[str, List]
-    ) -> pd.DataFrame:
-
-        logger.info(
-
-            "Starting parameter optimization..."
-
-        )
+    def optimize(self, parameter_space: Dict[str, List]) -> pd.DataFrame:
+        logger.info("Starting parameter optimization...")
 
         self.validate()
 
         results = []
 
-        for params in self.parameter_grid(
+        for params in self.parameter_grid(parameter_space):
+            score = self.evaluate(params)
 
-            parameter_space
+            results.append({**params, "Objective": score})
 
-        ):
+        results = pd.DataFrame(results)
 
-            score = self.evaluate(
-
-                params
-
-            )
-
-            results.append({
-
-                **params,
-
-                "Objective":
-
-                    score
-
-            })
-
-        results = pd.DataFrame(
-
-            results
-
-        )
-
-        results = results.sort_values(
-
-            "Objective",
-
-            ascending=False
-
-        ).reset_index(
-
+        results = results.sort_values("Objective", ascending=False).reset_index(
             drop=True
-
         )
 
-        logger.info(
-
-            "Parameter optimization completed."
-
-        )
+        logger.info("Parameter optimization completed.")
 
         return results
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside optimization_engine.py"
-
-    )
+    print("Import inside optimization_engine.py")

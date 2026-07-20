@@ -17,7 +17,6 @@ import pandas as pd
 
 from core.logger import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -52,14 +51,8 @@ class ExitMetricsEngine:
     Exit Quality
     """
 
-
-    def __init__(
-        self,
-        dataframe: pd.DataFrame
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
-
 
     # ==================================================
     # SAFE DIVIDE
@@ -67,393 +60,136 @@ class ExitMetricsEngine:
 
     @staticmethod
     def safe_divide(a, b):
-
-        return np.where(
-
-            b == 0,
-
-            np.nan,
-
-            a / b
-
-        )
-
+        return np.where(b == 0, np.nan, a / b)
 
     # ==================================================
     # TARGET RATIO
     # ==================================================
 
     def target_ratio(self):
+        required = {"Target #", "Trades"}
 
-        required = {
-
-            "Target #",
-
-            "Trades"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
         self.df["Target Ratio"] = (
-
-            self.safe_divide(
-
-                self.df["Target #"],
-
-                self.df["Trades"]
-
-            )
-
-            *
-
-            100
-
+            self.safe_divide(self.df["Target #"], self.df["Trades"]) * 100
         )
-
 
     # ==================================================
     # TRAIL RATIO
     # ==================================================
 
     def trail_ratio(self):
+        required = {"Trail #", "Trades"}
 
-        required = {
-
-            "Trail #",
-
-            "Trades"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
         self.df["Trail Ratio"] = (
-
-            self.safe_divide(
-
-                self.df["Trail #"],
-
-                self.df["Trades"]
-
-            )
-
-            *
-
-            100
-
+            self.safe_divide(self.df["Trail #"], self.df["Trades"]) * 100
         )
-
 
     # ==================================================
     # STOP RATIO
     # ==================================================
 
     def stop_ratio(self):
+        required = {"Stop #", "Trades"}
 
-        required = {
-
-            "Stop #",
-
-            "Trades"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
         self.df["Stop Ratio"] = (
-
-            self.safe_divide(
-
-                self.df["Stop #"],
-
-                self.df["Trades"]
-
-            )
-
-            *
-
-            100
-
+            self.safe_divide(self.df["Stop #"], self.df["Trades"]) * 100
         )
-
 
     # ==================================================
     # TIME EXIT RATIO
     # ==================================================
 
     def time_exit_ratio(self):
+        required = {"Time #", "Trades"}
 
-        required = {
-
-            "Time #",
-
-            "Trades"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
         self.df["Time Exit Ratio"] = (
-
-            self.safe_divide(
-
-                self.df["Time #"],
-
-                self.df["Trades"]
-
-            )
-
-            *
-
-            100
-
+            self.safe_divide(self.df["Time #"], self.df["Trades"]) * 100
         )
-
 
     # ==================================================
     # WINNING EXIT %
     # ==================================================
 
     def winning_exit_percentage(self):
+        required = {"Target %", "Trail %", "Time-win"}
 
-        required = {
-
-            "Target %",
-
-            "Trail %",
-
-            "Time-win"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
         self.df["Winning Exit %"] = (
-
-            self.df["Target %"]
-
-            +
-
-            self.df["Trail %"]
-
-            +
-
-            self.df["Time-win"]
-
+            self.df["Target %"] + self.df["Trail %"] + self.df["Time-win"]
         )
-
 
     # ==================================================
     # LOSING EXIT %
     # ==================================================
 
     def losing_exit_percentage(self):
+        required = {"Stop %", "Time-loss"}
 
-        required = {
-
-            "Stop %",
-
-            "Time-loss"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Losing Exit %"] = (
-
-            self.df["Stop %"]
-
-            +
-
-            self.df["Time-loss"]
-
-        )
-
+        self.df["Losing Exit %"] = self.df["Stop %"] + self.df["Time-loss"]
 
     # ==================================================
     # EXIT EDGE
     # ==================================================
 
     def exit_edge(self):
+        required = {"Winning Exit %", "Losing Exit %"}
 
-        required = {
-
-            "Winning Exit %",
-
-            "Losing Exit %"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Exit Edge"] = (
-
-            self.df["Winning Exit %"]
-
-            -
-
-            self.df["Losing Exit %"]
-
-        )
-
+        self.df["Exit Edge"] = self.df["Winning Exit %"] - self.df["Losing Exit %"]
 
     # ==================================================
     # EXIT EFFICIENCY
     # ==================================================
 
     def exit_efficiency(self):
+        required = {"Winning Exit %", "Losing Exit %"}
 
-        required = {
-
-            "Winning Exit %",
-
-            "Losing Exit %"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Exit Efficiency"] = (
-
-            self.safe_divide(
-
-                self.df["Winning Exit %"],
-
-                self.df["Losing Exit %"].abs()
-
-            )
-
+        self.df["Exit Efficiency"] = self.safe_divide(
+            self.df["Winning Exit %"], self.df["Losing Exit %"].abs()
         )
-
 
     # ==================================================
     # EXIT QUALITY
     # ==================================================
 
     def exit_quality(self):
+        required = {"Exit Edge", "Target Ratio", "Stop Ratio"}
 
-        required = {
-
-            "Exit Edge",
-
-            "Target Ratio",
-
-            "Stop Ratio"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
         self.df["Exit Quality"] = (
-
-            self.df["Exit Edge"]
-
-            +
-
-            self.df["Target Ratio"]
-
-            -
-
-            self.df["Stop Ratio"]
-
+            self.df["Exit Edge"] + self.df["Target Ratio"] - self.df["Stop Ratio"]
         )
-
-
 
     # ==================================================
     # GENERATE
     # ==================================================
 
     def generate(self):
-
-        logger.info(
-
-            "Generating Exit Metrics..."
-
-        )
-
+        logger.info("Generating Exit Metrics...")
 
         self.target_ratio()
 
@@ -473,22 +209,10 @@ class ExitMetricsEngine:
 
         self.exit_quality()
 
-
-        logger.info(
-
-            "Exit Metrics completed."
-
-        )
-
+        logger.info("Exit Metrics completed.")
 
         return self.df
 
 
-
 if __name__ == "__main__":
-
-    print(
-
-        "Import ExitMetricsEngine"
-
-    )
+    print("Import ExitMetricsEngine")

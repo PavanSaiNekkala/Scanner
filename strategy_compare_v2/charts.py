@@ -1,6 +1,5 @@
 from openpyxl.chart import BarChart
 from openpyxl.chart import Reference
-from openpyxl.styles import Font
 from openpyxl.chart import ScatterChart
 from openpyxl.chart import Series
 from openpyxl.chart import PieChart
@@ -8,9 +7,7 @@ from collections import Counter
 
 
 class ChartBuilder:
-
     def __init__(self, workbook):
-
         self.wb = workbook
 
     ###########################################################################
@@ -18,7 +15,6 @@ class ChartBuilder:
     ###########################################################################
 
     def overall_score_chart(self):
-
         if "Strategy Ranking" not in self.wb.sheetnames:
             return
 
@@ -41,7 +37,6 @@ class ChartBuilder:
         strategy_col = None
 
         for cell in ws[1]:
-
             if cell.value == "Overall Score":
                 score_col = cell.column
 
@@ -51,24 +46,11 @@ class ChartBuilder:
         if score_col is None or strategy_col is None:
             return
 
-        data = Reference(
-            ws,
-            min_col=score_col,
-            min_row=1,
-            max_row=ws.max_row
-        )
+        data = Reference(ws, min_col=score_col, min_row=1, max_row=ws.max_row)
 
-        cats = Reference(
-            ws,
-            min_col=strategy_col,
-            min_row=2,
-            max_row=ws.max_row
-        )
+        cats = Reference(ws, min_col=strategy_col, min_row=2, max_row=ws.max_row)
 
-        chart.add_data(
-            data,
-            titles_from_data=True
-        )
+        chart.add_data(data, titles_from_data=True)
 
         chart.set_categories(cats)
 
@@ -76,17 +58,13 @@ class ChartBuilder:
 
         chart.width = 18
 
-        ws.add_chart(
-            chart,
-            "L2"
-        )
+        ws.add_chart(chart, "L2")
 
     ###########################################################################
     # COMPOSITE SCORE CHART
     ###########################################################################
 
     def composite_score_chart(self):
-
         if "Strategy Ranking" not in self.wb.sheetnames:
             return
 
@@ -97,7 +75,6 @@ class ChartBuilder:
         strategy_col = None
 
         for cell in ws[1]:
-
             if cell.value == "Composite Score_Mean":
                 composite_col = cell.column
 
@@ -117,24 +94,11 @@ class ChartBuilder:
 
         chart.y_axis.title = "Composite Score"
 
-        data = Reference(
-            ws,
-            min_col=composite_col,
-            min_row=1,
-            max_row=ws.max_row
-        )
+        data = Reference(ws, min_col=composite_col, min_row=1, max_row=ws.max_row)
 
-        cats = Reference(
-            ws,
-            min_col=strategy_col,
-            min_row=2,
-            max_row=ws.max_row
-        )
+        cats = Reference(ws, min_col=strategy_col, min_row=2, max_row=ws.max_row)
 
-        chart.add_data(
-            data,
-            titles_from_data=True
-        )
+        chart.add_data(data, titles_from_data=True)
 
         chart.set_categories(cats)
 
@@ -142,17 +106,13 @@ class ChartBuilder:
 
         chart.width = 16
 
-        ws.add_chart(
-            chart,
-            "L20"
-        )
+        ws.add_chart(chart, "L20")
 
     ###########################################################################
     # PROFIT FACTOR CHART
     ###########################################################################
 
     def profit_factor_chart(self):
-
         if "Strategy Ranking" not in self.wb.sheetnames:
             return
 
@@ -163,7 +123,6 @@ class ChartBuilder:
         strategy_col = None
 
         for cell in ws[1]:
-
             if cell.value == "Profit Factor_Mean":
                 pf_col = cell.column
 
@@ -183,24 +142,11 @@ class ChartBuilder:
 
         chart.y_axis.title = "Profit Factor"
 
-        data = Reference(
-            ws,
-            min_col=pf_col,
-            min_row=1,
-            max_row=ws.max_row
-        )
+        data = Reference(ws, min_col=pf_col, min_row=1, max_row=ws.max_row)
 
-        cats = Reference(
-            ws,
-            min_col=strategy_col,
-            min_row=2,
-            max_row=ws.max_row
-        )
+        cats = Reference(ws, min_col=strategy_col, min_row=2, max_row=ws.max_row)
 
-        chart.add_data(
-            data,
-            titles_from_data=True
-        )
+        chart.add_data(data, titles_from_data=True)
 
         chart.set_categories(cats)
 
@@ -208,17 +154,13 @@ class ChartBuilder:
 
         chart.width = 16
 
-        ws.add_chart(
-            chart,
-            "L38"
-        )
+        ws.add_chart(chart, "L38")
 
     ###########################################################################
     # BUILD ALL BAR CHARTS
     ###########################################################################
 
     def build(self):
-
         self.overall_score_chart()
 
         self.composite_score_chart()
@@ -236,7 +178,6 @@ class ChartBuilder:
     ###########################################################################
 
     def recommendation_pie_chart(self):
-
         if "Dashboard" not in self.wb.sheetnames:
             return
 
@@ -250,9 +191,7 @@ class ChartBuilder:
         recommendation_col = None
 
         for cell in ranking[1]:
-
             if cell.value == "Recommendation":
-
                 recommendation_col = cell.column
 
                 break
@@ -263,43 +202,24 @@ class ChartBuilder:
         recommendations = []
 
         for row in range(2, ranking.max_row + 1):
-
             recommendations.append(
-
-                ranking.cell(
-                    row=row,
-                    column=recommendation_col
-                ).value
-
+                ranking.cell(row=row, column=recommendation_col).value
             )
 
         counts = Counter(recommendations)
 
         start_row = 30
 
-        dashboard.cell(
-            row=start_row,
-            column=1
-        ).value = "Recommendation"
+        dashboard.cell(row=start_row, column=1).value = "Recommendation"
 
-        dashboard.cell(
-            row=start_row,
-            column=2
-        ).value = "Count"
+        dashboard.cell(row=start_row, column=2).value = "Count"
 
         current = start_row + 1
 
         for key, value in counts.items():
+            dashboard.cell(row=current, column=1).value = key
 
-            dashboard.cell(
-                row=current,
-                column=1
-            ).value = key
-
-            dashboard.cell(
-                row=current,
-                column=2
-            ).value = value
+            dashboard.cell(row=current, column=2).value = value
 
             current += 1
 
@@ -308,36 +228,12 @@ class ChartBuilder:
         chart.title = "Recommendation Distribution"
 
         labels = Reference(
-
-            dashboard,
-
-            min_col=1,
-
-            min_row=start_row + 1,
-
-            max_row=current - 1
-
+            dashboard, min_col=1, min_row=start_row + 1, max_row=current - 1
         )
 
-        data = Reference(
+        data = Reference(dashboard, min_col=2, min_row=start_row, max_row=current - 1)
 
-            dashboard,
-
-            min_col=2,
-
-            min_row=start_row,
-
-            max_row=current - 1
-
-        )
-
-        chart.add_data(
-
-            data,
-
-            titles_from_data=True
-
-        )
+        chart.add_data(data, titles_from_data=True)
 
         chart.set_categories(labels)
 
@@ -345,20 +241,13 @@ class ChartBuilder:
 
         chart.width = 10
 
-        dashboard.add_chart(
-
-            chart,
-
-            "E30"
-
-        )
+        dashboard.add_chart(chart, "E30")
 
     ###########################################################################
     # GRADE DISTRIBUTION PIE CHART
     ###########################################################################
 
     def grade_pie_chart(self):
-
         if "Dashboard" not in self.wb.sheetnames:
             return
 
@@ -372,9 +261,7 @@ class ChartBuilder:
         grade_col = None
 
         for cell in ranking[1]:
-
             if cell.value == "Grade":
-
                 grade_col = cell.column
 
                 break
@@ -385,18 +272,7 @@ class ChartBuilder:
         grades = []
 
         for row in range(2, ranking.max_row + 1):
-
-            grades.append(
-
-                ranking.cell(
-
-                    row=row,
-
-                    column=grade_col
-
-                ).value
-
-            )
+            grades.append(ranking.cell(row=row, column=grade_col).value)
 
         counts = Counter(grades)
 
@@ -404,41 +280,16 @@ class ChartBuilder:
 
         start_col = 9
 
-        dashboard.cell(
+        dashboard.cell(row=start_row, column=start_col).value = "Grade"
 
-            row=start_row,
-
-            column=start_col
-
-        ).value = "Grade"
-
-        dashboard.cell(
-
-            row=start_row,
-
-            column=start_col + 1
-
-        ).value = "Count"
+        dashboard.cell(row=start_row, column=start_col + 1).value = "Count"
 
         current = start_row + 1
 
         for key, value in counts.items():
+            dashboard.cell(row=current, column=start_col).value = key
 
-            dashboard.cell(
-
-                row=current,
-
-                column=start_col
-
-            ).value = key
-
-            dashboard.cell(
-
-                row=current,
-
-                column=start_col + 1
-
-            ).value = value
+            dashboard.cell(row=current, column=start_col + 1).value = value
 
             current += 1
 
@@ -447,36 +298,14 @@ class ChartBuilder:
         chart.title = "Grade Distribution"
 
         labels = Reference(
-
-            dashboard,
-
-            min_col=start_col,
-
-            min_row=start_row + 1,
-
-            max_row=current - 1
-
+            dashboard, min_col=start_col, min_row=start_row + 1, max_row=current - 1
         )
 
         data = Reference(
-
-            dashboard,
-
-            min_col=start_col + 1,
-
-            min_row=start_row,
-
-            max_row=current - 1
-
+            dashboard, min_col=start_col + 1, min_row=start_row, max_row=current - 1
         )
 
-        chart.add_data(
-
-            data,
-
-            titles_from_data=True
-
-        )
+        chart.add_data(data, titles_from_data=True)
 
         chart.set_categories(labels)
 
@@ -484,20 +313,13 @@ class ChartBuilder:
 
         chart.width = 10
 
-        dashboard.add_chart(
-
-            chart,
-
-            "M30"
-
-        )
+        dashboard.add_chart(chart, "M30")
 
     ###########################################################################
     # RELIABILITY VS COMPOSITE SCORE
     ###########################################################################
 
     def reliability_vs_composite_chart(self):
-
         if "Strategy Ranking" not in self.wb.sheetnames:
             return
 
@@ -507,7 +329,6 @@ class ChartBuilder:
         composite_col = None
 
         for cell in ws[1]:
-
             if cell.value == "Reliability Score_Mean":
                 reliability_col = cell.column
 
@@ -525,25 +346,11 @@ class ChartBuilder:
 
         chart.y_axis.title = "Composite Score"
 
-        xvalues = Reference(
-            ws,
-            min_col=reliability_col,
-            min_row=2,
-            max_row=ws.max_row
-        )
+        xvalues = Reference(ws, min_col=reliability_col, min_row=2, max_row=ws.max_row)
 
-        yvalues = Reference(
-            ws,
-            min_col=composite_col,
-            min_row=2,
-            max_row=ws.max_row
-        )
+        yvalues = Reference(ws, min_col=composite_col, min_row=2, max_row=ws.max_row)
 
-        series = Series(
-            yvalues,
-            xvalues,
-            title="Strategies"
-        )
+        series = Series(yvalues, xvalues, title="Strategies")
 
         chart.series.append(series)
 
@@ -551,18 +358,13 @@ class ChartBuilder:
 
         chart.width = 12
 
-        ws.add_chart(
-            chart,
-            "L56"
-        )
-
+        ws.add_chart(chart, "L56")
 
     ###########################################################################
     # EXPECTANCY VS PROFIT FACTOR
     ###########################################################################
 
     def expectancy_vs_pf_chart(self):
-
         if "Strategy Ranking" not in self.wb.sheetnames:
             return
 
@@ -572,7 +374,6 @@ class ChartBuilder:
         pf_col = None
 
         for cell in ws[1]:
-
             if cell.value == "Expectancy%_Mean":
                 expectancy_col = cell.column
 
@@ -590,25 +391,11 @@ class ChartBuilder:
 
         chart.y_axis.title = "Profit Factor"
 
-        xvalues = Reference(
-            ws,
-            min_col=expectancy_col,
-            min_row=2,
-            max_row=ws.max_row
-        )
+        xvalues = Reference(ws, min_col=expectancy_col, min_row=2, max_row=ws.max_row)
 
-        yvalues = Reference(
-            ws,
-            min_col=pf_col,
-            min_row=2,
-            max_row=ws.max_row
-        )
+        yvalues = Reference(ws, min_col=pf_col, min_row=2, max_row=ws.max_row)
 
-        series = Series(
-            yvalues,
-            xvalues,
-            title="Strategies"
-        )
+        series = Series(yvalues, xvalues, title="Strategies")
 
         chart.series.append(series)
 
@@ -616,17 +403,13 @@ class ChartBuilder:
 
         chart.width = 12
 
-        ws.add_chart(
-            chart,
-            "L74"
-        )
+        ws.add_chart(chart, "L74")
 
     ###########################################################################
     # BUILD ANALYTICS CHARTS
     ###########################################################################
 
     def analytics_charts(self):
-
         self.reliability_vs_composite_chart()
 
         self.expectancy_vs_pf_chart()

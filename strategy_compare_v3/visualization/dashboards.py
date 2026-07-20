@@ -36,22 +36,13 @@ class DashboardEngine:
     """
 
     def __init__(
-        self,
-        dataframe: pd.DataFrame,
-        output_directory: str = "outputs/charts"
+        self, dataframe: pd.DataFrame, output_directory: str = "outputs/charts"
     ):
-
         self.df = dataframe.copy()
 
         self.output_directory = Path(output_directory)
 
-        self.output_directory.mkdir(
-
-            parents=True,
-
-            exist_ok=True
-
-        )
+        self.output_directory.mkdir(parents=True, exist_ok=True)
 
         self.results: Dict[str, Any] = {}
 
@@ -60,130 +51,53 @@ class DashboardEngine:
     # --------------------------------------------------
 
     def heatmaps(self):
+        engine = HeatmapVisualizer(self.df, output_directory=self.output_directory)
 
-        engine = HeatmapVisualizer(
-
-            self.df,
-
-            output_directory=self.output_directory
-
-        )
-
-        return {
-
-            "Chart":
-
-                engine.save(),
-
-            "Correlations":
-
-                engine.top_correlations()
-
-        }
+        return {"Chart": engine.save(), "Correlations": engine.top_correlations()}
 
     # --------------------------------------------------
 
     def histograms(self):
-
-        engine = HistogramVisualizer(
-
-            self.df,
-
-            output_directory=self.output_directory
-
-        )
+        engine = HistogramVisualizer(self.df, output_directory=self.output_directory)
 
         return engine.generate()
 
     # --------------------------------------------------
 
     def boxplots(self):
-
-        engine = BoxplotVisualizer(
-
-            self.df,
-
-            output_directory=self.output_directory
-
-        )
+        engine = BoxplotVisualizer(self.df, output_directory=self.output_directory)
 
         return engine.generate()
 
     # --------------------------------------------------
 
     def scatterplots(self):
-
-        engine = ScatterPlotVisualizer(
-
-            self.df,
-
-            output_directory=self.output_directory
-
-        )
+        engine = ScatterPlotVisualizer(self.df, output_directory=self.output_directory)
 
         return engine.generate()
 
     # --------------------------------------------------
 
     def run(self):
-
         logger.info("=" * 80)
 
-        logger.info(
-
-            "Generating Dashboard..."
-
-        )
+        logger.info("Generating Dashboard...")
 
         start = time.perf_counter()
 
-        self.results["Heatmaps"] = (
+        self.results["Heatmaps"] = self.heatmaps()
 
-            self.heatmaps()
+        self.results["Histograms"] = self.histograms()
 
-        )
+        self.results["Boxplots"] = self.boxplots()
 
-        self.results["Histograms"] = (
+        self.results["Scatterplots"] = self.scatterplots()
 
-            self.histograms()
+        self.execution_time = round(time.perf_counter() - start, 3)
 
-        )
+        self.results["Execution Time"] = self.execution_time
 
-        self.results["Boxplots"] = (
-
-            self.boxplots()
-
-        )
-
-        self.results["Scatterplots"] = (
-
-            self.scatterplots()
-
-        )
-
-        self.execution_time = round(
-
-            time.perf_counter()
-
-            - start,
-
-            3
-
-        )
-
-        self.results["Execution Time"] = (
-
-            self.execution_time
-
-        )
-
-        logger.info(
-
-            "Dashboard generated in %.3f seconds.",
-
-            self.execution_time
-
-        )
+        logger.info("Dashboard generated in %.3f seconds.", self.execution_time)
 
         logger.info("=" * 80)
 
@@ -192,32 +106,11 @@ class DashboardEngine:
     # --------------------------------------------------
 
     def summary(self):
-
         return {
-
-            "Modules": [
-
-                "Heatmaps",
-
-                "Histograms",
-
-                "Boxplots",
-
-                "Scatterplots"
-
-            ],
-
-            "Execution Time":
-
-                self.execution_time
-
+            "Modules": ["Heatmaps", "Histograms", "Boxplots", "Scatterplots"],
+            "Execution Time": self.execution_time,
         }
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside main.py"
-
-    )
+    print("Import inside main.py")

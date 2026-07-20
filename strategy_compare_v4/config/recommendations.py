@@ -21,36 +21,33 @@ Provides:
 from __future__ import annotations
 
 import pandas as pd
-
-from config.constants import (
+from strategy_compare_v4.config.constants import (
+    AVOID,
+    BUY,
     COMPOSITE_SCORE,
     EDGE_SCORE,
-    RELIABILITY_SCORE,
     EFFICIENCY_SCORE,
-    RECOMMENDATION,
-    STRONG_BUY,
-    BUY,
-    WATCH,
     IMPROVE,
-    AVOID,
+    RECOMMENDATION,
     REJECT,
+    RELIABILITY_SCORE,
+    STRONG_BUY,
+    WATCH,
 )
-
-from config.thresholds import (
-    MIN_COMPOSITE_SCORE,
-    MIN_EDGE_SCORE,
-    MIN_RELIABILITY_SCORE,
-    MIN_EFFICIENCY_SCORE,
+from strategy_compare_v4.config.thresholds import (
     EXCELLENT_SCORE,
     GOOD_SCORE,
+    MIN_COMPOSITE_SCORE,
+    MIN_EDGE_SCORE,
+    MIN_EFFICIENCY_SCORE,
+    MIN_RELIABILITY_SCORE,
 )
-
-from utils.helpers import require_columns
-
+from strategy_compare_v4.utils.helpers import require_columns
 
 # ============================================================
 # Recommendation Engine
 # ============================================================
+
 
 def get_recommendation(
     composite_score: float,
@@ -99,6 +96,7 @@ def get_recommendation(
 # ============================================================
 # Batch Recommendation
 # ============================================================
+
 
 def assign_recommendations(df: pd.DataFrame) -> pd.DataFrame:
     """

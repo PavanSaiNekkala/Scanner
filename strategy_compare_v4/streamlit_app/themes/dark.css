@@ -1,0 +1,66 @@
+/* ==========================================================
+   Institutional Strategy Platform
+   Dark Theme
+   ========================================================== */
+
+:root {
+
+    --primary: #3b82f6;
+
+    --secondary: #94a3b8;
+
+    --success: #22c55e;
+
+    --warning: #facc15;
+
+    --danger: #ef4444;
+
+    --background: #0f172a;
+
+    --surface: #1e293b;
+
+    --text: #f8fafc;
+
+    --border: #334155;
+
+}
+
+/* Main */
+
+.stApp {
+
+    background: var(--background);
+
+    color: var(--text);
+
+}
+
+/* Metric Cards */
+
+div[data-testid="metric-container"] {
+
+    background: var(--surface);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    padding: 12px;
+
+}
+
+/* Tables */
+
+thead tr th {
+
+    background: var(--primary);
+
+    color: white;
+
+}
+
+tbody tr:hover {
+
+    background: #263547;
+
+}

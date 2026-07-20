@@ -18,13 +18,12 @@ import pytest
 
 from core.loader import DataLoader
 
-
 # ==========================================================
 # CSV Loading
 # ==========================================================
 
-def test_load_csv(sample_csv):
 
+def test_load_csv(sample_csv):
     loader = DataLoader(sample_csv)
 
     df = loader.load()
@@ -40,8 +39,8 @@ def test_load_csv(sample_csv):
 # Excel Loading
 # ==========================================================
 
-def test_load_excel(sample_excel):
 
+def test_load_excel(sample_excel):
     loader = DataLoader(sample_excel)
 
     df = loader.load()
@@ -57,15 +56,10 @@ def test_load_excel(sample_excel):
 # Invalid File
 # ==========================================================
 
+
 def test_invalid_file():
-
     with pytest.raises(FileNotFoundError):
-
-        loader = DataLoader(
-
-            Path("invalid_file.csv")
-
-        )
+        loader = DataLoader(Path("invalid_file.csv"))
 
         loader.load()
 
@@ -74,8 +68,8 @@ def test_invalid_file():
 # Unsupported Extension
 # ==========================================================
 
-def test_invalid_extension(tmp_path):
 
+def test_invalid_extension(tmp_path):
     file = tmp_path / "sample.txt"
 
     file.write_text("invalid")
@@ -83,7 +77,6 @@ def test_invalid_extension(tmp_path):
     loader = DataLoader(file)
 
     with pytest.raises(ValueError):
-
         loader.load()
 
 
@@ -91,17 +84,11 @@ def test_invalid_extension(tmp_path):
 # Empty CSV
 # ==========================================================
 
-def test_empty_csv(tmp_path):
 
+def test_empty_csv(tmp_path):
     file = tmp_path / "empty.csv"
 
-    pd.DataFrame().to_csv(
-
-        file,
-
-        index=False
-
-    )
+    pd.DataFrame().to_csv(file, index=False)
 
     loader = DataLoader(file)
 
@@ -116,17 +103,11 @@ def test_empty_csv(tmp_path):
 # Empty Excel
 # ==========================================================
 
-def test_empty_excel(tmp_path):
 
+def test_empty_excel(tmp_path):
     file = tmp_path / "empty.xlsx"
 
-    pd.DataFrame().to_excel(
-
-        file,
-
-        index=False
-
-    )
+    pd.DataFrame().to_excel(file, index=False)
 
     loader = DataLoader(file)
 
@@ -141,112 +122,70 @@ def test_empty_excel(tmp_path):
 # Data Types
 # ==========================================================
 
-def test_dataframe_types(sample_csv):
 
+def test_dataframe_types(sample_csv):
     loader = DataLoader(sample_csv)
 
     df = loader.load()
 
     assert df["Stock"].dtype == object
 
-    assert pd.api.types.is_numeric_dtype(
-
-        df["Expectancy%"]
-
-    )
+    assert pd.api.types.is_numeric_dtype(df["Expectancy%"])
 
 
 # ==========================================================
 # Duplicate Load
 # ==========================================================
 
-def test_multiple_loads(sample_csv):
 
+def test_multiple_loads(sample_csv):
     loader = DataLoader(sample_csv)
 
     df1 = loader.load()
 
     df2 = loader.load()
 
-    pd.testing.assert_frame_equal(
-
-        df1,
-
-        df2
-
-    )
+    pd.testing.assert_frame_equal(df1, df2)
 
 
 # ==========================================================
 # Missing Columns
 # ==========================================================
 
+
 def test_missing_columns(tmp_path):
-
-    df = pd.DataFrame({
-
-        "A": [1, 2],
-
-        "B": [3, 4]
-
-    })
+    df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
 
     file = tmp_path / "missing.csv"
 
-    df.to_csv(
-
-        file,
-
-        index=False
-
-    )
+    df.to_csv(file, index=False)
 
     loader = DataLoader(file)
 
     loaded = loader.load()
 
-    assert isinstance(
-
-        loaded,
-
-        pd.DataFrame
-
-    )
+    assert isinstance(loaded, pd.DataFrame)
 
 
 # ==========================================================
 # Large Dataset
 # ==========================================================
 
-def test_large_dataset(tmp_path):
 
+def test_large_dataset(tmp_path):
     rows = 50000
 
-    df = pd.DataFrame({
-
-        "Stock":
-
-            [f"S{i}" for i in range(rows)],
-
-        "Expectancy%":
-
-            range(rows),
-
-        "Profit Factor":
-
-            range(rows)
-
-    })
+    df = pd.DataFrame(
+        {
+            "Stock": [f"S{i}" for i in range(rows)],
+            "Expectancy%": range(rows),
+            "Profit Factor": range(rows),
+        }
+    )
 
     file = tmp_path / "large.csv"
 
-    df.to_csv(
-
-        file,
-
-        index=False
-
-    )
+    df.to_csv(file, index=False)
 
     loader = DataLoader(file)
 

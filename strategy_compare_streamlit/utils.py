@@ -8,37 +8,17 @@ import numpy as np
 
 import pandas as pd
 
-from config import (
-
-    DECIMAL_PLACES,
-
-    TOP_N
-
-)
+from config import DECIMAL_PLACES, TOP_N
 
 ###########################################################################
 # DIRECTORY
 ###########################################################################
 
-def ensure_directory(
 
-    path
+def ensure_directory(path):
+    path = Path(path)
 
-):
-
-    path = Path(
-
-        path
-
-    )
-
-    path.mkdir(
-
-        parents=True,
-
-        exist_ok=True
-
-    )
+    path.mkdir(parents=True, exist_ok=True)
 
     return path
 
@@ -47,126 +27,51 @@ def ensure_directory(
 # EMPTY DATAFRAME
 ###########################################################################
 
-def is_empty_dataframe(
 
-    dataframe
-
-):
-
-    return (
-
-        dataframe is None
-
-        or
-
-        dataframe.empty
-
-    )
+def is_empty_dataframe(dataframe):
+    return dataframe is None or dataframe.empty
 
 
 ###########################################################################
 # NUMERIC
 ###########################################################################
 
-def numeric(
 
-    series
-
-):
-
-    return pd.to_numeric(
-
-        series,
-
-        errors="coerce"
-
-    )
+def numeric(series):
+    return pd.to_numeric(series, errors="coerce")
 
 
 ###########################################################################
 # SAFE DIVISION
 ###########################################################################
 
-def safe_divide(
 
-    numerator,
+def safe_divide(numerator, denominator):
+    numerator = np.asarray(numerator, dtype=float)
 
-    denominator
+    denominator = np.asarray(denominator, dtype=float)
 
-):
-
-    numerator = np.asarray(
-
-        numerator,
-
-        dtype=float
-
-    )
-
-    denominator = np.asarray(
-
-        denominator,
-
-        dtype=float
-
-    )
-
-    return np.where(
-
-        denominator == 0,
-
-        np.nan,
-
-        numerator / denominator
-
-    )
+    return np.where(denominator == 0, np.nan, numerator / denominator)
 
 
 ###########################################################################
 # PERCENTAGE
 ###########################################################################
 
-def percentage(
 
-    numerator,
-
-    denominator
-
-):
-
-    return (
-
-        safe_divide(
-
-            numerator,
-
-            denominator
-
-        )
-
-        * 100
-
-    )
+def percentage(numerator, denominator):
+    return safe_divide(numerator, denominator) * 100
 
 
 ###########################################################################
 # NORMALIZE
 ###########################################################################
 
-def normalize(
 
-    series
-
-):
-
-    series = numeric(
-
-        series
-
-    )
+def normalize(series):
+    series = numeric(series)
 
     if series.isna().all():
-
         return series
 
     minimum = series.min()
@@ -174,67 +79,22 @@ def normalize(
     maximum = series.max()
 
     if maximum == minimum:
+        return pd.Series(100.0, index=series.index)
 
-        return pd.Series(
-
-            100.0,
-
-            index=series.index
-
-        )
-
-    return (
-
-        (
-
-            series
-
-            - minimum
-
-        )
-
-        /
-
-        (
-
-            maximum
-
-            - minimum
-
-        )
-
-    ) * 100
+    return ((series - minimum) / (maximum - minimum)) * 100
 
 
 ###########################################################################
 # ROUND
 ###########################################################################
 
-def round_dataframe(
 
-    dataframe,
-
-    digits=DECIMAL_PLACES
-
-):
-
+def round_dataframe(dataframe, digits=DECIMAL_PLACES):
     df = dataframe.copy()
 
-    cols = df.select_dtypes(
+    cols = df.select_dtypes(include=np.number).columns
 
-        include=np.number
-
-    ).columns
-
-    df[cols] = df[
-
-        cols
-
-    ].round(
-
-        digits
-
-    )
+    df[cols] = df[cols].round(digits)
 
     return df
 
@@ -243,168 +103,72 @@ def round_dataframe(
 # NUMERIC COLUMNS
 ###########################################################################
 
-def numeric_columns(
 
-    dataframe
-
-):
-
-    return dataframe.select_dtypes(
-
-        include=np.number
-
-    ).columns.tolist()
+def numeric_columns(dataframe):
+    return dataframe.select_dtypes(include=np.number).columns.tolist()
 
 
 ###########################################################################
 # TEXT COLUMNS
 ###########################################################################
 
-def text_columns(
 
-    dataframe
-
-):
-
-    return dataframe.select_dtypes(
-
-        exclude=np.number
-
-    ).columns.tolist()
+def text_columns(dataframe):
+    return dataframe.select_dtypes(exclude=np.number).columns.tolist()
 
 
 ###########################################################################
 # IS NUMERIC
 ###########################################################################
 
-def is_numeric_column(
 
-    dataframe,
-
-    column
-
-):
-
+def is_numeric_column(dataframe, column):
     if column not in dataframe.columns:
-
         return False
 
-    return pd.api.types.is_numeric_dtype(
-
-        dataframe[column]
-
-    )
+    return pd.api.types.is_numeric_dtype(dataframe[column])
 
 
 ###########################################################################
 # CHECK REQUIRED COLUMNS
 ###########################################################################
 
-def check_columns(
 
-    dataframe,
-
-    required
-
-):
-
-    return [
-
-        column
-
-        for column in required
-
-        if column not in dataframe.columns
-
-    ]
+def check_columns(dataframe, required):
+    return [column for column in required if column not in dataframe.columns]
 
 
 ###########################################################################
 # TOP N
 ###########################################################################
 
-def top_n(
 
-    dataframe,
-
-    column,
-
-    n=TOP_N
-
-):
-
-    if (
-
-        column not in dataframe.columns
-
-        or
-
-        dataframe.empty
-
-    ):
-
+def top_n(dataframe, column, n=TOP_N):
+    if column not in dataframe.columns or dataframe.empty:
         return dataframe
 
-    return dataframe.nlargest(
-
-        n,
-
-        column
-
-    )
+    return dataframe.nlargest(n, column)
 
 
 ###########################################################################
 # BOTTOM N
 ###########################################################################
 
-def bottom_n(
 
-    dataframe,
-
-    column,
-
-    n=TOP_N
-
-):
-
-    if (
-
-        column not in dataframe.columns
-
-        or
-
-        dataframe.empty
-
-    ):
-
+def bottom_n(dataframe, column, n=TOP_N):
+    if column not in dataframe.columns or dataframe.empty:
         return dataframe
 
-    return dataframe.nsmallest(
-
-        n,
-
-        column
-
-    )
+    return dataframe.nsmallest(n, column)
 
 
 ###########################################################################
 # FORMAT %
 ###########################################################################
 
-def percent(
 
-    value
-
-):
-
-    if pd.isna(
-
-        value
-
-    ):
-
+def percent(value):
+    if pd.isna(value):
         return ""
 
     return f"{value:.2f}%"
@@ -414,180 +178,70 @@ def percent(
 # FORMAT NUMBER
 ###########################################################################
 
-def number(
 
-    value,
-
-    digits=DECIMAL_PLACES
-
-):
-
-    if pd.isna(
-
-        value
-
-    ):
-
+def number(value, digits=DECIMAL_PLACES):
+    if pd.isna(value):
         return ""
 
-    return round(
-
-        float(value),
-
-        digits
-
-    )
+    return round(float(value), digits)
 
 
 ###########################################################################
 # SORT
 ###########################################################################
 
-def sort_dataframe(
 
-    dataframe,
-
-    column,
-
-    ascending=False
-
-):
-
+def sort_dataframe(dataframe, column, ascending=False):
     if column not in dataframe.columns:
-
         return dataframe
 
-    return dataframe.sort_values(
-
-        column,
-
-        ascending=ascending
-
-    )
+    return dataframe.sort_values(column, ascending=ascending)
 
 
 ###########################################################################
 # DESCENDING
 ###########################################################################
 
-def descending(
 
-    dataframe,
-
-    column
-
-):
-
-    return sort_dataframe(
-
-        dataframe,
-
-        column,
-
-        False
-
-    )
+def descending(dataframe, column):
+    return sort_dataframe(dataframe, column, False)
 
 
 ###########################################################################
 # ASCENDING
 ###########################################################################
 
-def ascending(
 
-    dataframe,
-
-    column
-
-):
-
-    return sort_dataframe(
-
-        dataframe,
-
-        column,
-
-        True
-
-    )
+def ascending(dataframe, column):
+    return sort_dataframe(dataframe, column, True)
 
 
 ###########################################################################
 # FORMAT DATAFRAME
 ###########################################################################
 
-def format_dataframe(
 
-    dataframe
-
-):
-
-    return dataframe.astype(
-
-        str
-
-    )
+def format_dataframe(dataframe):
+    return dataframe.astype(str)
 
 
 ###########################################################################
 # MEMORY
 ###########################################################################
 
-def memory_usage(
 
-    dataframe
-
-):
-
-    return round(
-
-        dataframe.memory_usage(
-
-            deep=True
-
-        ).sum()
-
-        / 1024,
-
-        2
-
-    )
+def memory_usage(dataframe):
+    return round(dataframe.memory_usage(deep=True).sum() / 1024, 2)
 
 
 ###########################################################################
 # DATAFRAME INFO
 ###########################################################################
 
-def dataframe_info(
 
-    dataframe
-
-):
-
+def dataframe_info(dataframe):
     return {
-
-        "Rows":
-
-            len(
-
-                dataframe
-
-            ),
-
-        "Columns":
-
-            len(
-
-                dataframe.columns
-
-            ),
-
-        "Memory (KB)":
-
-            memory_usage(
-
-                dataframe
-
-            )
-
+        "Rows": len(dataframe),
+        "Columns": len(dataframe.columns),
+        "Memory (KB)": memory_usage(dataframe),
     }

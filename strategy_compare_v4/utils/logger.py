@@ -25,18 +25,12 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 # ============================================================
 # Logger Configuration
 # ============================================================
 
-LOG_FORMAT = (
-    "%(asctime)s | "
-    "%(levelname)-8s | "
-    "%(name)s | "
-    "%(message)s"
-)
+LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -46,6 +40,7 @@ DEFAULT_LEVEL = logging.INFO
 # ============================================================
 # Logger Factory
 # ============================================================
+
 
 def get_logger(
     name: str,
@@ -101,7 +96,6 @@ def get_logger(
     # --------------------------------------------------------
 
     if log_file is not None:
-
         log_file = Path(log_file)
 
         log_file.parent.mkdir(
@@ -126,6 +120,7 @@ def get_logger(
 # ============================================================
 # Banner
 # ============================================================
+
 
 def banner(
     logger: logging.Logger,
@@ -155,6 +150,7 @@ def banner(
 # Divider
 # ============================================================
 
+
 def divider(
     logger: logging.Logger,
     width: int = 70,
@@ -171,17 +167,17 @@ def divider(
 # Execution Timer
 # ============================================================
 
+
 def log_execution_time(
     logger: logging.Logger,
     seconds: float,
-    task: Optional[str] = None,
+    task: str | None = None,
 ) -> None:
     """
     Log execution time.
     """
 
     if task:
-
         logger.info(
             "%s completed in %.2f seconds",
             task,
@@ -189,7 +185,6 @@ def log_execution_time(
         )
 
     else:
-
         logger.info(
             "Execution completed in %.2f seconds",
             seconds,

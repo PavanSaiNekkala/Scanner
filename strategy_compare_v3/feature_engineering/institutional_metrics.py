@@ -51,11 +51,7 @@ class InstitutionalMetricsEngine:
     Institutional Grade
     """
 
-    def __init__(
-        self,
-        dataframe: pd.DataFrame
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
 
     # ==================================================
@@ -64,51 +60,22 @@ class InstitutionalMetricsEngine:
 
     @staticmethod
     def safe_divide(a, b):
-
-        return np.where(
-
-            b == 0,
-
-            np.nan,
-
-            a / b
-
-        )
+        return np.where(b == 0, np.nan, a / b)
 
     # ==================================================
     # CAPITAL PRODUCTIVITY
     # ==================================================
 
     def capital_productivity(self):
+        required = {"Profitability Index", "Capital Efficiency"}
 
-        required = {
-
-            "Profitability Index",
-
-            "Capital Efficiency"
-
-        }
-
-
-        if not required.issubset(
-            self.df.columns
-        ):
-
-            logger.warning(
-                "Capital Productivity skipped."
-            )
+        if not required.issubset(self.df.columns):
+            logger.warning("Capital Productivity skipped.")
 
             return
 
-
         self.df["Capital Productivity"] = (
-
-            self.df["Profitability Index"]
-
-            *
-
-            self.df["Capital Efficiency"]
-
+            self.df["Profitability Index"] * self.df["Capital Efficiency"]
         )
 
     # ==================================================
@@ -116,67 +83,27 @@ class InstitutionalMetricsEngine:
     # ==================================================
 
     def edge_density(self):
+        required = {"Edge Ratio", "Trade Density"}
 
-        required = {
-
-            "Edge Ratio",
-
-            "Trade Density"
-
-        }
-
-
-        if not required.issubset(
-            self.df.columns
-        ):
-
-            logger.warning(
-                "Edge Density skipped."
-            )
+        if not required.issubset(self.df.columns):
+            logger.warning("Edge Density skipped.")
 
             return
 
-
-        self.df["Edge Density"] = (
-
-            self.df["Edge Ratio"]
-
-            *
-
-            self.df["Trade Density"]
-
-        )
+        self.df["Edge Density"] = self.df["Edge Ratio"] * self.df["Trade Density"]
 
     # ==================================================
     # SIGNAL ROBUSTNESS
     # ==================================================
 
     def signal_robustness(self):
+        required = {"Signal Quality", "Profit Consistency"}
 
-        required = {
-
-            "Signal Quality",
-
-            "Profit Consistency"
-
-        }
-
-
-        if not required.issubset(
-            self.df.columns
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
         self.df["Signal Robustness"] = (
-
-            self.df["Signal Quality"]
-
-            *
-
-            self.df["Profit Consistency"]
-
+            self.df["Signal Quality"] * self.df["Profit Consistency"]
         )
 
     # ==================================================
@@ -184,31 +111,13 @@ class InstitutionalMetricsEngine:
     # ==================================================
 
     def strategy_robustness(self):
+        required = {"Stability Index", "Profitability Index"}
 
-        required = {
-
-            "Stability Index",
-
-            "Profitability Index"
-
-        }
-
-
-        if not required.issubset(
-            self.df.columns
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
         self.df["Strategy Robustness"] = (
-
-            self.df["Stability Index"]
-
-            *
-
-            self.df["Profitability Index"]
-
+            self.df["Stability Index"] * self.df["Profitability Index"]
         )
 
     # ==================================================
@@ -216,31 +125,13 @@ class InstitutionalMetricsEngine:
     # ==================================================
 
     def execution_productivity(self):
+        required = {"Execution Quality", "Opportunity Density"}
 
-        required = {
-
-            "Execution Quality",
-
-            "Opportunity Density"
-
-        }
-
-
-        if not required.issubset(
-            self.df.columns
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
         self.df["Execution Productivity"] = (
-
-            self.df["Execution Quality"]
-
-            *
-
-            self.df["Opportunity Density"]
-
+            self.df["Execution Quality"] * self.df["Opportunity Density"]
         )
 
     # ==================================================
@@ -248,118 +139,47 @@ class InstitutionalMetricsEngine:
     # ==================================================
 
     def institutional_readiness(self):
-
         required = {
-
             "Capital Productivity",
-
             "Edge Density",
-
             "Strategy Robustness",
-
-            "Execution Productivity"
-
+            "Execution Productivity",
         }
 
-
-        if not required.issubset(
-            self.df.columns
-        ):
-
-            logger.warning(
-                "Institutional Readiness skipped."
-            )
+        if not required.issubset(self.df.columns):
+            logger.warning("Institutional Readiness skipped.")
 
             return
 
-
         self.df["Institutional Readiness"] = (
-
             self.df["Capital Productivity"]
-
-            +
-
-            self.df["Edge Density"]
-
-            +
-
-            self.df["Strategy Robustness"]
-
-            +
-
-            self.df["Execution Productivity"]
-
+            + self.df["Edge Density"]
+            + self.df["Strategy Robustness"]
+            + self.df["Execution Productivity"]
         ) / 4
-
 
     # ==================================================
     # INSTITUTIONAL GRADE
     # ==================================================
 
     def institutional_grade(self):
-
-        if (
-            "Institutional Readiness"
-            not in
-            self.df.columns
-        ):
-
+        if "Institutional Readiness" not in self.df.columns:
             return
 
+        score = self.df["Institutional Readiness"]
 
-        score = self.df[
-            "Institutional Readiness"
-        ]
+        conditions = [score >= 90, score >= 75, score >= 60, score >= 40]
 
+        choices = ["Institutional", "Professional", "Advanced", "Intermediate"]
 
-        conditions = [
-
-            score >= 90,
-
-            score >= 75,
-
-            score >= 60,
-
-            score >= 40
-
-        ]
-
-
-        choices = [
-
-            "Institutional",
-
-            "Professional",
-
-            "Advanced",
-
-            "Intermediate"
-
-        ]
-
-
-        self.df["Institutional Grade"] = np.select(
-
-            conditions,
-
-            choices,
-
-            default="Basic"
-
-        )
+        self.df["Institutional Grade"] = np.select(conditions, choices, default="Basic")
 
     # ==================================================
     # GENERATE
     # ==================================================
 
     def generate(self):
-
-        logger.info(
-
-            "Generating Institutional Metrics..."
-
-        )
-
+        logger.info("Generating Institutional Metrics...")
 
         self.capital_productivity()
 
@@ -375,19 +195,10 @@ class InstitutionalMetricsEngine:
 
         self.institutional_grade()
 
-
-        logger.info(
-
-            "Institutional metrics completed."
-
-        )
-
+        logger.info("Institutional metrics completed.")
 
         return self.df
 
 
 if __name__ == "__main__":
-
-    print(
-        "Import InstitutionalMetricsEngine inside feature_engine.py"
-    )
+    print("Import InstitutionalMetricsEngine inside feature_engine.py")

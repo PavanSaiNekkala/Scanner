@@ -17,7 +17,6 @@ import pandas as pd
 
 from core.logger import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -45,15 +44,8 @@ class ReliabilityMetricsEngine:
     Strategy Maturity
     """
 
-
-    def __init__(
-        self,
-        dataframe: pd.DataFrame
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
-
-
 
     # ==================================================
     # SAFE DIVIDE
@@ -61,314 +53,98 @@ class ReliabilityMetricsEngine:
 
     @staticmethod
     def safe_divide(a, b):
-
-        return np.where(
-
-            b == 0,
-
-            np.nan,
-
-            a / b
-
-        )
-
-
+        return np.where(b == 0, np.nan, a / b)
 
     # ==================================================
     # TRADES PER YEAR
     # ==================================================
 
     def trades_per_year(self):
+        required = {"Trades", "Years"}
 
-        required = {
-
-            "Trades",
-
-            "Years"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Trades / Year"] = (
-
-            self.safe_divide(
-
-                self.df["Trades"],
-
-                self.df["Years"]
-
-            )
-
-        )
-
-
+        self.df["Trades / Year"] = self.safe_divide(self.df["Trades"], self.df["Years"])
 
     # ==================================================
     # TRADES PER MONTH
     # ==================================================
 
     def trades_per_month(self):
-
         if "Trades / Year" not in self.df.columns:
-
             return
 
-
-
-        self.df["Trades / Month"] = (
-
-            self.df["Trades / Year"]
-
-            /
-
-            12
-
-        )
-
-
+        self.df["Trades / Month"] = self.df["Trades / Year"] / 12
 
     # ==================================================
     # TRADE CONFIDENCE
     # ==================================================
 
     def trade_confidence(self):
+        required = {"Trades", "Win%"}
 
-        required = {
-
-            "Trades",
-
-            "Win%"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Trade Confidence"] = (
-
-            self.df["Trades"]
-
-            *
-
-            self.df["Win%"]
-
-            /
-
-            100
-
-        )
-
-
+        self.df["Trade Confidence"] = self.df["Trades"] * self.df["Win%"] / 100
 
     # ==================================================
     # BACKTEST QUALITY
     # ==================================================
 
     def backtest_quality(self):
+        required = {"Trades", "Years"}
 
-        required = {
-
-            "Trades",
-
-            "Years"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Backtest Quality"] = (
-
-            self.df["Trades"]
-
-            *
-
-            self.df["Years"]
-
-        )
-
-
+        self.df["Backtest Quality"] = self.df["Trades"] * self.df["Years"]
 
     # ==================================================
     # SAMPLE RELIABILITY
     # ==================================================
 
     def sample_reliability(self):
+        required = {"Trades", "Years"}
 
-        required = {
-
-            "Trades",
-
-            "Years"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Sample Reliability"] = (
-
-            np.log1p(
-
-                self.df["Trades"]
-
-            )
-
-            *
-
-            self.df["Years"]
-
-        )
-
-
+        self.df["Sample Reliability"] = np.log1p(self.df["Trades"]) * self.df["Years"]
 
     # ==================================================
     # CONSISTENCY FACTOR
     # ==================================================
 
     def consistency_factor(self):
+        required = {"Win%", "Years"}
 
-        required = {
-
-            "Win%",
-
-            "Years"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Consistency Factor"] = (
-
-            self.df["Win%"]
-
-            *
-
-            self.df["Years"]
-
-            /
-
-            100
-
-        )
-
-
+        self.df["Consistency Factor"] = self.df["Win%"] * self.df["Years"] / 100
 
     # ==================================================
     # STRATEGY MATURITY
     # ==================================================
 
     def strategy_maturity(self):
+        required = {"Trades", "Years", "Win%"}
 
-        required = {
-
-            "Trades",
-
-            "Years",
-
-            "Win%"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
         self.df["Strategy Maturity"] = (
-
-            (
-
-                np.log1p(
-
-                    self.df["Trades"]
-
-                )
-
-                *
-
-                self.df["Years"]
-
-            )
-
-            *
-
-            (
-
-                self.df["Win%"]
-
-                /
-
-                100
-
-            )
-
-        )
-
-
+            np.log1p(self.df["Trades"]) * self.df["Years"]
+        ) * (self.df["Win%"] / 100)
 
     # ==================================================
     # GENERATE
     # ==================================================
 
     def generate(self):
-
-
-        logger.info(
-
-            "Generating Reliability Metrics..."
-
-        )
-
+        logger.info("Generating Reliability Metrics...")
 
         self.trades_per_year()
 
@@ -384,23 +160,10 @@ class ReliabilityMetricsEngine:
 
         self.strategy_maturity()
 
-
-
-        logger.info(
-
-            "Reliability Metrics completed."
-
-        )
-
+        logger.info("Reliability Metrics completed.")
 
         return self.df
 
 
-
 if __name__ == "__main__":
-
-    print(
-
-        "Import ReliabilityMetricsEngine"
-
-    )
+    print("Import ReliabilityMetricsEngine")

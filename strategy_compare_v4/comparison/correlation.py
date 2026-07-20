@@ -28,27 +28,22 @@ Outputs
 from __future__ import annotations
 
 import time
-from typing import Dict
 
 import numpy as np
 import pandas as pd
-
 from strategy_compare_v4.config.constants import (
-    REQUIRED_COMPARISON_COLUMNS,
     COMPOSITE_SCORE,
+    REQUIRED_COMPARISON_COLUMNS,
 )
-
 from strategy_compare_v4.utils.helpers import (
     require_columns,
 )
-
+from strategy_compare_v4.utils.logger import (
+    banner,
+    get_logger,
+)
 from strategy_compare_v4.utils.math_utils import (
     round_dataframe,
-)
-
-from strategy_compare_v4.utils.logger import (
-    get_logger,
-    banner,
 )
 
 logger = get_logger(__name__)
@@ -57,6 +52,7 @@ logger = get_logger(__name__)
 # ============================================================
 # Correlation Engine
 # ============================================================
+
 
 class CorrelationEngine:
     """
@@ -75,7 +71,6 @@ class CorrelationEngine:
         self,
         comparison_df: pd.DataFrame,
     ):
-
         self.df = comparison_df.copy()
 
         self.strategy_matrix = pd.DataFrame()
@@ -98,7 +93,7 @@ class CorrelationEngine:
 
         self.summary = pd.DataFrame()
 
-        self.diagnostic_report: Dict = {}
+        self.diagnostic_report: dict = {}
 
         self.execution_time: float = 0.0
 
@@ -107,79 +102,42 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def validate(self):
-
         """
         Validate comparison dataframe.
         """
 
         banner(
-
             logger,
-
             "Validating Correlation Input",
-
         )
 
         require_columns(
-
             self.df,
-
             REQUIRED_COMPARISON_COLUMNS,
-
         )
 
-        logger.info(
-
-            "Validation successful."
-
-        )
+        logger.info("Validation successful.")
 
         logger.info(
-
             "Rows       : %d",
-
             len(
-
                 self.df,
-
             ),
-
         )
 
         logger.info(
-
             "Stocks     : %d",
-
-            self.df[
-
-                "Stock"
-
-            ].nunique(),
-
+            self.df["Stock"].nunique(),
         )
 
         logger.info(
-
             "Strategies : %d",
-
-            self.df[
-
-                "Strategy"
-
-            ].nunique(),
-
+            self.df["Strategy"].nunique(),
         )
 
         logger.info(
-
             "Average Composite : %.2f",
-
-            self.df[
-
-                COMPOSITE_SCORE
-
-            ].mean(),
-
+            self.df[COMPOSITE_SCORE].mean(),
         )
 
         return self
@@ -189,53 +147,32 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def create_strategy_matrix(self):
-
         """
         Create Strategy vs Stock matrix.
         """
 
         self.strategy_matrix = (
-
-            self.df
-
-            .pivot_table(
-
+            self.df.pivot_table(
                 index="Stock",
-
                 columns="Strategy",
-
                 values=COMPOSITE_SCORE,
-
                 aggfunc="mean",
-
             )
-
             .sort_index()
-
             .sort_index(
-
                 axis=1,
-
             )
-
         )
 
         self.strategy_matrix = round_dataframe(
-
             self.strategy_matrix,
-
             decimals=4,
-
         )
 
         logger.info(
-
             "Strategy matrix created (%d × %d).",
-
             self.strategy_matrix.shape[0],
-
             self.strategy_matrix.shape[1],
-
         )
 
         return self
@@ -245,53 +182,32 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def create_stock_matrix(self):
-
         """
         Create Stock similarity matrix.
         """
 
         self.stock_matrix = (
-
-            self.df
-
-            .pivot_table(
-
+            self.df.pivot_table(
                 index="Strategy",
-
                 columns="Stock",
-
                 values=COMPOSITE_SCORE,
-
                 aggfunc="mean",
-
             )
-
             .sort_index()
-
             .sort_index(
-
                 axis=1,
-
             )
-
         )
 
         self.stock_matrix = round_dataframe(
-
             self.stock_matrix,
-
             decimals=4,
-
         )
 
         logger.info(
-
             "Stock matrix created (%d × %d).",
-
             self.stock_matrix.shape[0],
-
             self.stock_matrix.shape[1],
-
         )
 
         return self
@@ -301,37 +217,21 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def pearson_correlation(self):
-
         """
         Calculate Pearson correlation
         between strategies.
         """
 
-        self.pearson = (
-
-            self.strategy_matrix
-
-            .corr(
-
-                method="pearson",
-
-            )
-
+        self.pearson = self.strategy_matrix.corr(
+            method="pearson",
         )
 
         self.pearson = round_dataframe(
-
             self.pearson,
-
             decimals=4,
-
         )
 
-        logger.info(
-
-            "Pearson correlation calculated."
-
-        )
+        logger.info("Pearson correlation calculated.")
 
         return self
 
@@ -340,37 +240,21 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def spearman_correlation(self):
-
         """
         Calculate Spearman correlation
         between strategies.
         """
 
-        self.spearman = (
-
-            self.strategy_matrix
-
-            .corr(
-
-                method="spearman",
-
-            )
-
+        self.spearman = self.strategy_matrix.corr(
+            method="spearman",
         )
 
         self.spearman = round_dataframe(
-
             self.spearman,
-
             decimals=4,
-
         )
 
-        logger.info(
-
-            "Spearman correlation calculated."
-
-        )
+        logger.info("Spearman correlation calculated.")
 
         return self
 
@@ -379,46 +263,29 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def kendall_correlation(self):
-
         """
         Calculate Kendall correlation
         between strategies.
         """
 
-        self.kendall = (
-
-            self.strategy_matrix
-
-            .corr(
-
-                method="kendall",
-
-            )
-
+        self.kendall = self.strategy_matrix.corr(
+            method="kendall",
         )
 
         self.kendall = round_dataframe(
-
             self.kendall,
-
             decimals=4,
-
         )
 
-        logger.info(
-
-            "Kendall correlation calculated."
-
-        )
+        logger.info("Kendall correlation calculated.")
 
         return self
-    
+
     # ---------------------------------------------------------
     # Diversification Score
     # ---------------------------------------------------------
 
     def diversification_score(self):
-
         """
         Calculate institutional diversification
         score from the Pearson correlation matrix.
@@ -426,53 +293,40 @@ class CorrelationEngine:
 
         corr = self.pearson.copy()
 
+        matrix = corr.to_numpy(copy=True)
+
         np.fill_diagonal(
-
-            corr.values,
-
+            matrix,
             np.nan,
+        )
 
+        corr = pd.DataFrame(
+            matrix,
+            index=corr.index,
+            columns=corr.columns,
         )
 
         score = (
-
             1
-
-            -
-
-            corr.abs().mean()
-
+            - corr.abs().mean(
+                axis=1,
+                skipna=True,
+            )
         ) * 100
 
         self.diversification = pd.DataFrame(
-
             {
-
-                "Strategy":
-
-                    score.index,
-
-                "Diversification Score":
-
-                    score.values,
-
+                "Strategy": score.index,
+                "Diversification Score": score.values,
             }
-
         )
 
         self.diversification = round_dataframe(
-
             self.diversification,
-
             decimals=2,
-
         )
 
-        logger.info(
-
-            "Diversification scores calculated."
-
-        )
+        logger.info("Diversification scores calculated.")
 
         return self
 
@@ -481,65 +335,36 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def similarity_rank(self):
-
         """
         Rank strategies based on
         diversification score.
         """
 
-        self.diversification = (
-
-            self.diversification
-
-            .sort_values(
-
-                "Diversification Score",
-
-                ascending=False,
-
-            )
-
-            .reset_index(
-
-                drop=True,
-
-            )
-
+        self.diversification = self.diversification.sort_values(
+            "Diversification Score",
+            ascending=False,
+        ).reset_index(
+            drop=True,
         )
 
         self.diversification.insert(
-
             0,
-
             "Rank",
-
             np.arange(
-
                 1,
-
                 len(
-
                     self.diversification,
-
-                ) + 1,
-
+                )
+                + 1,
             ),
-
         )
 
         self.diversification = round_dataframe(
-
             self.diversification,
-
             decimals=2,
-
         )
 
-        logger.info(
-
-            "Diversification ranking generated."
-
-        )
+        logger.info("Diversification ranking generated.")
 
         return self
 
@@ -548,90 +373,39 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def summary_report(self):
-
         """
         Generate executive summary.
         """
 
         self.summary = pd.DataFrame(
-
             {
-
                 "Metric": [
-
                     "Strategies",
-
                     "Stocks",
-
                     "Average Diversification",
-
                     "Maximum Diversification",
-
                     "Minimum Diversification",
-
                 ],
-
                 "Value": [
-
-                    self.df[
-
-                        "Strategy"
-
-                    ].nunique(),
-
-                    self.df[
-
-                        "Stock"
-
-                    ].nunique(),
-
+                    self.df["Strategy"].nunique(),
+                    self.df["Stock"].nunique(),
                     round(
-
-                        self.diversification[
-
-                            "Diversification Score"
-
-                        ].mean(),
-
+                        self.diversification["Diversification Score"].mean(),
                         2,
-
                     ),
-
                     round(
-
-                        self.diversification[
-
-                            "Diversification Score"
-
-                        ].max(),
-
+                        self.diversification["Diversification Score"].max(),
                         2,
-
                     ),
-
                     round(
-
-                        self.diversification[
-
-                            "Diversification Score"
-
-                        ].min(),
-
+                        self.diversification["Diversification Score"].min(),
                         2,
-
                     ),
-
                 ],
-
             }
-
         )
 
-        logger.info(
-
-            "Executive summary generated."
-
-        )
+        logger.info("Executive summary generated.")
 
         return self
 
@@ -640,7 +414,6 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def classify_correlations(self):
-
         """
         Classify pairwise strategy
         correlations.
@@ -649,120 +422,66 @@ class CorrelationEngine:
         rows = []
 
         for strategy_a in self.pearson.index:
-
             for strategy_b in self.pearson.columns:
-
                 if strategy_a >= strategy_b:
-
                     continue
 
                 correlation = self.pearson.loc[
-
                     strategy_a,
-
                     strategy_b,
-
                 ]
 
                 if pd.isna(
-
                     correlation,
-
                 ):
-
                     continue
 
                 absolute = abs(
-
                     correlation,
-
                 )
 
                 if absolute >= 0.90:
-
                     strength = "Very High"
 
                 elif absolute >= 0.75:
-
                     strength = "High"
 
                 elif absolute >= 0.50:
-
                     strength = "Moderate"
 
                 elif absolute >= 0.25:
-
                     strength = "Low"
 
                 else:
-
                     strength = "Very Low"
 
                 rows.append(
-
                     {
-
-                        "Strategy A":
-
-                            strategy_a,
-
-                        "Strategy B":
-
-                            strategy_b,
-
-                        "Correlation":
-
-                            correlation,
-
-                        "Strength":
-
-                            strength,
-
+                        "Strategy A": strategy_a,
+                        "Strategy B": strategy_b,
+                        "Correlation": correlation,
+                        "Strength": strength,
                     }
-
                 )
 
         self.correlation_pairs = pd.DataFrame(
-
             rows,
-
         )
 
         if not self.correlation_pairs.empty:
-
-            self.correlation_pairs = (
-
-                self.correlation_pairs
-
-                .sort_values(
-
-                    "Correlation",
-
-                    ascending=False,
-
-                )
-
-                .reset_index(
-
-                    drop=True,
-
-                )
-
+            self.correlation_pairs = self.correlation_pairs.sort_values(
+                "Correlation",
+                ascending=False,
+            ).reset_index(
+                drop=True,
             )
 
             self.correlation_pairs = round_dataframe(
-
                 self.correlation_pairs,
-
                 decimals=4,
-
             )
 
-        logger.info(
-
-            "Correlation pairs classified."
-
-        )
+        logger.info("Correlation pairs classified.")
 
         return self
 
@@ -771,52 +490,26 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def detect_clusters(self):
-
         """
         Detect highly correlated
         strategy clusters.
         """
 
         if self.correlation_pairs.empty:
-
             self.cluster_report = pd.DataFrame()
 
         else:
-
-            self.cluster_report = (
-
-                self.correlation_pairs
-
-                .loc[
-
-                    self.correlation_pairs[
-
-                        "Correlation"
-
-                    ].abs()
-
-                    >= 0.80
-
-                ]
-
-                .reset_index(
-
-                    drop=True,
-
-                )
-
+            self.cluster_report = self.correlation_pairs.loc[
+                self.correlation_pairs["Correlation"].abs() >= 0.80
+            ].reset_index(
+                drop=True,
             )
 
         logger.info(
-
             "Detected %d highly correlated pairs.",
-
             len(
-
                 self.cluster_report,
-
             ),
-
         )
 
         return self
@@ -826,25 +519,17 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def heatmap_matrix(self):
-
         """
         Generate rounded heatmap
         correlation matrix.
         """
 
         self.heatmap = round_dataframe(
-
             self.pearson.copy(),
-
             decimals=3,
-
         )
 
-        logger.info(
-
-            "Heatmap matrix generated."
-
-        )
+        logger.info("Heatmap matrix generated.")
 
         return self
 
@@ -853,86 +538,31 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def diagnostics(self):
-
         """
         Generate execution diagnostics.
         """
 
         self.diagnostic_report = {
-
-            "Strategies":
-
-                self.df[
-
-                    "Strategy"
-
-                ].nunique(),
-
-            "Stocks":
-
-                self.df[
-
-                    "Stock"
-
-                ].nunique(),
-
-            "Average Diversification":
-
-                round(
-
-                    self.diversification[
-
-                        "Diversification Score"
-
-                    ].mean(),
-
-                    2,
-
-                ),
-
-            "Maximum Diversification":
-
-                round(
-
-                    self.diversification[
-
-                        "Diversification Score"
-
-                    ].max(),
-
-                    2,
-
-                ),
-
-            "Minimum Diversification":
-
-                round(
-
-                    self.diversification[
-
-                        "Diversification Score"
-
-                    ].min(),
-
-                    2,
-
-                ),
-
-            "Highly Correlated Pairs":
-
-                len(
-
-                    self.cluster_report,
-
-                ),
-
+            "Strategies": self.df["Strategy"].nunique(),
+            "Stocks": self.df["Stock"].nunique(),
+            "Average Diversification": round(
+                self.diversification["Diversification Score"].mean(),
+                2,
+            ),
+            "Maximum Diversification": round(
+                self.diversification["Diversification Score"].max(),
+                2,
+            ),
+            "Minimum Diversification": round(
+                self.diversification["Diversification Score"].min(),
+                2,
+            ),
+            "Highly Correlated Pairs": len(
+                self.cluster_report,
+            ),
         }
 
-        logger.info(
-
-            "Diagnostics generated."
-
-        )
+        logger.info("Diagnostics generated.")
 
         return self
 
@@ -941,37 +571,25 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def execution_report(self):
-
         """
         Log execution summary.
         """
 
         banner(
-
             logger,
-
             "Institutional Correlation Completed",
-
         )
 
         for key, value in self.diagnostic_report.items():
-
             logger.info(
-
                 "%-30s : %s",
-
                 key,
-
                 value,
-
             )
 
         logger.info(
-
             "Execution Time (s)           : %.3f",
-
             self.execution_time,
-
         )
 
         return self
@@ -981,73 +599,36 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def export(
-
         self,
-
         output_file: str = "Institutional_Correlation.xlsx",
-
     ):
-
         """
         Export all generated reports.
         """
 
         from strategy_compare_v4.utils.io_utils import (
-
             write_excel,
-
         )
 
         sheets = {
-
-            "Pearson":
-
-                self.pearson,
-
-            "Spearman":
-
-                self.spearman,
-
-            "Kendall":
-
-                self.kendall,
-
-            "Heatmap":
-
-                self.heatmap,
-
-            "Diversification":
-
-                self.diversification,
-
-            "Correlation Pairs":
-
-                self.correlation_pairs,
-
-            "Clusters":
-
-                self.cluster_report,
-
-            "Summary":
-
-                self.summary,
-
+            "Pearson": self.pearson,
+            "Spearman": self.spearman,
+            "Kendall": self.kendall,
+            "Heatmap": self.heatmap,
+            "Diversification": self.diversification,
+            "Correlation Pairs": self.correlation_pairs,
+            "Clusters": self.cluster_report,
+            "Summary": self.summary,
         }
 
         write_excel(
-
             sheets,
-
             output_file,
-
         )
 
         logger.info(
-
             "Correlation workbook exported -> %s",
-
             output_file,
-
         )
 
         return self
@@ -1057,45 +638,19 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def get_results(self):
-
         """
         Return all generated reports.
         """
 
         return {
-
-            "pearson":
-
-                self.pearson,
-
-            "spearman":
-
-                self.spearman,
-
-            "kendall":
-
-                self.kendall,
-
-            "heatmap":
-
-                self.heatmap,
-
-            "diversification":
-
-                self.diversification,
-
-            "pairs":
-
-                self.correlation_pairs,
-
-            "clusters":
-
-                self.cluster_report,
-
-            "summary":
-
-                self.summary,
-
+            "pearson": self.pearson,
+            "spearman": self.spearman,
+            "kendall": self.kendall,
+            "heatmap": self.heatmap,
+            "diversification": self.diversification,
+            "pairs": self.correlation_pairs,
+            "clusters": self.cluster_report,
+            "summary": self.summary,
         }
 
     # ---------------------------------------------------------
@@ -1103,7 +658,6 @@ class CorrelationEngine:
     # ---------------------------------------------------------
 
     def run(self):
-
         """
         Execute the complete
         correlation pipeline.
@@ -1112,63 +666,31 @@ class CorrelationEngine:
         start = time.perf_counter()
 
         try:
-
             (
-
-                self
-
-                .validate()
-
+                self.validate()
                 .create_strategy_matrix()
-
                 .create_stock_matrix()
-
                 .pearson_correlation()
-
                 .spearman_correlation()
-
                 .kendall_correlation()
-
                 .diversification_score()
-
                 .similarity_rank()
-
                 .summary_report()
-
                 .classify_correlations()
-
                 .detect_clusters()
-
                 .heatmap_matrix()
-
                 .diagnostics()
-
             )
 
         except Exception as exc:
+            logger.exception("Correlation Engine failed.")
 
-            logger.exception(
-
-                "Correlation Engine failed."
-
-            )
-
-            raise RuntimeError(
-
-                f"Correlation Engine failed:\n{exc}"
-
-            ) from exc
+            raise RuntimeError(f"Correlation Engine failed:\n{exc}") from exc
 
         finally:
-
             self.execution_time = round(
-
-                time.perf_counter()
-
-                - start,
-
+                time.perf_counter() - start,
                 3,
-
             )
 
         self.execution_report()
@@ -1180,35 +702,22 @@ class CorrelationEngine:
 # Convenience Function
 # ============================================================
 
+
 def analyze_correlations(
-
     comparison_df: pd.DataFrame,
-
     output_file: str = "Institutional_Correlation.xlsx",
-
 ) -> CorrelationEngine:
-
     """
     Execute the institutional
     correlation engine.
     """
 
-    engine = (
-
-        CorrelationEngine(
-
-            comparison_df,
-
-        )
-
-        .run()
-
-    )
+    engine = CorrelationEngine(
+        comparison_df,
+    ).run()
 
     engine.export(
-
         output_file,
-
     )
 
     return engine
@@ -1218,65 +727,41 @@ def analyze_correlations(
 # Main
 # ============================================================
 
-def main():
 
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-
-        description=(
-
-            "Institutional "
-
-            "Correlation Engine V4"
-
-        )
-
+        description=("Institutional Correlation Engine V4")
     )
 
     parser.add_argument(
-
         "--input",
-
         required=True,
-
         help="Comparison workbook",
-
     )
 
     parser.add_argument(
-
         "--output",
-
         default="Institutional_Correlation.xlsx",
-
         help="Output workbook",
-
     )
 
     args = parser.parse_args()
 
     from strategy_compare_v4.utils.io_utils import (
-
         read_excel,
-
     )
 
     comparison_df = read_excel(
-
         args.input,
-
     )
 
     analyze_correlations(
-
         comparison_df,
-
         args.output,
-
     )
 
 
 if __name__ == "__main__":
-
     main()

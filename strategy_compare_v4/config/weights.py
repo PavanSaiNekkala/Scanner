@@ -27,20 +27,20 @@ Guidelines
 
 from __future__ import annotations
 
-from config.constants import (
+from strategy_compare_v4.config.constants import (
     COMPOSITE_SCORE,
     EDGE_SCORE,
-    RELIABILITY_SCORE,
     EFFICIENCY_SCORE,
-    PROFIT_VELOCITY,
-    SIGNAL_QUALITY,
-    HOLDING_EFFICIENCY,
     EXPECTANCY,
+    HOLDING_EFFICIENCY,
+    LOSING_EXIT,
     PROFIT_FACTOR,
+    PROFIT_VELOCITY,
+    RELIABILITY_SCORE,
     REWARD_RISK,
+    SIGNAL_QUALITY,
     TRADES_PER_YEAR,
     WINNING_EXIT,
-    LOSING_EXIT,
 )
 
 # ============================================================
@@ -48,21 +48,12 @@ from config.constants import (
 # ============================================================
 
 COMPOSITE_WEIGHTS = {
-
-    EDGE_SCORE: 0.30,
-
-    RELIABILITY_SCORE: 0.25,
-
-    EFFICIENCY_SCORE: 0.20,
-
-    PROFIT_VELOCITY: 0.10,
-
-    SIGNAL_QUALITY: 0.05,
-
-    HOLDING_EFFICIENCY: 0.05,
-
-    EXPECTANCY: 0.05,
-
+    "Edge Score": 0.20,
+    "Reliability Score": 0.20,
+    "Risk Score": 0.15,
+    "Opportunity Score": 0.15,
+    "Efficiency Score": 0.15,
+    "Return Score": 0.15,
 }
 
 # ============================================================
@@ -70,15 +61,10 @@ COMPOSITE_WEIGHTS = {
 # ============================================================
 
 EDGE_WEIGHTS = {
-
     EXPECTANCY: 0.35,
-
     PROFIT_FACTOR: 0.30,
-
     REWARD_RISK: 0.20,
-
     PROFIT_VELOCITY: 0.15,
-
 }
 
 # ============================================================
@@ -86,15 +72,10 @@ EDGE_WEIGHTS = {
 # ============================================================
 
 RELIABILITY_WEIGHTS = {
-
     TRADES_PER_YEAR: 0.30,
-
     WINNING_EXIT: 0.25,
-
     LOSING_EXIT: 0.20,
-
     SIGNAL_QUALITY: 0.25,
-
 }
 
 # ============================================================
@@ -102,13 +83,9 @@ RELIABILITY_WEIGHTS = {
 # ============================================================
 
 EFFICIENCY_WEIGHTS = {
-
     HOLDING_EFFICIENCY: 0.40,
-
     PROFIT_VELOCITY: 0.30,
-
     EXPECTANCY: 0.30,
-
 }
 
 # ============================================================
@@ -116,13 +93,9 @@ EFFICIENCY_WEIGHTS = {
 # ============================================================
 
 PORTFOLIO_WEIGHTS = {
-
     COMPOSITE_SCORE: 0.60,
-
     RELIABILITY_SCORE: 0.20,
-
     EDGE_SCORE: 0.20,
-
 }
 
 # ============================================================
@@ -130,15 +103,10 @@ PORTFOLIO_WEIGHTS = {
 # ============================================================
 
 LEADERBOARD_WEIGHTS = {
-
     COMPOSITE_SCORE: 0.50,
-
     EDGE_SCORE: 0.20,
-
     RELIABILITY_SCORE: 0.15,
-
     EFFICIENCY_SCORE: 0.15,
-
 }
 
 # ============================================================
@@ -146,15 +114,10 @@ LEADERBOARD_WEIGHTS = {
 # ============================================================
 
 ROBUSTNESS_WEIGHTS = {
-
     "Composite Consistency": 0.35,
-
     "Expectancy Stability": 0.25,
-
     "Profit Factor Stability": 0.20,
-
     "Reward Risk Stability": 0.20,
-
 }
 
 # ============================================================
@@ -162,11 +125,7 @@ ROBUSTNESS_WEIGHTS = {
 # ============================================================
 
 CORRELATION_WEIGHTS = {
-
     "Pearson": 0.50,
-
     "Spearman": 0.30,
-
     "Kendall": 0.20,
-
 }

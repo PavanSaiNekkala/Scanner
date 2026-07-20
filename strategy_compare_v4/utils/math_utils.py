@@ -30,10 +30,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-
 # ============================================================
 # Numeric Conversion
 # ============================================================
+
 
 def numeric(
     series: pd.Series | Any,
@@ -53,32 +53,40 @@ def numeric(
 # Safe Division
 # ============================================================
 
-def safe_divide(
-    numerator: Any,
-    denominator: Any,
-    default: float = 0.0,
-) -> np.ndarray:
+
+def safe_divide(a, b):
     """
-    Divide safely while avoiding divide-by-zero.
+    Safe element-wise division.
+
+    • Preserves pandas Series/DataFrame type.
+    • Returns 0 where denominator is 0 or NaN.
+    • Supports scalars, numpy arrays and pandas objects.
     """
 
-    numerator = np.asarray(numerator, dtype=float)
+    if isinstance(a, (pd.Series, pd.DataFrame)):
+        denominator = (
+            b.replace(0, np.nan) if isinstance(b, (pd.Series, pd.DataFrame)) else b
+        )
 
-    denominator = np.asarray(
-        denominator,
-        dtype=float,
-    )
+        result = a.divide(denominator)
 
-    return np.where(
-        denominator != 0,
-        numerator / denominator,
-        default,
+        return result.fillna(0)
+
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+
+    return np.divide(
+        a,
+        b,
+        out=np.zeros_like(a, dtype=float),
+        where=(b != 0) & (~np.isnan(b)),
     )
 
 
 # ============================================================
 # Min-Max Normalization
 # ============================================================
+
 
 def normalize(
     series: pd.Series,
@@ -105,17 +113,13 @@ def normalize(
             index=series.index,
         )
 
-    return (
-        (series - minimum)
-        /
-        (maximum - minimum)
-        * 100
-    )
+    return (series - minimum) / (maximum - minimum) * 100
 
 
 # ============================================================
 # Reverse Normalization
 # ============================================================
+
 
 def reverse_normalize(
     series: pd.Series,
@@ -132,6 +136,7 @@ def reverse_normalize(
 # Percentile Rank
 # ============================================================
 
+
 def percentile_rank(
     series: pd.Series,
 ) -> pd.Series:
@@ -139,16 +144,15 @@ def percentile_rank(
     Percentile ranking (0-100).
     """
 
-    return (
-        numeric(series)
-        .rank(pct=True)
-        * 100
-    )
+    ranked = numeric(series).rank(pct=True)
+
+    return ranked.mul(100.0)
 
 
 # ============================================================
 # Z-Score
 # ============================================================
+
 
 def z_score(
     series: pd.Series,
@@ -167,14 +171,13 @@ def z_score(
             index=series.index,
         )
 
-    return (
-        series - series.mean()
-    ) / std
+    return (series - series.mean()) / std
 
 
 # ============================================================
 # Coefficient of Variation
 # ============================================================
+
 
 def coefficient_of_variation(
     series: pd.Series,
@@ -190,14 +193,13 @@ def coefficient_of_variation(
     if mean == 0 or pd.isna(mean):
         return np.nan
 
-    return float(
-        series.std() / mean
-    )
+    return float(series.std() / mean)
 
 
 # ============================================================
 # Winsorization
 # ============================================================
+
 
 def winsorize(
     series: pd.Series,
@@ -222,6 +224,7 @@ def winsorize(
 # Clamp
 # ============================================================
 
+
 def clamp(
     series: pd.Series,
     minimum: float = 0.0,
@@ -240,6 +243,7 @@ def clamp(
 # ============================================================
 # Weighted Average
 # ============================================================
+
 
 def weighted_average(
     values: Any,
@@ -273,6 +277,7 @@ def weighted_average(
 # CAGR
 # ============================================================
 
+
 def cagr(
     beginning: float,
     ending: float,
@@ -282,23 +287,16 @@ def cagr(
     Compute Compound Annual Growth Rate.
     """
 
-    if (
-        beginning <= 0
-        or ending <= 0
-        or years <= 0
-    ):
+    if beginning <= 0 or ending <= 0 or years <= 0:
         return np.nan
 
-    return (
-        (ending / beginning)
-        ** (1 / years)
-        - 1
-    )
+    return (ending / beginning) ** (1 / years) - 1
 
 
 # ============================================================
 # Round DataFrame
 # ============================================================
+
 
 def round_dataframe(
     df: pd.DataFrame,
@@ -314,9 +312,6 @@ def round_dataframe(
         include="number",
     ).columns
 
-    df[numeric_columns] = (
-        df[numeric_columns]
-        .round(decimals)
-    )
+    df[numeric_columns] = df[numeric_columns].round(decimals)
 
     return df

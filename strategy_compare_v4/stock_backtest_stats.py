@@ -1,6 +1,7 @@
 from pathlib import Path
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 
 ROOT = Path("/workspaces/Scanner/strategy_compare_v3")
 
@@ -8,7 +9,6 @@ ROOT = Path("/workspaces/Scanner/strategy_compare_v3")
 backtest_dirs = sorted(ROOT.glob("backtest_*"))
 
 for folder in backtest_dirs:
-
     print(f"\nProcessing {folder.name}")
 
     csv_files = sorted(folder.glob("*.csv"))
@@ -19,9 +19,7 @@ for folder in backtest_dirs:
     output_excel = folder / f"{folder.name}_Statistics.xlsx"
 
     with pd.ExcelWriter(output_excel, engine="openpyxl") as writer:
-
         for csv in csv_files:
-
             print(f"   {csv.name}")
 
             df = pd.read_csv(csv)
@@ -55,15 +53,13 @@ for folder in backtest_dirs:
                 stats["Std Dev"] / stats["Mean"] * 100,
                 np.nan,
             )
-            stats["Std Error"] = (
-                stats["Std Dev"] / np.sqrt(stats["Count"])
-            )
+            stats["Std Error"] = stats["Std Dev"] / np.sqrt(stats["Count"])
 
-            stats["5%"] = numeric.quantile(.05)
-            stats["10%"] = numeric.quantile(.10)
-            stats["90%"] = numeric.quantile(.90)
-            stats["95%"] = numeric.quantile(.95)
-            stats["99%"] = numeric.quantile(.99)
+            stats["5%"] = numeric.quantile(0.05)
+            stats["10%"] = numeric.quantile(0.10)
+            stats["90%"] = numeric.quantile(0.90)
+            stats["95%"] = numeric.quantile(0.95)
+            stats["99%"] = numeric.quantile(0.99)
 
             stats = stats.round(4)
 

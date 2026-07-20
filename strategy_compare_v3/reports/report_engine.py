@@ -44,15 +44,11 @@ class ReportEngine:
         dataframe: pd.DataFrame,
         output_directory: str = "outputs/excel",
     ):
-
         self.df = dataframe.copy()
 
         self.output_directory = Path(output_directory)
 
-        self.output_directory.mkdir(
-            parents=True,
-            exist_ok=True
-        )
+        self.output_directory.mkdir(parents=True, exist_ok=True)
 
         self.execution_time = 0.0
 
@@ -61,55 +57,32 @@ class ReportEngine:
     # -----------------------------------------------------
 
     def summary_report(self):
+        logger.info("Generating Summary Report...")
 
-        logger.info(
-            "Generating Summary Report..."
-        )
-
-        return SummaryReport(
-            self.df
-        ).generate()
+        return SummaryReport(self.df).generate()
 
     # -----------------------------------------------------
 
     def institutional_report(self):
+        logger.info("Generating Institutional Report...")
 
-        logger.info(
-            "Generating Institutional Report..."
-        )
-
-        return InstitutionalReport(
-            self.df
-        ).generate()
+        return InstitutionalReport(self.df).generate()
 
     # -----------------------------------------------------
 
-    def excel_report(
-        self,
-        report_dictionary: Dict[str, pd.DataFrame]
-    ):
+    def excel_report(self, report_dictionary: Dict[str, pd.DataFrame]):
+        logger.info("Generating Excel Workbook...")
 
-        logger.info(
-            "Generating Excel Workbook..."
-        )
+        exporter = ExcelReport(output_directory=self.output_directory)
 
-        exporter = ExcelReport(
-            output_directory=self.output_directory
-        )
-
-        return exporter.generate(
-            report_dictionary
-        )
+        return exporter.generate(report_dictionary)
 
     # -----------------------------------------------------
 
     def run(self):
-
         logger.info("=" * 80)
 
-        logger.info(
-            "Starting Report Engine..."
-        )
+        logger.info("Starting Report Engine...")
 
         start = time.perf_counter()
 
@@ -139,47 +112,20 @@ class ReportEngine:
         # Excel Export
         # ---------------------------------------------
 
-        excel_file = self.excel_report(
-            workbook
-        )
+        excel_file = self.excel_report(workbook)
 
         # ---------------------------------------------
 
-        self.execution_time = round(
-
-            time.perf_counter() - start,
-
-            3
-
-        )
+        self.execution_time = round(time.perf_counter() - start, 3)
 
         self.results = {
-
-            "Summary Report":
-
-                summary,
-
-            "Institutional Report":
-
-                institutional,
-
-            "Excel File":
-
-                excel_file,
-
-            "Execution Time":
-
-                self.execution_time
-
+            "Summary Report": summary,
+            "Institutional Report": institutional,
+            "Excel File": excel_file,
+            "Execution Time": self.execution_time,
         }
 
-        logger.info(
-
-            "Report Engine completed in %.3f sec.",
-
-            self.execution_time
-
-        )
+        logger.info("Report Engine completed in %.3f sec.", self.execution_time)
 
         logger.info("=" * 80)
 
@@ -188,40 +134,20 @@ class ReportEngine:
     # -----------------------------------------------------
 
     def summary(self):
-
         return {
-
             "Reports Generated": [
-
                 "Summary Report",
-
                 "Institutional Report",
-
-                "Excel Workbook"
-
+                "Excel Workbook",
             ],
-
-            "Execution Time":
-
-                self.execution_time
-
+            "Execution Time": self.execution_time,
         }
 
     # -----------------------------------------------------
 
     def get_excel_file(self):
-
-        return self.results.get(
-
-            "Excel File"
-
-        )
+        return self.results.get("Excel File")
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside main.py"
-
-    )
+    print("Import inside main.py")

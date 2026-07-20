@@ -25,10 +25,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from utils.io_utils import (
-    find_backtest_files,
-    write_excel,
-)
 from utils.logger import (
     banner,
     get_logger,
@@ -41,6 +37,7 @@ logger = get_logger(__name__)
 # ============================================================
 # Statistics Engine
 # ============================================================
+
 
 def build_statistics(
     df: pd.DataFrame,
@@ -97,10 +94,7 @@ def build_statistics(
         np.nan,
     )
 
-    stats["Std Error"] = (
-        stats["Std Dev"] /
-        np.sqrt(stats["Count"])
-    )
+    stats["Std Error"] = stats["Std Dev"] / np.sqrt(stats["Count"])
 
     stats["5%"] = numeric.quantile(0.05)
 
@@ -114,9 +108,11 @@ def build_statistics(
 
     return round_dataframe(stats, 4)
 
+
 # ============================================================
 # Folder Processing
 # ============================================================
+
 
 def process_folder(
     folder: Path,
@@ -131,25 +127,17 @@ def process_folder(
     csv_files = sorted(folder.glob("*.csv"))
 
     if not csv_files:
-
-        logger.warning(
-            "No CSV files found."
-        )
+        logger.warning("No CSV files found.")
 
         return
 
-    output_excel = (
-        folder /
-        f"{folder.name}_Statistics.xlsx"
-    )
+    output_excel = folder / f"{folder.name}_Statistics.xlsx"
 
     with pd.ExcelWriter(
         output_excel,
         engine="openpyxl",
     ) as writer:
-
         for csv in csv_files:
-
             logger.info(
                 "Reading %s",
                 csv.name,
@@ -160,13 +148,9 @@ def process_folder(
             stats = build_statistics(df)
 
             if stats.empty:
-
                 continue
 
-            sheet = (
-                csv.stem
-                .replace("_backtest_", "_")
-            )[:31]
+            sheet = (csv.stem.replace("_backtest_", "_"))[:31]
 
             stats.to_excel(
                 writer,
@@ -178,12 +162,13 @@ def process_folder(
         output_excel.name,
     )
 
+
 # ============================================================
 # Main
 # ============================================================
 
-def main() -> None:
 
+def main() -> None:
     banner(
         logger,
         "BACKTEST STATISTICS",
@@ -193,9 +178,7 @@ def main() -> None:
 
     root = Path.cwd()
 
-    backtest_dirs = sorted(
-        root.glob("backtest_*")
-    )
+    backtest_dirs = sorted(root.glob("backtest_*"))
 
     logger.info(
         "Found %d strategy folders.",
@@ -203,7 +186,6 @@ def main() -> None:
     )
 
     for folder in backtest_dirs:
-
         process_folder(folder)
 
     log_execution_time(
@@ -214,21 +196,13 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-
     try:
-
         main()
 
     except KeyboardInterrupt:
-
-        logger.warning(
-            "Execution cancelled."
-        )
+        logger.warning("Execution cancelled.")
 
     except Exception:
-
-        logger.exception(
-            "Statistics generation failed."
-        )
+        logger.exception("Statistics generation failed.")
 
         raise

@@ -34,7 +34,6 @@ class RobustnessAnalysis:
         dataframe: pd.DataFrame,
         objective_function: Callable,
     ):
-
         self.df = dataframe.copy()
 
         self.objective_function = objective_function
@@ -46,178 +45,57 @@ class RobustnessAnalysis:
         scenario_name: str,
         transformation: Callable[[pd.DataFrame], pd.DataFrame],
     ) -> Dict:
+        logger.info("Running scenario: %s", scenario_name)
 
-        logger.info(
+        modified = transformation(self.df.copy())
 
-            "Running scenario: %s",
+        score = self.objective_function(modified)
 
-            scenario_name
-
-        )
-
-        modified = transformation(
-
-            self.df.copy()
-
-        )
-
-        score = self.objective_function(
-
-            modified
-
-        )
-
-        return {
-
-            "Scenario":
-
-                scenario_name,
-
-            "Score":
-
-                score
-
-        }
+        return {"Scenario": scenario_name, "Score": score}
 
     # --------------------------------------------------
 
-    def run(
-        self,
-        scenarios: Dict[str, Callable]
-    ) -> pd.DataFrame:
-
-        logger.info(
-
-            "Running Robustness Analysis..."
-
-        )
+    def run(self, scenarios: Dict[str, Callable]) -> pd.DataFrame:
+        logger.info("Running Robustness Analysis...")
 
         results = []
 
         for name, transform in scenarios.items():
+            results.append(self.run_scenario(name, transform))
 
-            results.append(
-
-                self.run_scenario(
-
-                    name,
-
-                    transform
-
-                )
-
-            )
-
-        results = pd.DataFrame(
-
-            results
-
-        )
+        results = pd.DataFrame(results)
 
         baseline = results.iloc[0]["Score"]
 
-        results["Deviation"] = (
+        results["Deviation"] = results["Score"] - baseline
 
-            results["Score"]
+        results["Deviation %"] = results["Deviation"] / baseline * 100
 
-            - baseline
+        robustness = 100 - results["Deviation %"].abs().mean()
 
-        )
+        results.attrs["Robustness Score"] = round(robustness, 2)
 
-        results["Deviation %"] = (
-
-            results["Deviation"]
-
-            /
-
-            baseline
-
-            * 100
-
-        )
-
-        robustness = (
-
-            100
-
-            -
-
-            results["Deviation %"]
-
-            .abs()
-
-            .mean()
-
-        )
-
-        results.attrs["Robustness Score"] = round(
-
-            robustness,
-
-            2
-
-        )
-
-        logger.info(
-
-            "Robustness Score = %.2f",
-
-            robustness
-
-        )
+        logger.info("Robustness Score = %.2f", robustness)
 
         return results
 
     # --------------------------------------------------
 
     @staticmethod
-    def summary(
-        results: pd.DataFrame
-    ) -> pd.DataFrame:
-
-        return pd.DataFrame({
-
-            "Metric": [
-
-                "Mean",
-
-                "Std",
-
-                "Minimum",
-
-                "Maximum",
-
-                "Robustness Score"
-
-            ],
-
-            "Value": [
-
-                results["Score"].mean(),
-
-                results["Score"].std(),
-
-                results["Score"].min(),
-
-                results["Score"].max(),
-
-                results.attrs.get(
-
-                    "Robustness Score",
-
-                    np.nan
-
-                )
-
-            ]
-
-        })
+    def summary(results: pd.DataFrame) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "Metric": ["Mean", "Std", "Minimum", "Maximum", "Robustness Score"],
+                "Value": [
+                    results["Score"].mean(),
+                    results["Score"].std(),
+                    results["Score"].min(),
+                    results["Score"].max(),
+                    results.attrs.get("Robustness Score", np.nan),
+                ],
+            }
+        )
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside optimization_engine.py"
-
-    )
+    print("Import inside optimization_engine.py")

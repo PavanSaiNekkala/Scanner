@@ -24,15 +24,16 @@ Provides
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import pandas as pd
-
 
 # ============================================================
 # Column Validation
 # ============================================================
+
 
 def require_columns(
     df: pd.DataFrame,
@@ -47,22 +48,16 @@ def require_columns(
         If one or more required columns are missing.
     """
 
-    missing = [
-        column
-        for column in required_columns
-        if column not in df.columns
-    ]
+    missing = [column for column in required_columns if column not in df.columns]
 
     if missing:
-        raise ValueError(
-            "Missing required columns:\n"
-            + "\n".join(sorted(missing))
-        )
+        raise ValueError("Missing required columns:\n" + "\n".join(sorted(missing)))
 
 
 # ============================================================
 # DataFrame Copy
 # ============================================================
+
 
 def copy_dataframe(
     df: pd.DataFrame,
@@ -78,6 +73,7 @@ def copy_dataframe(
 # Empty DataFrame
 # ============================================================
 
+
 def is_empty(
     df: pd.DataFrame | None,
 ) -> bool:
@@ -91,6 +87,7 @@ def is_empty(
 # ============================================================
 # Ensure Directory
 # ============================================================
+
 
 def ensure_directory(
     directory: str | Path,
@@ -113,6 +110,7 @@ def ensure_directory(
 # Safe Sorting
 # ============================================================
 
+
 def sort_dataframe(
     df: pd.DataFrame,
     column: str,
@@ -128,18 +126,16 @@ def sort_dataframe(
     if column not in df.columns:
         return df
 
-    return (
-        df.sort_values(
-            by=column,
-            ascending=ascending,
-        )
-        .reset_index(drop=True)
-    )
+    return df.sort_values(
+        by=column,
+        ascending=ascending,
+    ).reset_index(drop=True)
 
 
 # ============================================================
 # Move Column
 # ============================================================
+
 
 def move_column(
     df: pd.DataFrame,
@@ -166,6 +162,7 @@ def move_column(
 # First Existing Column
 # ============================================================
 
+
 def first_existing_column(
     df: pd.DataFrame,
     candidates: Iterable[str],
@@ -175,11 +172,7 @@ def first_existing_column(
     """
 
     return next(
-        (
-            column
-            for column in candidates
-            if column in df.columns
-        ),
+        (column for column in candidates if column in df.columns),
         None,
     )
 
@@ -187,6 +180,7 @@ def first_existing_column(
 # ============================================================
 # Safe Rename
 # ============================================================
+
 
 def safe_rename(
     df: pd.DataFrame,
@@ -196,11 +190,7 @@ def safe_rename(
     Rename only columns that exist.
     """
 
-    valid_mapping = {
-        old: new
-        for old, new in mapping.items()
-        if old in df.columns
-    }
+    valid_mapping = {old: new for old, new in mapping.items() if old in df.columns}
 
     return df.rename(columns=valid_mapping)
 
@@ -208,6 +198,7 @@ def safe_rename(
 # ============================================================
 # DataFrame Summary
 # ============================================================
+
 
 def dataframe_summary(
     df: pd.DataFrame,

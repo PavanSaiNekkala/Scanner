@@ -14,26 +14,8 @@ import pandas as pd
 
 
 class Tables:
-
     @staticmethod
-    def dataframe(
+    def dataframe(dataframe: pd.DataFrame, title: str):
+        st.subheader(title)
 
-        dataframe: pd.DataFrame,
-
-        title: str
-
-    ):
-
-        st.subheader(
-
-            title
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            use_container_width=True
-
-        )
+        st.dataframe(dataframe, use_container_width=True)

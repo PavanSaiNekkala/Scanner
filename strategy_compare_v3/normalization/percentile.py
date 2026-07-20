@@ -38,19 +38,10 @@ class PercentileNormalization:
     • Stable across different datasets
     """
 
-    def __init__(
-        self,
-        dataframe: pd.DataFrame
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
 
-        self.numeric_columns = (
-            self.df
-            .select_dtypes(include=np.number)
-            .columns
-            .tolist()
-        )
+        self.numeric_columns = self.df.select_dtypes(include=np.number).columns.tolist()
 
         self.summary_df = pd.DataFrame()
 
@@ -59,35 +50,20 @@ class PercentileNormalization:
     # ==================================================
 
     def generate(self) -> pd.DataFrame:
-
-        logger.info(
-            "Running Percentile Normalization..."
-        )
+        logger.info("Running Percentile Normalization...")
 
         normalized = self.df.copy()
 
         if self.numeric_columns:
-
             normalized[self.numeric_columns] = (
-
                 normalized[self.numeric_columns]
-
-                .replace(
-
-                    [np.inf, -np.inf],
-
-                    np.nan
-
-                )
-
+                .replace([np.inf, -np.inf], np.nan)
                 .astype(np.float64)
-
             )
 
         summary = []
 
         for column in self.numeric_columns:
-
             series = normalized[column]
 
             valid = series.notna()
@@ -99,16 +75,7 @@ class PercentileNormalization:
             # ------------------------------------------
 
             if values.empty:
-
-                logger.warning(
-
-                    "Skipping '%s' "
-
-                    "(all values are NaN).",
-
-                    column
-
-                )
+                logger.warning("Skipping '%s' (all values are NaN).", column)
 
                 continue
 
@@ -117,31 +84,16 @@ class PercentileNormalization:
             # ------------------------------------------
 
             if values.nunique(dropna=True) <= 1:
+                normalized.loc[valid, column] = 100.0
 
-                normalized.loc[
-                    valid,
-                    column
-                ] = 100.0
-
-                summary.append({
-
-                    "Feature":
-
-                        column,
-
-                    "Minimum Percentile":
-
-                        100.0,
-
-                    "Maximum Percentile":
-
-                        100.0,
-
-                    "Average Percentile":
-
-                        100.0
-
-                })
+                summary.append(
+                    {
+                        "Feature": column,
+                        "Minimum Percentile": 100.0,
+                        "Maximum Percentile": 100.0,
+                        "Average Percentile": 100.0,
+                    }
+                )
 
                 continue
 
@@ -149,100 +101,24 @@ class PercentileNormalization:
             # Rank
             # ------------------------------------------
 
-            ranks = rankdata(
+            ranks = rankdata(values, method="average")
 
-                values,
+            percentiles = (ranks - 1) / (len(values) - 1) * 100.0
 
-                method="average"
+            normalized.loc[valid, column] = percentiles.astype(np.float64)
 
+            summary.append(
+                {
+                    "Feature": column,
+                    "Minimum Percentile": round(float(np.nanmin(percentiles)), 2),
+                    "Maximum Percentile": round(float(np.nanmax(percentiles)), 2),
+                    "Average Percentile": round(float(np.nanmean(percentiles)), 2),
+                }
             )
 
-            percentiles = (
+        self.summary_df = pd.DataFrame(summary)
 
-                (ranks - 1)
-
-                /
-
-                (len(values) - 1)
-
-                *
-
-                100.0
-
-            )
-
-            normalized.loc[
-                valid,
-                column
-            ] = percentiles.astype(
-                np.float64
-            )
-
-            summary.append({
-
-                "Feature":
-
-                    column,
-
-                "Minimum Percentile":
-
-                    round(
-
-                        float(
-
-                            np.nanmin(
-                                percentiles
-                            )
-
-                        ),
-
-                        2
-
-                    ),
-
-                "Maximum Percentile":
-
-                    round(
-
-                        float(
-
-                            np.nanmax(
-                                percentiles
-                            )
-
-                        ),
-
-                        2
-
-                    ),
-
-                "Average Percentile":
-
-                    round(
-
-                        float(
-
-                            np.nanmean(
-                                percentiles
-                            )
-
-                        ),
-
-                        2
-
-                    )
-
-            })
-
-        self.summary_df = pd.DataFrame(
-            summary
-        )
-
-        logger.info(
-
-            "Percentile normalization completed."
-
-        )
+        logger.info("Percentile normalization completed.")
 
         return normalized
 
@@ -251,7 +127,6 @@ class PercentileNormalization:
     # ==================================================
 
     def statistics(self) -> pd.DataFrame:
-
         return self.summary_df.copy()
 
     # ==================================================
@@ -259,25 +134,10 @@ class PercentileNormalization:
     # ==================================================
 
     def summary(self):
-
         return {
-
-            "Method":
-
-                "Percentile",
-
-            "Numeric Features":
-
-                len(
-                    self.numeric_columns
-                ),
-
-            "Normalized Features":
-
-                len(
-                    self.summary_df
-                )
-
+            "Method": "Percentile",
+            "Numeric Features": len(self.numeric_columns),
+            "Normalized Features": len(self.summary_df),
         }
 
 
@@ -286,7 +146,4 @@ class PercentileNormalization:
 # ==========================================================
 
 if __name__ == "__main__":
-
-    print(
-        "Import this module inside normalization_engine.py"
-    )
+    print("Import this module inside normalization_engine.py")

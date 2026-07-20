@@ -67,17 +67,11 @@ Z_SCORE_THRESHOLD = 3.0
 # ==========================================================
 
 QUALITY_WEIGHTS = {
-
     "missing": 0.30,
-
     "duplicates": 0.20,
-
     "datatype": 0.15,
-
     "outliers": 0.20,
-
-    "consistency": 0.15
-
+    "consistency": 0.15,
 }
 
 # ==========================================================
@@ -119,15 +113,10 @@ SHEET_QUALITY = "Quality Score"
 # ==========================================================
 
 NUMERIC_DTYPES = [
-
     "int64",
-
     "float64",
-
     "int32",
-
     "float32",
-
 ]
 
 # ==========================================================
@@ -140,17 +129,7 @@ DEFAULT_REPORT_NAME = "Data_Profile_Report.xlsx"
 # LOGGING
 # ==========================================================
 
-LOG_FORMAT = (
-
-    "%(asctime)s | "
-
-    "%(levelname)s | "
-
-    "%(name)s | "
-
-    "%(message)s"
-
-)
+LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 
 LOG_LEVEL = "INFO"
 

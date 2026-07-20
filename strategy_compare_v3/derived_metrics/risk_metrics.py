@@ -17,7 +17,6 @@ import pandas as pd
 
 from core.logger import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -49,14 +48,8 @@ class RiskMetricsEngine:
     Risk Efficiency
     """
 
-
-    def __init__(
-        self,
-        dataframe: pd.DataFrame
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
-
 
     # ==================================================
     # SAFE DIVIDE
@@ -64,290 +57,104 @@ class RiskMetricsEngine:
 
     @staticmethod
     def safe_divide(a, b):
-
-        return np.where(
-
-            b == 0,
-
-            np.nan,
-
-            a / b
-
-        )
-
+        return np.where(b == 0, np.nan, a / b)
 
     # ==================================================
     # RISK EXPOSURE
     # ==================================================
 
     def risk_exposure(self):
+        required = {"Loss %", "Avg loss%"}
 
-        required = {
-
-            "Loss %",
-
-            "Avg loss%"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Risk Exposure"] = (
-
-            self.df["Loss %"]
-
-            *
-
-            self.df["Avg loss%"].abs()
-
-            /
-
-            100
-
-        )
-
-
+        self.df["Risk Exposure"] = self.df["Loss %"] * self.df["Avg loss%"].abs() / 100
 
     # ==================================================
     # RISK ADJUSTED EXPECTANCY
     # ==================================================
 
     def risk_adjusted_expectancy(self):
+        required = {"Expectancy%", "Avg loss%"}
 
-        required = {
-
-            "Expectancy%",
-
-            "Avg loss%"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Risk Adjusted Expectancy"] = (
-
-            self.safe_divide(
-
-                self.df["Expectancy%"],
-
-                self.df["Avg loss%"].abs()
-
-            )
-
+        self.df["Risk Adjusted Expectancy"] = self.safe_divide(
+            self.df["Expectancy%"], self.df["Avg loss%"].abs()
         )
-
-
 
     # ==================================================
     # RISK REWARD QUALITY
     # ==================================================
 
     def risk_reward_quality(self):
+        required = {"Reward Risk Ratio", "Win%"}
 
-        required = {
-
-            "Reward Risk Ratio",
-
-            "Win%"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
         self.df["Risk Reward Quality"] = (
-
-            self.df["Reward Risk Ratio"]
-
-            *
-
-            self.df["Win%"]
-
-            /
-
-            100
-
+            self.df["Reward Risk Ratio"] * self.df["Win%"] / 100
         )
-
-
 
     # ==================================================
     # STOP EFFICIENCY
     # ==================================================
 
     def stop_efficiency(self):
-
         if "Stop %" not in self.df.columns:
-
             return
 
-
-
-        self.df["Stop Efficiency"] = (
-
-            100
-
-            -
-
-            self.df["Stop %"].abs()
-
-        )
-
-
+        self.df["Stop Efficiency"] = 100 - self.df["Stop %"].abs()
 
     # ==================================================
     # LOSS PRESSURE
     # ==================================================
 
     def loss_pressure(self):
+        required = {"Loss %", "Avg loss%"}
 
-        required = {
-
-            "Loss %",
-
-            "Avg loss%"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Loss Pressure"] = (
-
-            self.df["Loss %"]
-
-            *
-
-            self.df["Avg loss%"].abs()
-
-        )
-
-
+        self.df["Loss Pressure"] = self.df["Loss %"] * self.df["Avg loss%"].abs()
 
     # ==================================================
     # RECOVERY FACTOR
     # ==================================================
 
     def recovery_factor(self):
+        required = {"Expectancy%", "Risk Exposure"}
 
-        required = {
-
-            "Expectancy%",
-
-            "Risk Exposure"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Recovery Factor"] = (
-
-            self.safe_divide(
-
-                self.df["Expectancy%"],
-
-                self.df["Risk Exposure"]
-
-            )
-
+        self.df["Recovery Factor"] = self.safe_divide(
+            self.df["Expectancy%"], self.df["Risk Exposure"]
         )
-
-
 
     # ==================================================
     # RISK EFFICIENCY
     # ==================================================
 
     def risk_efficiency(self):
+        required = {"Reward Risk Ratio", "Risk Exposure"}
 
-        required = {
-
-            "Reward Risk Ratio",
-
-            "Risk Exposure"
-
-        }
-
-
-        if not required.issubset(
-
-            self.df.columns
-
-        ):
-
+        if not required.issubset(self.df.columns):
             return
 
-
-
-        self.df["Risk Efficiency"] = (
-
-            self.safe_divide(
-
-                self.df["Reward Risk Ratio"],
-
-                self.df["Risk Exposure"]
-
-            )
-
+        self.df["Risk Efficiency"] = self.safe_divide(
+            self.df["Reward Risk Ratio"], self.df["Risk Exposure"]
         )
-
-
 
     # ==================================================
     # GENERATE
     # ==================================================
 
     def generate(self):
-
-        logger.info(
-
-            "Generating Risk Metrics..."
-
-        )
-
+        logger.info("Generating Risk Metrics...")
 
         self.risk_exposure()
 
@@ -363,22 +170,10 @@ class RiskMetricsEngine:
 
         self.risk_efficiency()
 
-
-        logger.info(
-
-            "Risk Metrics completed."
-
-        )
-
+        logger.info("Risk Metrics completed.")
 
         return self.df
 
 
-
 if __name__ == "__main__":
-
-    print(
-
-        "Import RiskMetricsEngine"
-
-    )
+    print("Import RiskMetricsEngine")

@@ -2,28 +2,28 @@
 
 ## Institutional Strategy Comparison Platform V4
 
----
+______________________________________________________________________
 
 # Table of Contents
 
 1. Overview
-2. Design Principles
-3. High-Level Architecture
-4. Project Structure
-5. Data Flow
-6. Module Responsibilities
-7. Processing Pipeline
-8. Dependency Graph
-9. Metrics Engine
-10. Comparison Engine
-11. Portfolio Engine
-12. Reporting Engine
-13. Configuration
-14. Testing Strategy
-15. Logging
-16. Future Roadmap
+1. Design Principles
+1. High-Level Architecture
+1. Project Structure
+1. Data Flow
+1. Module Responsibilities
+1. Processing Pipeline
+1. Dependency Graph
+1. Metrics Engine
+1. Comparison Engine
+1. Portfolio Engine
+1. Reporting Engine
+1. Configuration
+1. Testing Strategy
+1. Logging
+1. Future Roadmap
 
----
+______________________________________________________________________
 
 # 1. Overview
 
@@ -33,7 +33,7 @@ Unlike traditional strategy evaluation tools that focus primarily on Win Rate or
 
 The platform follows a layered architecture to maximize maintainability, scalability, and testability.
 
----
+______________________________________________________________________
 
 # 2. Design Principles
 
@@ -50,7 +50,7 @@ The platform is designed around the following principles:
 
 Each module performs a single well-defined responsibility.
 
----
+______________________________________________________________________
 
 # 3. High-Level Architecture
 
@@ -73,7 +73,7 @@ Each module performs a single well-defined responsibility.
                   Final Outputs
 ```
 
----
+______________________________________________________________________
 
 # 4. Project Structure
 
@@ -103,7 +103,7 @@ strategy_compare_v4/
 └── backtest_statistics_generator.py
 ```
 
----
+______________________________________________________________________
 
 # 5. Data Flow
 
@@ -136,7 +136,7 @@ Charts
 Dashboard
 ```
 
----
+______________________________________________________________________
 
 # 6. Module Responsibilities
 
@@ -160,7 +160,7 @@ Responsibilities
 - Robustness Analysis
 - Recommendation
 
----
+______________________________________________________________________
 
 ## derived_metrics/
 
@@ -179,7 +179,7 @@ Output
 
 Institutional metrics used by downstream modules.
 
----
+______________________________________________________________________
 
 ## portfolio/
 
@@ -199,7 +199,7 @@ Allocation Methods
 - Reliability Weight
 - Blended Weight
 
----
+______________________________________________________________________
 
 ## reports/
 
@@ -212,7 +212,7 @@ Outputs
 - Dashboard
 - Portfolio Summary
 
----
+______________________________________________________________________
 
 ## config/
 
@@ -225,7 +225,7 @@ Contains
 - Recommendation Rules
 - Weights
 
----
+______________________________________________________________________
 
 ## utils/
 
@@ -238,7 +238,7 @@ Modules
 - helpers.py
 - io_utils.py
 
----
+______________________________________________________________________
 
 ## tests/
 
@@ -248,7 +248,7 @@ Unit testing for
 - Portfolio
 - Reports
 
----
+______________________________________________________________________
 
 # 7. Processing Pipeline
 
@@ -277,7 +277,7 @@ Portfolio Allocation
 Report Generation
 ```
 
----
+______________________________________________________________________
 
 # 8. Dependency Graph
 
@@ -300,7 +300,7 @@ portfolio    reports
 
 The dependency graph is intentionally one-directional to avoid circular imports.
 
----
+______________________________________________________________________
 
 # 9. Derived Metrics Engine
 
@@ -317,7 +317,7 @@ Metric categories include:
 
 The output becomes the canonical dataset used by all downstream modules.
 
----
+______________________________________________________________________
 
 # 10. Comparison Engine
 
@@ -342,7 +342,7 @@ The final output includes institutional recommendations such as:
 - Improve
 - Avoid
 
----
+______________________________________________________________________
 
 # 11. Portfolio Engine
 
@@ -363,7 +363,7 @@ Supported allocation methods
 - Reliability Weight
 - Blended Weight
 
----
+______________________________________________________________________
 
 # 12. Reporting Engine
 
@@ -376,7 +376,7 @@ Generates professional outputs including:
 - Dashboard Data
 - Correlation Heatmaps
 
----
+______________________________________________________________________
 
 # 13. Configuration
 
@@ -391,7 +391,7 @@ Examples
 
 This minimizes hard-coded values and simplifies maintenance.
 
----
+______________________________________________________________________
 
 # 14. Testing Strategy
 
@@ -412,9 +412,9 @@ Coverage goals
 
 Target coverage:
 
-- >95%
+- > 95%
 
----
+______________________________________________________________________
 
 # 15. Logging
 
@@ -428,7 +428,7 @@ Capabilities
 - Section banners
 - Error reporting
 
----
+______________________________________________________________________
 
 # 16. Future Roadmap
 
@@ -454,7 +454,7 @@ Version 3.0
 - Kubernetes
 - Real-time market data integration
 
----
+______________________________________________________________________
 
 # Summary
 

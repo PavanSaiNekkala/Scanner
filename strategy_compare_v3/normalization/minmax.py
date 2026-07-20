@@ -30,81 +30,45 @@ class MinMaxNormalization:
     X' = (X - Min) / (Max - Min)
     """
 
-    def __init__(
-        self,
-        dataframe: pd.DataFrame
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
 
-        self.numeric = self.df.select_dtypes(
-            include=np.number
-        ).columns
+        self.numeric = self.df.select_dtypes(include=np.number).columns
 
         self.scaler = MinMaxScaler()
 
     # --------------------------------------------------
 
     def generate(self):
-
-        logger.info(
-            "Running Min-Max Normalization..."
-        )
+        logger.info("Running Min-Max Normalization...")
 
         normalized = self.df.copy()
 
         if len(self.numeric) == 0:
-
-            logger.warning(
-                "No numeric columns found."
-            )
+            logger.warning("No numeric columns found.")
 
             return normalized
 
-        normalized[self.numeric] = self.scaler.fit_transform(
+        normalized[self.numeric] = self.scaler.fit_transform(normalized[self.numeric])
 
-            normalized[self.numeric]
-
-        )
-
-        logger.info(
-            "Min-Max normalization completed."
-        )
+        logger.info("Min-Max normalization completed.")
 
         return normalized
 
     # --------------------------------------------------
 
     def scaler_parameters(self):
+        if not hasattr(self.scaler, "data_min_"):
+            raise RuntimeError("Run generate() before requesting parameters.")
 
-        if not hasattr(
-            self.scaler,
-            "data_min_"
-        ):
-
-            raise RuntimeError(
-                "Run generate() before requesting parameters."
-            )
-
-        return pd.DataFrame({
-
-            "Feature":
-
-                self.numeric,
-
-            "Minimum":
-
-                self.scaler.data_min_,
-
-            "Maximum":
-
-                self.scaler.data_max_
-
-        })
+        return pd.DataFrame(
+            {
+                "Feature": self.numeric,
+                "Minimum": self.scaler.data_min_,
+                "Maximum": self.scaler.data_max_,
+            }
+        )
 
 
 if __name__ == "__main__":
-
-    print(
-        "Import inside normalization_engine.py"
-    )
+    print("Import inside normalization_engine.py")

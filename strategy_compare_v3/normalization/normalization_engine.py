@@ -47,12 +47,7 @@ class NormalizationEngine:
     Dictionary of normalized DataFrames.
     """
 
-    def __init__(
-        self,
-        dataframe: pd.DataFrame,
-        use_cache: bool = False
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame, use_cache: bool = False):
         self.df = dataframe.copy()
 
         self.use_cache = use_cache
@@ -64,32 +59,20 @@ class NormalizationEngine:
     # -----------------------------------------------------
 
     def validate(self):
-
         if self.df.empty:
+            raise ValueError("Input dataframe is empty.")
 
-            raise ValueError(
-                "Input dataframe is empty."
-            )
-
-        numeric = self.df.select_dtypes(
-            include="number"
-        )
+        numeric = self.df.select_dtypes(include="number")
 
         if numeric.empty:
-
-            raise ValueError(
-                "No numeric columns found."
-            )
+            raise ValueError("No numeric columns found.")
 
     # -----------------------------------------------------
 
     def run(self):
-
         logger.info("=" * 80)
 
-        logger.info(
-            "Starting Normalization Engine..."
-        )
+        logger.info("Starting Normalization Engine...")
 
         self.validate()
 
@@ -99,97 +82,53 @@ class NormalizationEngine:
         # Min-Max
         # -------------------------------------------------
 
-        minmax = MinMaxNormalization(
-            self.df
-        ).generate()
+        minmax = MinMaxNormalization(self.df).generate()
 
         # -------------------------------------------------
         # Z-Score
         # -------------------------------------------------
 
-        zscore = ZScoreNormalization(
-            self.df
-        ).generate()
+        zscore = ZScoreNormalization(self.df).generate()
 
         # -------------------------------------------------
         # Robust Z-Score
         # -------------------------------------------------
 
-        robust = RobustZScoreNormalization(
-            self.df
-        ).generate()
+        robust = RobustZScoreNormalization(self.df).generate()
 
         # -------------------------------------------------
         # Percentile
         # -------------------------------------------------
 
-        percentile = PercentileNormalization(
-            self.df
-        ).generate()
+        percentile = PercentileNormalization(self.df).generate()
 
         # -------------------------------------------------
         # Quantile
         # -------------------------------------------------
 
         quantile_uniform = QuantileNormalization(
-            self.df,
-            output_distribution="uniform"
+            self.df, output_distribution="uniform"
         ).generate()
 
         quantile_normal = QuantileNormalization(
-            self.df,
-            output_distribution="normal"
+            self.df, output_distribution="normal"
         ).generate()
 
         # -------------------------------------------------
 
-        elapsed = round(
-
-            time.perf_counter() - start,
-
-            3
-
-        )
+        elapsed = round(time.perf_counter() - start, 3)
 
         self.results = {
-
-            "Min-Max":
-
-                minmax,
-
-            "Z-Score":
-
-                zscore,
-
-            "Robust Z-Score":
-
-                robust,
-
-            "Percentile":
-
-                percentile,
-
-            "Quantile (Uniform)":
-
-                quantile_uniform,
-
-            "Quantile (Normal)":
-
-                quantile_normal,
-
-            "Execution Time (sec)":
-
-                elapsed
-
+            "Min-Max": minmax,
+            "Z-Score": zscore,
+            "Robust Z-Score": robust,
+            "Percentile": percentile,
+            "Quantile (Uniform)": quantile_uniform,
+            "Quantile (Normal)": quantile_normal,
+            "Execution Time (sec)": elapsed,
         }
 
-        logger.info(
-
-            "Normalization completed in %.3f seconds.",
-
-            elapsed
-
-        )
+        logger.info("Normalization completed in %.3f seconds.", elapsed)
 
         logger.info("=" * 80)
 
@@ -197,60 +136,23 @@ class NormalizationEngine:
 
     # -----------------------------------------------------
 
-    def get_result(
-        self,
-        method: str
-    ):
-
+    def get_result(self, method: str):
         return self.results.get(method)
 
     # -----------------------------------------------------
 
     def methods(self):
-
-        return [
-
-            key
-
-            for key in self.results.keys()
-
-            if key != "Execution Time (sec)"
-
-        ]
+        return [key for key in self.results.keys() if key != "Execution Time (sec)"]
 
     # -----------------------------------------------------
 
     def summary(self):
-
         return {
-
-            "Methods":
-
-                self.methods(),
-
-            "Execution Time":
-
-                self.results.get(
-
-                    "Execution Time (sec)"
-
-                ),
-
-            "Total Methods":
-
-                len(
-
-                    self.methods()
-
-                )
-
+            "Methods": self.methods(),
+            "Execution Time": self.results.get("Execution Time (sec)"),
+            "Total Methods": len(self.methods()),
         }
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside main.py"
-
-    )
+    print("Import inside main.py")

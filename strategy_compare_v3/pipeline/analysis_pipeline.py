@@ -27,35 +27,22 @@ from feature_engineering.feature_engine import FeatureEngine
 from strategy_compare_v4.derived_metrics.derived_engine import DerivedMetricsEngine
 
 
-from normalization.normalization_engine import (
-    NormalizationEngine
-)
+from normalization.normalization_engine import NormalizationEngine
 
-from scoring.scoring_engine import (
-    ScoringEngine
-)
+from scoring.scoring_engine import ScoringEngine
 
-from recommendation.recommendation_engine import (
-    RecommendationEngine
-)
+from recommendation.recommendation_engine import RecommendationEngine
 
-from optimization.optimization_engine import (
-    OptimizationEngine
-)
+from optimization.optimization_engine import OptimizationEngine
 
-from visualization.dashboards import (
-    DashboardEngine
-)
+from visualization.dashboards import DashboardEngine
 
-from reports.report_engine import (
-    ReportEngine
-)
+from reports.report_engine import ReportEngine
 
 logger = get_logger(__name__)
 
 
 class AnalysisPipeline:
-
     """
     Master Institutional Pipeline.
 
@@ -67,16 +54,7 @@ class AnalysisPipeline:
     respective module.
     """
 
-    def __init__(
-
-        self,
-
-        dataframe: pd.DataFrame,
-
-        config: dict | None = None
-
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame, config: dict | None = None):
         self.df = dataframe.copy()
 
         self.config = config or {}
@@ -88,299 +66,104 @@ class AnalysisPipeline:
     # --------------------------------------------------
 
     def profile(self):
+        logger.info("Profiling...")
 
-        logger.info(
-
-            "Profiling..."
-
-        )
-
-        return DataProfiler(
-
-            self.df
-
-        ).generate()
+        return DataProfiler(self.df).generate()
 
     # --------------------------------------------------
 
     def relationships(self):
+        logger.info("Relationship Analysis...")
 
-        logger.info(
-
-            "Relationship Analysis..."
-
-        )
-
-        return RelationshipEngine(
-
-            self.df
-
-        ).generate()
-
+        return RelationshipEngine(self.df).generate()
 
     # --------------------------------------------------
     # DERIVED METRICS
     # --------------------------------------------------
 
     def derived_metrics(self):
+        logger.info("Derived Metrics...")
 
-        logger.info(
-
-            "Derived Metrics..."
-
-        )
-
-        self.df = DerivedMetricsEngine(
-
-            self.df
-
-        ).run()
-
+        self.df = DerivedMetricsEngine(self.df).run()
 
         return self.df
-
 
     # --------------------------------------------------
 
     def features(self):
+        logger.info("Feature Engineering...")
 
-        logger.info(
-
-            "Feature Engineering..."
-
-        )
-
-        return FeatureEngine(
-
-            self.df
-
-        ).run()
-    
-    # --------------------------------------------------
-
-    def normalize(
-
-        self,
-
-        dataframe
-
-    ):
-
-        logger.info(
-
-            "Normalization..."
-
-        )
-
-        return NormalizationEngine(
-
-            dataframe
-
-        ).run()
+        return FeatureEngine(self.df).run()
 
     # --------------------------------------------------
 
-    def scoring(
+    def normalize(self, dataframe):
+        logger.info("Normalization...")
 
-        self,
-
-        dataframe
-
-    ):
-
-        logger.info(
-
-            "Scoring..."
-
-        )
-
-        return ScoringEngine(
-
-            dataframe
-
-        ).run()
+        return NormalizationEngine(dataframe).run()
 
     # --------------------------------------------------
 
-    def recommendation(
+    def scoring(self, dataframe):
+        logger.info("Scoring...")
 
-        self,
-
-        dataframe
-
-    ):
-
-        logger.info(
-
-            "Recommendations..."
-
-        )
-
-        return RecommendationEngine(
-
-            dataframe
-
-        ).generate()
+        return ScoringEngine(dataframe).run()
 
     # --------------------------------------------------
 
-    def optimization(
+    def recommendation(self, dataframe):
+        logger.info("Recommendations...")
 
-        self,
+        return RecommendationEngine(dataframe).generate()
 
-        dataframe
+    # --------------------------------------------------
 
-    ):
+    def optimization(self, dataframe):
+        logger.info("Optimization...")
 
-        logger.info(
-
-            "Optimization..."
-
-        )
-
-        def objective(
-
-            df
-
-        ):
-
-            return df[
-
-                "Composite Score"
-
-            ].mean()
+        def objective(df):
+            return df["Composite Score"].mean()
 
         parameter_space = {
-
-            "Edge Weight":
-
-                [
-
-                    0.10,
-
-                    0.15,
-
-                    0.20
-
-                ],
-
-            "Risk Weight":
-
-                [
-
-                    0.10,
-
-                    0.20
-
-                ]
-
+            "Edge Weight": [0.10, 0.15, 0.20],
+            "Risk Weight": [0.10, 0.20],
         }
 
-        scenarios = {
+        scenarios = {"Baseline": lambda x: x}
 
-            "Baseline":
-
-                lambda x: x
-
-        }
-
-        return OptimizationEngine(
-
-            dataframe,
-
-            objective
-
-        ).run(
-
-            parameter_space,
-
-            scenarios
-
-        )
+        return OptimizationEngine(dataframe, objective).run(parameter_space, scenarios)
 
     # --------------------------------------------------
 
-    def visualization(
+    def visualization(self, dataframe):
+        logger.info("Visualization...")
 
-        self,
-
-        dataframe
-
-    ):
-
-        logger.info(
-
-            "Visualization..."
-
-        )
-
-        return DashboardEngine(
-
-            dataframe
-
-        ).run()
+        return DashboardEngine(dataframe).run()
 
     # --------------------------------------------------
 
-    def reports(
+    def reports(self, dataframe):
+        logger.info("Reports...")
 
-        self,
-
-        dataframe
-
-    ):
-
-        logger.info(
-
-            "Reports..."
-
-        )
-
-        return ReportEngine(
-
-            dataframe
-
-        ).run()
+        return ReportEngine(dataframe).run()
 
     # --------------------------------------------------
 
     def run(self):
-
         logger.info("=" * 80)
 
-        logger.info(
-
-            "Starting Analysis Pipeline..."
-
-        )
+        logger.info("Starting Analysis Pipeline...")
 
         start = time.perf_counter()
-
 
         # ----------------------------------------------
         # Optional Research Modules
         # ----------------------------------------------
 
-        if self.config.get(
+        if self.config.get("research_mode", False):
+            self.results["Profiling"] = self.profile()
 
-            "research_mode",
-
-            False
-
-        ):
-
-            self.results["Profiling"] = (
-
-                self.profile()
-
-            )
-
-
-            self.results["Relationships"] = (
-
-                self.relationships()
-
-            )
+            self.results["Relationships"] = self.relationships()
 
         # ----------------------------------------------
         # Derived Metrics
@@ -388,7 +171,6 @@ class AnalysisPipeline:
         derived = self.derived_metrics()
 
         self.results["Derived Metrics"] = derived
-
 
         # ----------------------------------------------
         # Feature Engineering
@@ -398,15 +180,9 @@ class AnalysisPipeline:
         self.results["Features"] = features
 
         # ----------------------------------------------
-        normalized = self.normalize(
-
-            features
-
-        )
+        normalized = self.normalize(features)
 
         self.results["Normalization"] = normalized
-
-
 
         # ==================================================
         # SCORING DATAFRAME
@@ -415,167 +191,66 @@ class AnalysisPipeline:
 
         analysis_df = normalized["Percentile"].copy()
 
-
-
         scoring_columns = [
-
             "Expectancy%",
-
             "Profit Factor",
-
             "Reward Risk Ratio",
-
             "Win %",
-
             "Avg win%",
-
             "Avg loss%",
-
             "Trades",
-
             "Years",
-
         ]
 
-
-
         for column in scoring_columns:
-
-
             if column in self.df.columns:
-
-
                 analysis_df[column] = self.df[column]
 
             else:
+                logger.warning("Missing scoring column: %s", column)
 
-
-                logger.warning(
-
-                    "Missing scoring column: %s",
-
-                    column
-
-                )
-
-
-        logger.info(
-
-            "Scoring dataframe columns: %s",
-
-            analysis_df.columns.tolist()
-
-        )
+        logger.info("Scoring dataframe columns: %s", analysis_df.columns.tolist())
 
         required_scoring_columns = [
-
             "Expectancy%",
-
             "Profit Factor",
-
             "Reward Risk Ratio",
-
             "Win %",
-
-            "Edge Ratio"
-
+            "Edge Ratio",
         ]
-
 
         missing = [
-
-            col
-
-            for col in required_scoring_columns
-
-            if col not in analysis_df.columns
-
+            col for col in required_scoring_columns if col not in analysis_df.columns
         ]
 
-
         if missing:
+            raise ValueError(f"Missing scoring metrics: {missing}")
 
-            raise ValueError(
-
-                f"Missing scoring metrics: {missing}"
-
-            )
-        
-        scored = self.scoring(
-
-            analysis_df
-
-        )
+        scored = self.scoring(analysis_df)
 
         self.results["Scoring"] = scored
 
         # ----------------------------------------------
 
-        recommended = self.recommendation(
-
-            scored
-
-        )
+        recommended = self.recommendation(scored)
 
         self.results["Recommendation"] = recommended
 
         # ----------------------------------------------
 
-        self.results["Optimization"] = (
+        self.results["Optimization"] = self.optimization(recommended)
 
-            self.optimization(
+        self.results["Visualization"] = self.visualization(recommended)
 
-                recommended
-
-            )
-
-        )
-
-        self.results["Visualization"] = (
-
-            self.visualization(
-
-                recommended
-
-            )
-
-        )
-
-        self.results["Reports"] = (
-
-            self.reports(
-
-                recommended
-
-            )
-
-        )
+        self.results["Reports"] = self.reports(recommended)
 
         # ----------------------------------------------
 
-        self.execution_time = round(
+        self.execution_time = round(time.perf_counter() - start, 3)
 
-            time.perf_counter()
+        self.results["Execution Time"] = self.execution_time
 
-            - start,
-
-            3
-
-        )
-
-        self.results["Execution Time"] = (
-
-            self.execution_time
-
-        )
-
-        logger.info(
-
-            "Pipeline completed in %.3f seconds.",
-
-            self.execution_time
-
-        )
+        logger.info("Pipeline completed in %.3f seconds.", self.execution_time)
 
         logger.info("=" * 80)
 
@@ -584,32 +259,12 @@ class AnalysisPipeline:
     # --------------------------------------------------
 
     def summary(self):
-
         return {
-
-            "Pipeline":
-
-                "Completed",
-
-            "Execution Time":
-
-                self.execution_time,
-
-            "Modules":
-
-                list(
-
-                    self.results.keys()
-
-                )
-
+            "Pipeline": "Completed",
+            "Execution Time": self.execution_time,
+            "Modules": list(self.results.keys()),
         }
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside main.py"
-
-    )
+    print("Import inside main.py")

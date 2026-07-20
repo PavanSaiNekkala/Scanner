@@ -1,6 +1,6 @@
 from loader import StrategyLoader
 
-from analyzer import StatisticsEngine
+from strategy_compare_v2.analyzer_v2 import StatisticsEngine
 
 from ranking import RankingEngine
 
@@ -16,27 +16,24 @@ from charts import ChartBuilder
 
 from insights import InsightEngine
 
-def main():
 
-    print("="*60)
+def main():
+    print("=" * 60)
 
     print("Strategy Comparison Engine V2")
 
-    print("="*60)
+    print("=" * 60)
 
     loader = StrategyLoader()
 
     strategies = loader.load()
 
     for name, df in strategies.items():
-
         print("=" * 60)
         print(name)
         print(df.columns.tolist())
 
-    analyzer = StatisticsEngine(
-        strategies
-    )
+    analyzer = StatisticsEngine(strategies)
 
     stats = analyzer.strategy_statistics()
 
@@ -50,9 +47,7 @@ def main():
 
     ranked = ranking.rank()
 
-    dashboard = DashboardBuilder(
-        ranked
-    )
+    dashboard = DashboardBuilder(ranked)
 
     summary = dashboard.executive_summary()
 
@@ -62,23 +57,16 @@ def main():
 
     score_breakdown = dashboard.score_breakdown()
 
-    overlap = dashboard.top10_overlap(
-        strategies
-    )
+    overlap = dashboard.top10_overlap(strategies)
 
-    reasons = ReasonGenerator(
-        ranked,
-        strategies
-    ).generate()
+    reasons = ReasonGenerator(ranked, strategies).generate()
 
-    insight = InsightEngine(
-        ranked
-    )
+    insight = InsightEngine(ranked)
 
     executive = insight.executive_summary()
 
     leaders = insight.metric_leaders()
-    
+
     deployment = insight.deployment()
 
     # -------------------------------------------------------
@@ -93,55 +81,25 @@ def main():
     # Write Sheets
     # -------------------------------------------------------
 
-    excel.write_sheet(
-        executive,
-        "Executive Insights"
-    )
+    excel.write_sheet(executive, "Executive Insights")
 
-    excel.write_sheet(
-        leaders,
-        "Metric Leaders"
-    )
+    excel.write_sheet(leaders, "Metric Leaders")
 
-    excel.write_sheet(
-        deployment,
-        "Deployment Guide"
-    )
+    excel.write_sheet(deployment, "Deployment Guide")
 
-    excel.write_sheet(
-        summary,
-        "Executive Summary"
-    )
+    excel.write_sheet(summary, "Executive Summary")
 
-    excel.write_sheet(
-        ranked,
-        "Strategy Ranking"
-    )
+    excel.write_sheet(ranked, "Strategy Ranking")
 
-    excel.write_sheet(
-        winners,
-        "Metric Winners"
-    )
+    excel.write_sheet(winners, "Metric Winners")
 
-    excel.write_sheet(
-        score_breakdown,
-        "Score Breakdown"
-    )
+    excel.write_sheet(score_breakdown, "Score Breakdown")
 
-    excel.write_sheet(
-        distribution,
-        "Recommendations"
-    )
+    excel.write_sheet(distribution, "Recommendations")
 
-    excel.write_sheet(
-        reasons,
-        "Strengths & Weaknesses"
-    )
+    excel.write_sheet(reasons, "Strengths & Weaknesses")
 
-    excel.write_sheet(
-        overlap,
-        "Top 10 Stocks"
-    )
+    excel.write_sheet(overlap, "Top 10 Stocks")
 
     print("=" * 60)
     print("DataFrame Shapes")
@@ -162,21 +120,15 @@ def main():
     # Create Dashboard
     # -------------------------------------------------------
 
-    dashboard_sheet = DashboardSheet(
-        excel.writer
-    )
+    dashboard_sheet = DashboardSheet(excel.writer)
 
-    dashboard_sheet.create(
-        ranked
-    )
+    dashboard_sheet.create(ranked)
 
     # -------------------------------------------------------
     # Charts
     # -------------------------------------------------------
 
-    charts = ChartBuilder(
-        excel.writer
-    )
+    charts = ChartBuilder(excel.writer)
 
     charts.build()
 

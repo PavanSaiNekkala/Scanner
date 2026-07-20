@@ -17,55 +17,44 @@ import time
 from pathlib import Path
 
 import pandas as pd
-
-from strategy_compare_v4.derived_metrics.performance_metrics import (
-    derive_performance_metrics,
+from strategy_compare_v4.config.constants import (
+    COMPOSITE_SCORE,
+    INSTITUTION_RANK,
+    RECOMMENDATION,
+    VALIDATION_STATUS,
 )
-
-from strategy_compare_v4.derived_metrics.risk_metrics import (
-    derive_risk_metrics,
-)
-
-from strategy_compare_v4.derived_metrics.exit_metrics import (
-    derive_exit_metrics,
-)
-
-from strategy_compare_v4.derived_metrics.opportunity_metrics import (
-    derive_opportunity_metrics,
-)
-
 from strategy_compare_v4.derived_metrics.efficiency_metrics import (
     derive_efficiency_metrics,
 )
-
-from strategy_compare_v4.derived_metrics.validation_metrics import (
-    derive_validation_metrics,
+from strategy_compare_v4.derived_metrics.exit_metrics import (
+    derive_exit_metrics,
 )
-
+from strategy_compare_v4.derived_metrics.opportunity_metrics import (
+    derive_opportunity_metrics,
+)
+from strategy_compare_v4.derived_metrics.performance_metrics import (
+    derive_performance_metrics,
+)
+from strategy_compare_v4.derived_metrics.risk_metrics import (
+    derive_risk_metrics,
+)
 from strategy_compare_v4.derived_metrics.scoring_metrics import (
     derive_scoring_metrics,
 )
-
+from strategy_compare_v4.derived_metrics.validation_metrics import (
+    derive_validation_metrics,
+)
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+)
 from strategy_compare_v4.utils.io_utils import (
     read_csv,
     read_excel,
     write_excel,
 )
-
 from strategy_compare_v4.utils.logger import (
-    get_logger,
     banner,
-)
-
-from strategy_compare_v4.utils.helpers import (
-    require_columns,
-)
-
-from strategy_compare_v4.config.constants import (
-    VALIDATION_STATUS,
-    COMPOSITE_SCORE,
-    INSTITUTION_RANK,
-    RECOMMENDATION,
+    get_logger,
 )
 
 logger = get_logger(__name__)
@@ -92,30 +81,23 @@ class DerivedMetricsEngine:
     Institutional Scoring
     """
 
-    def __init__(
-        self,
-        df: pd.DataFrame
-    ):
-
+    def __init__(self, df: pd.DataFrame):
         self.df = df.copy()
 
-        self.summary = {}
+        from typing import Any
 
-        self.diagnostics_report = {}
+        self.summary: dict[str, Any] = {}
+
+        self.diagnostics_report: dict[str, Any] = {}
 
     # ---------------------------------------------------------
     # Validation Stage
     # ---------------------------------------------------------
 
     def validation_stage(self):
+        logger.info("Running Validation Metrics...")
 
-        logger.info(
-            "Running Validation Metrics..."
-        )
-
-        self.df = derive_validation_metrics(
-            self.df
-        )
+        self.df = derive_validation_metrics(self.df)
 
         return self
 
@@ -124,14 +106,9 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def performance_stage(self):
+        logger.info("Running Performance Metrics...")
 
-        logger.info(
-            "Running Performance Metrics..."
-        )
-
-        self.df = derive_performance_metrics(
-            self.df
-        )
+        self.df = derive_performance_metrics(self.df)
 
         return self
 
@@ -140,14 +117,9 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def risk_stage(self):
+        logger.info("Running Risk Metrics...")
 
-        logger.info(
-            "Running Risk Metrics..."
-        )
-
-        self.df = derive_risk_metrics(
-            self.df
-        )
+        self.df = derive_risk_metrics(self.df)
 
         return self
 
@@ -156,14 +128,9 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def exit_stage(self):
+        logger.info("Running Exit Metrics...")
 
-        logger.info(
-            "Running Exit Metrics..."
-        )
-
-        self.df = derive_exit_metrics(
-            self.df
-        )
+        self.df = derive_exit_metrics(self.df)
 
         return self
 
@@ -172,14 +139,9 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def opportunity_stage(self):
+        logger.info("Running Opportunity Metrics...")
 
-        logger.info(
-            "Running Opportunity Metrics..."
-        )
-
-        self.df = derive_opportunity_metrics(
-            self.df
-        )
+        self.df = derive_opportunity_metrics(self.df)
 
         return self
 
@@ -188,14 +150,9 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def efficiency_stage(self):
+        logger.info("Running Efficiency Metrics...")
 
-        logger.info(
-            "Running Efficiency Metrics..."
-        )
-
-        self.df = derive_efficiency_metrics(
-            self.df
-        )
+        self.df = derive_efficiency_metrics(self.df)
 
         return self
 
@@ -204,32 +161,21 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def validate_dependencies(self):
-
         """
         Verify all required derived metrics
         exist before institutional scoring.
         """
 
         require_columns(
-
             self.df,
-
             [
-
                 "Expectancy",
-
                 "Profit Factor",
-
                 "Reward Risk",
-
                 "Institutional Exit Score",
-
                 "Institutional Opportunity Score",
-
                 "Institutional Efficiency Score",
-
-            ]
-
+            ],
         )
 
         return self
@@ -239,14 +185,9 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def scoring_stage(self):
+        logger.info("Running Institutional Scoring...")
 
-        logger.info(
-            "Running Institutional Scoring..."
-        )
-
-        self.df = derive_scoring_metrics(
-            self.df
-        )
+        self.df = derive_scoring_metrics(self.df)
 
         return self
 
@@ -255,65 +196,28 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def pipeline_summary(self):
-
         """
         Build pipeline execution summary.
         """
 
         self.summary = {
-
             "Rows Processed": len(self.df),
-
             "Columns Produced": len(self.df.columns),
-
-            "Passed Validation": int(
-
-                (
-
-                    self.df[VALIDATION_STATUS]
-
-                    == "PASSED"
-
-                ).sum()
-
-            )
-
-            if VALIDATION_STATUS in self.df.columns
-
-            else None,
-
-            "Warning Rows": int(
-
-                (
-
-                    self.df[VALIDATION_STATUS]
-
-                    == "WARNING"
-
-                ).sum()
-
-            )
-
-            if VALIDATION_STATUS in self.df.columns
-
-            else None,
-
-            "Failed Validation": int(
-
-                (
-
-                    self.df[VALIDATION_STATUS]
-
-                    == "FAILED"
-
-                ).sum()
-
-            )
-
-            if VALIDATION_STATUS in self.df.columns
-
-            else None,
-
+            "Passed Validation": (
+                int((self.df[VALIDATION_STATUS] == "PASSED").sum())
+                if VALIDATION_STATUS in self.df.columns
+                else None
+            ),
+            "Warning Rows": (
+                int((self.df[VALIDATION_STATUS] == "WARNING").sum())
+                if VALIDATION_STATUS in self.df.columns
+                else None
+            ),
+            "Failed Validation": (
+                int((self.df[VALIDATION_STATUS] == "FAILED").sum())
+                if VALIDATION_STATUS in self.df.columns
+                else None
+            ),
         }
 
         return self
@@ -323,7 +227,6 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def diagnostics(self):
-
         """
         Generate institutional diagnostics.
         """
@@ -331,100 +234,44 @@ class DerivedMetricsEngine:
         diagnostics = {}
 
         if COMPOSITE_SCORE in self.df.columns:
+            diagnostics["Average Composite"] = round(self.df[COMPOSITE_SCORE].mean(), 2)
 
-            diagnostics["Average Composite"] = round(
+            diagnostics["Maximum Composite"] = round(self.df[COMPOSITE_SCORE].max(), 2)
 
-                self.df[COMPOSITE_SCORE].mean(),
-
-                2
-
-            )
-
-            diagnostics["Maximum Composite"] = round(
-
-                self.df[COMPOSITE_SCORE].max(),
-
-                2
-
-            )
-
-            diagnostics["Minimum Composite"] = round(
-
-                self.df[COMPOSITE_SCORE].min(),
-
-                2
-
-            )
+            diagnostics["Minimum Composite"] = round(self.df[COMPOSITE_SCORE].min(), 2)
 
         if RECOMMENDATION in self.df.columns:
-
             diagnostics["Recommendations"] = (
-
-                self.df[RECOMMENDATION]
-
-                .value_counts()
-
-                .to_dict()
-
+                self.df[RECOMMENDATION].value_counts().to_dict()
             )
 
         self.diagnostics_report = diagnostics
 
         return self
-    
+
     # ---------------------------------------------------------
     # Execution Report
     # ---------------------------------------------------------
 
     def execution_report(self):
-
         """
         Log pipeline execution summary.
         """
 
-        banner(
-
-            logger,
-
-            "Institutional Metrics Engine Completed"
-
-        )
+        banner(logger, "Institutional Metrics Engine Completed")
 
         for key, value in self.summary.items():
-
-            logger.info(
-
-                "%-30s : %s",
-
-                key,
-
-                value
-
-            )
+            logger.info("%-30s : %s", key, value)
 
         if self.diagnostics_report:
-
             logger.info("")
 
             for key, value in self.diagnostics_report.items():
-
-                logger.info(
-
-                    "%-30s : %s",
-
-                    key,
-
-                    value
-
-                )
+                logger.info("%-30s : %s", key, value)
 
         logger.info("")
 
-        logger.info(
-
-            "Derived Metrics Pipeline Completed Successfully."
-
-        )
+        logger.info("Derived Metrics Pipeline Completed Successfully.")
 
         return self
 
@@ -433,53 +280,18 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def sort_results(self):
-
         """
         Sort final institutional output.
         """
 
         if INSTITUTION_RANK in self.df.columns:
-
-            self.df = (
-
-                self.df
-
-                .sort_values(
-
-                    INSTITUTION_RANK,
-
-                    ascending=True
-
-                )
-
-                .reset_index(
-
-                    drop=True
-
-                )
-
+            self.df = self.df.sort_values(INSTITUTION_RANK, ascending=True).reset_index(
+                drop=True
             )
 
         elif COMPOSITE_SCORE in self.df.columns:
-
-            self.df = (
-
-                self.df
-
-                .sort_values(
-
-                    COMPOSITE_SCORE,
-
-                    ascending=False
-
-                )
-
-                .reset_index(
-
-                    drop=True
-
-                )
-
+            self.df = self.df.sort_values(COMPOSITE_SCORE, ascending=False).reset_index(
+                drop=True
             )
 
         return self
@@ -489,7 +301,6 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def get_dataframe(self):
-
         """
         Return processed dataframe.
         """
@@ -501,7 +312,6 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def run(self):
-
         """
         Execute complete institutional
         derived metrics pipeline.
@@ -510,66 +320,29 @@ class DerivedMetricsEngine:
         start = time.perf_counter()
 
         try:
-
             (
-
-                self
-
-                .validation_stage()
-
+                self.validation_stage()
                 .performance_stage()
-
                 .risk_stage()
-
                 .exit_stage()
-
                 .opportunity_stage()
-
                 .efficiency_stage()
-
                 .validate_dependencies()
-
                 .scoring_stage()
-
                 .pipeline_summary()
-
                 .diagnostics()
-
                 .sort_results()
-
             )
 
         except Exception as exc:
+            logger.exception("Derived Metrics Engine failed.")
 
-            logger.exception(
-
-                "Derived Metrics Engine failed."
-
-            )
-
-            raise RuntimeError(
-
-                f"Derived Metrics Engine failed:\n{exc}"
-
-            ) from exc
+            raise RuntimeError(f"Derived Metrics Engine failed:\n{exc}") from exc
 
         finally:
+            self.execution_time = round(time.perf_counter() - start, 3)
 
-            self.execution_time = round(
-
-                time.perf_counter()
-
-                - start,
-
-                3
-
-            )
-
-        self.summary[
-
-            "Execution Time (s)"
-
-        ] = self.execution_time
+        self.summary["Execution Time (s)"] = self.execution_time
 
         self.execution_report()
 
@@ -580,28 +353,20 @@ class DerivedMetricsEngine:
 # Convenience Function
 # ===========================================================
 
-def derive_metrics(
 
-    df: pd.DataFrame
-
-) -> pd.DataFrame:
-
+def derive_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """
     Execute complete institutional
     derived metrics pipeline.
     """
 
-    return (
+    return DerivedMetricsEngine(df).run()
 
-        DerivedMetricsEngine(df)
-
-        .run()
-
-    )
 
 # ===========================================================
 # File Processing
 # ===========================================================
+
 
 def process_file(
     input_file: str,
@@ -621,61 +386,30 @@ def process_file(
     extension = input_path.suffix.lower()
 
     if extension == ".csv":
-
-        df = read_csv(
-            input_file
-        )
+        df = read_csv(input_file)
 
     elif extension in {
-
         ".xlsx",
-
         ".xls",
-
     }:
-
-        df = read_excel(
-            input_file
-        )
+        df = read_excel(input_file)
 
     else:
-
-        raise ValueError(
-
-            f"Unsupported file type: {extension}"
-
-        )
+        raise ValueError(f"Unsupported file type: {extension}")
 
     result = derive_metrics(df)
 
     if output_file is None:
-
-        output_file = str(
-
-            input_path.with_name(
-
-                input_path.stem
-
-                + "_Institutional.xlsx"
-
-            )
-
-        )
+        output_file = str(input_path.with_name(input_path.stem + "_Institutional.xlsx"))
 
     write_excel(
-
         result,
-
         output_file,
-
     )
 
     logger.info(
-
         "Output saved: %s",
-
         output_file,
-
     )
 
     return result
@@ -685,80 +419,42 @@ def process_file(
 # Directory Processing
 # ===========================================================
 
+
 def process_directory(
-    directory: str,
+    directory: str | Path,
 ) -> None:
     """
     Process every CSV and Excel file
     inside a directory.
     """
 
-    directory = Path(directory)
+    path = Path(directory)
 
     files = sorted(
-
-        list(
-
-            directory.glob("*.csv")
-
-        )
-
-        +
-
-        list(
-
-            directory.glob("*.xlsx")
-
-        )
-
-        +
-
-        list(
-
-            directory.glob("*.xls")
-
-        )
-
+        list(path.glob("*.csv")) + list(path.glob("*.xlsx")) + list(path.glob("*.xls"))
     )
 
     if not files:
-
         logger.warning(
-
             "No input files found in %s",
-
-            directory,
-
+            path,
         )
 
         return
 
     logger.info(
-
         "Found %d files.",
-
         len(files),
-
     )
 
     for file in files:
-
         try:
-
-            process_file(
-
-                str(file)
-
-            )
+            process_file(str(file))
 
         except Exception:
-
             logger.exception(
-
                 "Failed processing %s",
-
                 file.name,
-
             )
 
 
@@ -766,65 +462,37 @@ def process_directory(
 # Main
 # ===========================================================
 
-def main():
 
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-
-        description=(
-
-            "Institutional Strategy "
-
-            "Comparison Engine V4"
-
-        )
-
+        description=("Institutional Strategy Comparison Engine V4")
     )
 
     parser.add_argument(
-
         "--file",
-
         type=str,
-
         help="Input CSV or Excel file",
-
     )
 
     parser.add_argument(
-
         "--dir",
-
         type=str,
-
         help="Directory containing reports",
-
     )
 
     args = parser.parse_args()
 
     if args.file:
-
-        process_file(
-
-            args.file
-
-        )
+        process_file(args.file)
 
     elif args.dir:
-
-        process_directory(
-
-            args.dir
-
-        )
+        process_directory(args.dir)
 
     else:
-
         parser.print_help()
 
 
 if __name__ == "__main__":
-
     main()

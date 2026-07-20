@@ -5,9 +5,9 @@
 
 repos:
 
-# ------------------------------------------------------------
+# ============================================================
 # General File Checks
-# ------------------------------------------------------------
+# ============================================================
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v6.0.0
@@ -15,14 +15,19 @@ repos:
   hooks:
 
     - id: trailing-whitespace
+      files: ^strategy_compare_v4/
 
     - id: end-of-file-fixer
+      files: ^strategy_compare_v4/
 
     - id: check-yaml
+      files: ^strategy_compare_v4/
 
     - id: check-json
+      files: ^strategy_compare_v4/
 
     - id: check-toml
+      files: ^strategy_compare_v4/
 
     - id: check-added-large-files
       args:
@@ -33,10 +38,11 @@ repos:
     - id: mixed-line-ending
       args:
         - --fix=lf
+      files: ^strategy_compare_v4/
 
-# ------------------------------------------------------------
-# Ruff Linter & Formatter
-# ------------------------------------------------------------
+# ============================================================
+# Ruff
+# ============================================================
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.15.22
@@ -44,14 +50,16 @@ repos:
   hooks:
 
     - id: ruff
+      files: ^strategy_compare_v4/
       args:
         - --fix
 
     - id: ruff-format
+      files: ^strategy_compare_v4/
 
-# ------------------------------------------------------------
-# Black Formatter
-# ------------------------------------------------------------
+# ============================================================
+# Black
+# ============================================================
 
 - repo: https://github.com/psf/black
   rev: 26.5.1
@@ -60,17 +68,21 @@ repos:
 
     - id: black
       language_version: python3.12
+      files: ^strategy_compare_v4/
 
-# ------------------------------------------------------------
+# ============================================================
 # MyPy
-# ------------------------------------------------------------
+# ============================================================
 
 - repo: https://github.com/pre-commit/mirrors-mypy
   rev: v1.16.1
 
   hooks:
-
     - id: mypy
+
+      name: mypy (Strategy Compare V4)
+
+      files: ^strategy_compare_v4/
 
       language_version: python3.12
 
@@ -78,13 +90,18 @@ repos:
         - pandas-stubs
         - types-openpyxl
         - types-requests
+        - streamlit
+        - pytest
+        - plotly
+        - matplotlib
 
       args:
-        - --config-file=mypy.ini
+        - --config-file=strategy_compare_v4/mypy.ini
+        - --explicit-package-bases
 
-# ------------------------------------------------------------
-# Markdown Formatter
-# ------------------------------------------------------------
+# ============================================================
+# Markdown
+# ============================================================
 
 - repo: https://github.com/executablebooks/mdformat
   rev: 1.0.0
@@ -92,10 +109,11 @@ repos:
   hooks:
 
     - id: mdformat
+      files: ^strategy_compare_v4/
 
-# ------------------------------------------------------------
+# ============================================================
 # Local Hooks
-# ------------------------------------------------------------
+# ============================================================
 
 - repo: local
 
@@ -103,7 +121,7 @@ repos:
 
     - id: pytest
       name: Run PyTest
-      entry: pytest
+      entry: pytest strategy_compare_v4/tests
       language: system
       pass_filenames: false
       stages:

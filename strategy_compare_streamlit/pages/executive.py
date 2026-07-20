@@ -8,54 +8,27 @@ import pandas as pd
 
 from charts import ChartEngine
 
-
 ###########################################################################
 # EXECUTIVE PAGE
 ###########################################################################
 
+
 class ExecutivePage:
-
-    def __init__(
-
-        self,
-
-        result
-
-    ):
-
+    def __init__(self, result):
         self.result = result
 
-        self.ranked = result[
+        self.ranked = result["ranked"]
 
-            "ranked"
+        self.insights = result.get("insights", {})
 
-        ]
-
-        self.insights = result.get(
-
-            "insights",
-
-            {}
-
-        )
-
-        self.charts = ChartEngine(
-
-            self.ranked
-
-        )
+        self.charts = ChartEngine(self.ranked)
 
     ###########################################################################
     # PAGE
     ###########################################################################
 
     def render(self):
-
-        st.header(
-
-            "Executive Dashboard"
-
-        )
+        st.header("Executive Dashboard")
 
         self.kpis()
 
@@ -76,840 +49,301 @@ class ExecutivePage:
     ###########################################################################
 
     def kpis(self):
-
         if self.ranked.empty:
-
-            st.warning(
-
-                "No ranking data available."
-
-            )
+            st.warning("No ranking data available.")
 
             return
 
-        total = len(
+        total = len(self.ranked)
 
-            self.ranked
+        average = round(self.ranked["Overall Score"].mean(), 2)
 
-        )
+        highest = round(self.ranked["Overall Score"].max(), 2)
 
-        average = round(
+        strong_buy = int((self.ranked["Recommendation"] == "Strong Buy").sum())
 
-            self.ranked[
+        col1, col2, col3, col4 = st.columns(4)
 
-                "Overall Score"
+        col1.metric("Strategies", total)
 
-            ].mean(),
+        col2.metric("Highest Score", highest)
 
-            2
+        col3.metric("Average Score", average)
 
-        )
-
-        highest = round(
-
-            self.ranked[
-
-                "Overall Score"
-
-            ].max(),
-
-            2
-
-        )
-
-        strong_buy = int(
-
-            (
-
-                self.ranked[
-
-                    "Recommendation"
-
-                ]
-
-                ==
-
-                "Strong Buy"
-
-            ).sum()
-
-        )
-
-        col1, col2, col3, col4 = st.columns(
-
-            4
-
-        )
-
-        col1.metric(
-
-            "Strategies",
-
-            total
-
-        )
-
-        col2.metric(
-
-            "Highest Score",
-
-            highest
-
-        )
-
-        col3.metric(
-
-            "Average Score",
-
-            average
-
-        )
-
-        col4.metric(
-
-            "Strong Buy",
-
-            strong_buy
-
-        )
+        col4.metric("Strong Buy", strong_buy)
 
     ###########################################################################
     # EXECUTIVE SUMMARY
     ###########################################################################
 
     def executive_summary(self):
+        st.subheader("Executive Summary")
 
-        st.subheader(
-
-            "Executive Summary"
-
-        )
-
-        summary = self.insights.get(
-
-            "executive_summary"
-
-        )
+        summary = self.insights.get("executive_summary")
 
         if summary is None:
-
-            summary = self.insights.get(
-
-                "executive"
-
-            )
+            summary = self.insights.get("executive")
 
         if summary is None:
-
-            st.info(
-
-                "Executive summary is not available."
-
-            )
+            st.info("Executive summary is not available.")
 
             return
 
         dataframe = summary.copy()
 
-        dataframe = dataframe.astype(
+        dataframe = dataframe.astype(str)
 
-            str
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # BEST STRATEGY
     ###########################################################################
 
     def best_strategy(self):
-
-        st.subheader(
-
-            "Best Strategy"
-
-        )
+        st.subheader("Best Strategy")
 
         if self.ranked.empty:
-
-            st.info(
-
-                "No strategy available."
-
-            )
+            st.info("No strategy available.")
 
             return
 
-        best = self.ranked.iloc[
+        best = self.ranked.iloc[0]
 
-            0
-
-        ]
-
-        dataframe = pd.DataFrame({
-
-            "Metric": [
-
-                "Strategy",
-
-                "Overall Score",
-
-                "Grade",
-
-                "Recommendation"
-
-            ],
-
-            "Value": [
-
-                best["Strategy"],
-
-                round(
-
-                    best["Overall Score"],
-
-                    2
-
-                ),
-
-                best["Grade"],
-
-                best["Recommendation"]
-
-            ]
-
-        })
-
-        dataframe = dataframe.astype(
-
-            str
-
+        dataframe = pd.DataFrame(
+            {
+                "Metric": ["Strategy", "Overall Score", "Grade", "Recommendation"],
+                "Value": [
+                    best["Strategy"],
+                    round(best["Overall Score"], 2),
+                    best["Grade"],
+                    best["Recommendation"],
+                ],
+            }
         )
 
-        st.dataframe(
+        dataframe = dataframe.astype(str)
 
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # TOP 5 STRATEGIES
     ###########################################################################
 
     def top_five(self):
-
-        st.subheader(
-
-            "Top 5 Strategies"
-
-        )
+        st.subheader("Top 5 Strategies")
 
         if self.ranked.empty:
-
-            st.info(
-
-                "No ranking available."
-
-            )
+            st.info("No ranking available.")
 
             return
 
-        columns = [
+        columns = ["Rank", "Strategy", "Overall Score", "Grade", "Recommendation"]
 
-            "Rank",
+        columns = [column for column in columns if column in self.ranked.columns]
 
-            "Strategy",
+        dataframe = self.ranked[columns].head(5).copy()
 
-            "Overall Score",
+        dataframe = dataframe.astype(str)
 
-            "Grade",
-
-            "Recommendation"
-
-        ]
-
-        columns = [
-
-            column
-
-            for column in columns
-
-            if column in self.ranked.columns
-
-        ]
-
-        dataframe = (
-
-            self.ranked[
-
-                columns
-
-            ]
-
-            .head(
-
-                5
-
-            )
-
-            .copy()
-
-        )
-
-        dataframe = dataframe.astype(
-
-            str
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # METRIC LEADERS
     ###########################################################################
 
     def metric_leaders(self):
+        st.subheader("Metric Leaders")
 
-        st.subheader(
-
-            "Metric Leaders"
-
-        )
-
-        leaders = self.insights.get(
-
-            "metric_leaders"
-
-        )
+        leaders = self.insights.get("metric_leaders")
 
         if leaders is None:
-
-            leaders = self.insights.get(
-
-                "leaders"
-
-            )
+            leaders = self.insights.get("leaders")
 
         if leaders is None:
-
-            st.info(
-
-                "Metric leaders are unavailable."
-
-            )
+            st.info("Metric leaders are unavailable.")
 
             return
 
         dataframe = leaders.copy()
 
-        dataframe = dataframe.astype(
+        dataframe = dataframe.astype(str)
 
-            str
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # RECOMMENDATION SUMMARY
     ###########################################################################
 
     def recommendation_summary(self):
-
-        st.subheader(
-
-            "Recommendation Summary"
-
-        )
+        st.subheader("Recommendation Summary")
 
         if "Recommendation" not in self.ranked.columns:
-
-            st.info(
-
-                "Recommendation data unavailable."
-
-            )
+            st.info("Recommendation data unavailable.")
 
             return
 
-        dataframe = (
+        dataframe = self.ranked["Recommendation"].value_counts().reset_index()
 
-            self.ranked[
+        dataframe.columns = ["Recommendation", "Count"]
 
-                "Recommendation"
+        dataframe = dataframe.astype(str)
 
-            ]
-
-            .value_counts()
-
-            .reset_index()
-
-        )
-
-        dataframe.columns = [
-
-            "Recommendation",
-
-            "Count"
-
-        ]
-
-        dataframe = dataframe.astype(
-
-            str
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # OVERALL SCORE CHART
     ###########################################################################
 
     def overall_score_chart(self):
-
-        st.subheader(
-
-            "Overall Strategy Scores"
-
-        )
+        st.subheader("Overall Strategy Scores")
 
         figure = self.charts.overall_score()
 
-        st.plotly_chart(
-
-            figure,
-
-            width="stretch"
-
-        )
+        st.plotly_chart(figure, width="stretch")
 
     ###########################################################################
     # EXECUTIVE NARRATIVE
     ###########################################################################
 
     def executive_narrative(self):
+        st.subheader("Executive Narrative")
 
-        st.subheader(
-
-            "Executive Narrative"
-
-        )
-
-        narrative = self.insights.get(
-
-            "executive_narrative"
-
-        )
+        narrative = self.insights.get("executive_narrative")
 
         if narrative is None:
-
-            st.info(
-
-                "Executive narrative unavailable."
-
-            )
+            st.info("Executive narrative unavailable.")
 
             return
 
         for line in narrative:
-
-            st.write(
-
-                f"• {line}"
-
-            )
+            st.write(f"• {line}")
 
     ###########################################################################
     # STRENGTH ANALYSIS
     ###########################################################################
 
     def strength_analysis(self):
+        st.subheader("Strategy Strengths")
 
-        st.subheader(
-
-            "Strategy Strengths"
-
-        )
-
-        dataframe = self.insights.get(
-
-            "strength_analysis"
-
-        )
+        dataframe = self.insights.get("strength_analysis")
 
         if dataframe is None:
-
-            st.info(
-
-                "Strength analysis unavailable."
-
-            )
+            st.info("Strength analysis unavailable.")
 
             return
 
-        dataframe = dataframe.astype(
+        dataframe = dataframe.astype(str)
 
-            str
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # WEAKNESS ANALYSIS
     ###########################################################################
 
     def weakness_analysis(self):
+        st.subheader("Strategy Weaknesses")
 
-        st.subheader(
-
-            "Strategy Weaknesses"
-
-        )
-
-        dataframe = self.insights.get(
-
-            "weakness_analysis"
-
-        )
+        dataframe = self.insights.get("weakness_analysis")
 
         if dataframe is None:
-
-            st.info(
-
-                "Weakness analysis unavailable."
-
-            )
+            st.info("Weakness analysis unavailable.")
 
             return
 
-        dataframe = dataframe.astype(
+        dataframe = dataframe.astype(str)
 
-            str
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # RISK MATRIX
     ###########################################################################
 
     def risk_matrix(self):
+        st.subheader("Risk Assessment")
 
-        st.subheader(
-
-            "Risk Assessment"
-
-        )
-
-        dataframe = self.insights.get(
-
-            "risk_matrix"
-
-        )
+        dataframe = self.insights.get("risk_matrix")
 
         if dataframe is None:
-
-            st.info(
-
-                "Risk assessment unavailable."
-
-            )
+            st.info("Risk assessment unavailable.")
 
             return
 
-        dataframe = dataframe.astype(
+        dataframe = dataframe.astype(str)
 
-            str
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # OPPORTUNITY MATRIX
     ###########################################################################
 
     def opportunity_matrix(self):
+        st.subheader("Opportunity Assessment")
 
-        st.subheader(
-
-            "Opportunity Assessment"
-
-        )
-
-        dataframe = self.insights.get(
-
-            "opportunity_matrix"
-
-        )
+        dataframe = self.insights.get("opportunity_matrix")
 
         if dataframe is None:
-
-            st.info(
-
-                "Opportunity assessment unavailable."
-
-            )
+            st.info("Opportunity assessment unavailable.")
 
             return
 
-        dataframe = dataframe.astype(
+        dataframe = dataframe.astype(str)
 
-            str
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # GRADE DISTRIBUTION
     ###########################################################################
 
     def grade_distribution(self):
-
-        st.subheader(
-
-            "Grade Distribution"
-
-        )
+        st.subheader("Grade Distribution")
 
         figure = self.charts.grade_distribution()
 
-        st.plotly_chart(
-
-            figure,
-
-            width="stretch"
-
-        )
+        st.plotly_chart(figure, width="stretch")
 
     ###########################################################################
     # RECOMMENDATION DISTRIBUTION
     ###########################################################################
 
     def recommendation_distribution(self):
-
-        st.subheader(
-
-            "Recommendation Distribution"
-
-        )
+        st.subheader("Recommendation Distribution")
 
         figure = self.charts.recommendation_distribution()
 
-        st.plotly_chart(
-
-            figure,
-
-            width="stretch"
-
-        )
+        st.plotly_chart(figure, width="stretch")
 
     ###########################################################################
     # DASHBOARD SUMMARY
     ###########################################################################
 
     def dashboard_summary(self):
-
-        st.subheader(
-
-            "Dashboard Summary"
-
-        )
+        st.subheader("Dashboard Summary")
 
         rows = [
-
+            {"Category": "Strategies", "Value": len(self.ranked)},
+            {"Category": "Best Strategy", "Value": self.ranked.iloc[0]["Strategy"]},
             {
-
-                "Category":
-
-                    "Strategies",
-
-                "Value":
-
-                    len(
-
-                        self.ranked
-
-                    )
-
+                "Category": "Highest Score",
+                "Value": round(self.ranked.iloc[0]["Overall Score"], 2),
             },
-
             {
-
-                "Category":
-
-                    "Best Strategy",
-
-                "Value":
-
-                    self.ranked.iloc[
-
-                        0
-
-                    ][
-
-                        "Strategy"
-
-                    ]
-
+                "Category": "Average Score",
+                "Value": round(self.ranked["Overall Score"].mean(), 2),
             },
-
-            {
-
-                "Category":
-
-                    "Highest Score",
-
-                "Value":
-
-                    round(
-
-                        self.ranked.iloc[
-
-                            0
-
-                        ][
-
-                            "Overall Score"
-
-                        ],
-
-                        2
-
-                    )
-
-            },
-
-            {
-
-                "Category":
-
-                    "Average Score",
-
-                "Value":
-
-                    round(
-
-                        self.ranked[
-
-                            "Overall Score"
-
-                        ].mean(),
-
-                        2
-
-                    )
-
-            }
-
         ]
 
-        dataframe = pd.DataFrame(
+        dataframe = pd.DataFrame(rows)
 
-            rows
+        dataframe = dataframe.astype(str)
 
-        )
-
-        dataframe = dataframe.astype(
-
-            str
-
-        )
-
-        st.dataframe(
-
-            dataframe,
-
-            width="stretch",
-
-            hide_index=True
-
-        )
+        st.dataframe(dataframe, width="stretch", hide_index=True)
 
     ###########################################################################
     # COMPLETE DASHBOARD
     ###########################################################################
 
     def render(self):
-
-        st.header(
-
-            "Executive Dashboard"
-
-        )
+        st.header("Executive Dashboard")
 
         self.kpis()
 
@@ -951,34 +385,22 @@ class ExecutivePage:
 
         st.divider()
 
-        left, right = st.columns(
-
-            2
-
-        )
+        left, right = st.columns(2)
 
         with left:
-
             self.strength_analysis()
 
         with right:
-
             self.weakness_analysis()
 
         st.divider()
 
-        left, right = st.columns(
-
-            2
-
-        )
+        left, right = st.columns(2)
 
         with left:
-
             self.risk_matrix()
 
         with right:
-
             self.opportunity_matrix()
 
         st.divider()

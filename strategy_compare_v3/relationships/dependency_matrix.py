@@ -33,16 +33,8 @@ class DependencyMatrix:
     ✓ Dependency Strength Report
     """
 
-    def __init__(
-        self,
-        dataframe: pd.DataFrame
-    ):
-
-        self.df = (
-            dataframe
-            .select_dtypes(include=np.number)
-            .copy()
-        )
+    def __init__(self, dataframe: pd.DataFrame):
+        self.df = dataframe.select_dtypes(include=np.number).copy()
 
         self.df = self._prepare_numeric()
 
@@ -51,64 +43,31 @@ class DependencyMatrix:
     # ==================================================
 
     def _prepare_numeric(self) -> pd.DataFrame:
-
         df = self.df.copy()
 
         if df.empty:
-
             return df
 
         # Replace infinities
 
-        df.replace(
-
-            [np.inf, -np.inf],
-
-            np.nan,
-
-            inplace=True
-
-        )
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)
 
         # Remove empty columns
 
-        df.dropna(
-
-            axis=1,
-
-            how="all",
-
-            inplace=True
-
-        )
+        df.dropna(axis=1, how="all", inplace=True)
 
         if df.empty:
-
             return df
 
         # Fill NaN using median
 
-        medians = df.median(
+        medians = df.median(numeric_only=True)
 
-            numeric_only=True
-
-        )
-
-        df = df.fillna(
-
-            medians
-
-        )
+        df = df.fillna(medians)
 
         # Remove constant columns
 
-        df = df.loc[
-
-            :,
-
-            df.nunique(dropna=False) > 1
-
-        ]
+        df = df.loc[:, df.nunique(dropna=False) > 1]
 
         return df
 
@@ -117,15 +76,9 @@ class DependencyMatrix:
     # ==================================================
 
     def covariance(self):
-
-        logger.info(
-
-            "Computing covariance matrix..."
-
-        )
+        logger.info("Computing covariance matrix...")
 
         if self.df.empty:
-
             return pd.DataFrame()
 
         return self.df.cov()
@@ -135,72 +88,34 @@ class DependencyMatrix:
     # ==================================================
 
     def mutual_information(self):
-
-        logger.info(
-
-            "Computing mutual information..."
-
-        )
+        logger.info("Computing mutual information...")
 
         if self.df.shape[1] < 2:
-
             return pd.DataFrame()
 
         cols = self.df.columns
 
-        mi = pd.DataFrame(
-
-            index=cols,
-
-            columns=cols,
-
-            dtype=float
-
-        )
+        mi = pd.DataFrame(index=cols, columns=cols, dtype=float)
 
         for target in cols:
-
-            X = self.df.drop(
-
-                columns=target
-
-            )
+            X = self.df.drop(columns=target)
 
             y = self.df[target]
 
             if X.empty:
-
                 mi.loc[target, target] = 1.0
 
                 continue
 
             try:
-
-                scores = mutual_info_regression(
-
-                    X,
-
-                    y,
-
-                    random_state=42
-
-                )
+                scores = mutual_info_regression(X, y, random_state=42)
 
                 mi.loc[target, target] = 1.0
 
                 mi.loc[target, X.columns] = scores
 
             except Exception as exc:
-
-                logger.warning(
-
-                    "Mutual information skipped for %s : %s",
-
-                    target,
-
-                    exc
-
-                )
+                logger.warning("Mutual information skipped for %s : %s", target, exc)
 
                 mi.loc[target] = np.nan
 
@@ -213,15 +128,9 @@ class DependencyMatrix:
     # ==================================================
 
     def dependency_strength(self):
-
-        logger.info(
-
-            "Computing dependency strengths..."
-
-        )
+        logger.info("Computing dependency strengths...")
 
         if self.df.shape[1] < 2:
-
             return pd.DataFrame()
 
         corr = self.df.corr()
@@ -231,75 +140,43 @@ class DependencyMatrix:
         cols = corr.columns
 
         for i in range(len(cols)):
-
             for j in range(i + 1, len(cols)):
-
                 value = corr.iloc[i, j]
 
                 if pd.isna(value):
-
                     continue
 
                 absolute = abs(value)
 
                 if absolute >= 0.90:
-
                     strength = "Very Strong"
 
                 elif absolute >= 0.70:
-
                     strength = "Strong"
 
                 elif absolute >= 0.50:
-
                     strength = "Moderate"
 
                 else:
-
                     strength = "Weak"
 
-                rows.append({
-
-                    "Feature A":
-
-                        cols[i],
-
-                    "Feature B":
-
-                        cols[j],
-
-                    "Correlation":
-
-                        round(value, 4),
-
-                    "Absolute":
-
-                        round(absolute, 4),
-
-                    "Strength":
-
-                        strength
-
-                })
+                rows.append(
+                    {
+                        "Feature A": cols[i],
+                        "Feature B": cols[j],
+                        "Correlation": round(value, 4),
+                        "Absolute": round(absolute, 4),
+                        "Strength": strength,
+                    }
+                )
 
         if not rows:
-
             return pd.DataFrame()
 
         return (
-
             pd.DataFrame(rows)
-
-            .sort_values(
-
-                "Absolute",
-
-                ascending=False
-
-            )
-
+            .sort_values("Absolute", ascending=False)
             .reset_index(drop=True)
-
         )
 
     # ==================================================
@@ -307,34 +184,14 @@ class DependencyMatrix:
     # ==================================================
 
     def generate(self):
-
-        logger.info(
-
-            "Generating dependency analytics..."
-
-        )
+        logger.info("Generating dependency analytics...")
 
         return {
-
-            "Covariance":
-
-                self.covariance(),
-
-            "Mutual Information":
-
-                self.mutual_information(),
-
-            "Dependency Strength":
-
-                self.dependency_strength()
-
+            "Covariance": self.covariance(),
+            "Mutual Information": self.mutual_information(),
+            "Dependency Strength": self.dependency_strength(),
         }
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import DependencyMatrix from relationship_engine.py"
-
-    )
+    print("Import DependencyMatrix from relationship_engine.py")

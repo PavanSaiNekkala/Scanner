@@ -37,10 +37,7 @@ class DimensionalityReduction:
         self,
         dataframe: pd.DataFrame,
     ):
-
-        df = dataframe.select_dtypes(
-            include=np.number
-        ).copy()
+        df = dataframe.select_dtypes(include=np.number).copy()
 
         # ---------------------------------------------
         # Clean dataset
@@ -59,19 +56,11 @@ class DimensionalityReduction:
         )
 
         if not df.empty:
-
-            df = df.fillna(
-                df.median(
-                    numeric_only=True
-                )
-            )
+            df = df.fillna(df.median(numeric_only=True))
 
             # Remove constant columns
 
-            df = df.loc[
-                :,
-                df.nunique(dropna=False) > 1
-            ]
+            df = df.loc[:, df.nunique(dropna=False) > 1]
 
         self.df = df
 
@@ -79,20 +68,11 @@ class DimensionalityReduction:
 
         self.X = None
 
-        if (
-            self.df.shape[0] >= 2
-            and
-            self.df.shape[1] >= 2
-        ):
-
+        if self.df.shape[0] >= 2 and self.df.shape[1] >= 2:
             try:
-
-                self.X = self.scaler.fit_transform(
-                    self.df
-                )
+                self.X = self.scaler.fit_transform(self.df)
 
             except Exception as exc:
-
                 logger.warning(
                     "Scaling failed: %s",
                     exc,
@@ -105,7 +85,6 @@ class DimensionalityReduction:
     # ==================================================
 
     def _ready(self):
-
         return self.X is not None
 
     # ==================================================
@@ -116,13 +95,9 @@ class DimensionalityReduction:
         self,
         n_components=None,
     ):
-
-        logger.info(
-            "Running PCA..."
-        )
+        logger.info("Running PCA...")
 
         if not self._ready():
-
             return {
                 "Scores": pd.DataFrame(),
                 "Variance": pd.DataFrame(),
@@ -135,48 +110,33 @@ class DimensionalityReduction:
         )
 
         if n_components is None:
-
             n_components = max_components
 
         else:
-
             n_components = min(
                 n_components,
                 max_components,
             )
 
         try:
-
             model = PCA(
                 n_components=n_components,
                 random_state=42,
             )
 
-            transformed = model.fit_transform(
-                self.X
-            )
+            transformed = model.fit_transform(self.X)
 
             scores = pd.DataFrame(
                 transformed,
-                columns=[
-                    f"PC{i+1}"
-                    for i in range(
-                        transformed.shape[1]
-                    )
-                ],
+                columns=[f"PC{i + 1}" for i in range(transformed.shape[1])],
             )
 
             variance = pd.DataFrame(
                 {
                     "Principal Component": scores.columns,
-                    "Explained Variance":
-                        model.explained_variance_,
-                    "Explained Variance Ratio":
-                        model.explained_variance_ratio_,
-                    "Cumulative Variance":
-                        np.cumsum(
-                            model.explained_variance_ratio_
-                        ),
+                    "Explained Variance": model.explained_variance_,
+                    "Explained Variance Ratio": model.explained_variance_ratio_,
+                    "Cumulative Variance": np.cumsum(model.explained_variance_ratio_),
                 }
             )
 
@@ -193,7 +153,6 @@ class DimensionalityReduction:
             }
 
         except Exception as exc:
-
             logger.warning(
                 "PCA failed: %s",
                 exc,
@@ -213,13 +172,9 @@ class DimensionalityReduction:
         self,
         n_components=None,
     ):
-
-        logger.info(
-            "Running Incremental PCA..."
-        )
+        logger.info("Running Incremental PCA...")
 
         if not self._ready():
-
             return pd.DataFrame()
 
         max_components = min(
@@ -228,38 +183,25 @@ class DimensionalityReduction:
         )
 
         if n_components is None:
-
             n_components = max_components
 
         else:
-
             n_components = min(
                 n_components,
                 max_components,
             )
 
         try:
+            model = IncrementalPCA(n_components=n_components)
 
-            model = IncrementalPCA(
-                n_components=n_components
-            )
-
-            transformed = model.fit_transform(
-                self.X
-            )
+            transformed = model.fit_transform(self.X)
 
             return pd.DataFrame(
                 transformed,
-                columns=[
-                    f"IPC{i+1}"
-                    for i in range(
-                        transformed.shape[1]
-                    )
-                ],
+                columns=[f"IPC{i + 1}" for i in range(transformed.shape[1])],
             )
 
         except Exception as exc:
-
             logger.warning(
                 "Incremental PCA failed: %s",
                 exc,
@@ -275,9 +217,7 @@ class DimensionalityReduction:
         self,
         threshold=0.95,
     ):
-
         if not self._ready():
-
             return pd.DataFrame(
                 {
                     "Threshold": [threshold],
@@ -286,21 +226,13 @@ class DimensionalityReduction:
             )
 
         try:
-
             model = PCA()
 
             model.fit(self.X)
 
-            cumulative = np.cumsum(
-                model.explained_variance_ratio_
-            )
+            cumulative = np.cumsum(model.explained_variance_ratio_)
 
-            n = (
-                np.argmax(
-                    cumulative >= threshold
-                )
-                + 1
-            )
+            n = np.argmax(cumulative >= threshold) + 1
 
             return pd.DataFrame(
                 {
@@ -310,7 +242,6 @@ class DimensionalityReduction:
             )
 
         except Exception as exc:
-
             logger.warning(
                 "Recommendation failed: %s",
                 exc,
@@ -328,27 +259,14 @@ class DimensionalityReduction:
     # ==================================================
 
     def generate(self):
-
-        logger.info(
-            "Generating Dimensionality Reduction Report..."
-        )
+        logger.info("Generating Dimensionality Reduction Report...")
 
         return {
-
-            "PCA":
-                self.pca(),
-
-            "Incremental PCA":
-                self.incremental_pca(),
-
-            "Recommendation":
-                self.recommended_components(),
-
+            "PCA": self.pca(),
+            "Incremental PCA": self.incremental_pca(),
+            "Recommendation": self.recommended_components(),
         }
 
 
 if __name__ == "__main__":
-
-    print(
-        "Import DimensionalityReduction from relationship_engine.py"
-    )
+    print("Import DimensionalityReduction from relationship_engine.py")

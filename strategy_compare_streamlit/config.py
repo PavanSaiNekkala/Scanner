@@ -16,23 +16,11 @@ REPORTS = BASE_DIR / "reports"
 
 ASSETS = BASE_DIR / "assets"
 
-OUTPUTS.mkdir(
+OUTPUTS.mkdir(exist_ok=True)
 
-    exist_ok=True
+REPORTS.mkdir(exist_ok=True)
 
-)
-
-REPORTS.mkdir(
-
-    exist_ok=True
-
-)
-
-ASSETS.mkdir(
-
-    exist_ok=True
-
-)
+ASSETS.mkdir(exist_ok=True)
 
 ###########################################################################
 # INPUT / OUTPUT
@@ -47,31 +35,12 @@ REPORT_NAME = REPORTS / "Strategy_Comparison.xlsx"
 ###########################################################################
 
 SHEETS = {
-
-    "ranking":
-
-        "Strategy Ranking",
-
-    "recommendations":
-
-        "Recommendations",
-
-    "overlap":
-
-        "Top Stocks",
-
-    "executive":
-
-        "Executive Summary",
-
-    "comparison":
-
-        "Comparison",
-
-    "analytics":
-
-        "Analytics"
-
+    "ranking": "Strategy Ranking",
+    "recommendations": "Recommendations",
+    "overlap": "Top Stocks",
+    "executive": "Executive Summary",
+    "comparison": "Comparison",
+    "analytics": "Analytics",
 }
 
 ###########################################################################
@@ -79,23 +48,14 @@ SHEETS = {
 ###########################################################################
 
 REQUIRED_COLUMNS = [
-
     "Strategy Rank",
-
     "Stock",
-
     "Overall Score",
-
     "Recommendation",
-
     "Performance Score",
-
     "Reliability Score",
-
     "Execution Score",
-
-    "Opportunity Score"
-
+    "Opportunity Score",
 ]
 
 ###########################################################################
@@ -103,17 +63,11 @@ REQUIRED_COLUMNS = [
 ###########################################################################
 
 PRIMARY_METRICS = (
-
     "Overall Score",
-
     "Performance Score",
-
     "Reliability Score",
-
     "Execution Score",
-
-    "Opportunity Score"
-
+    "Opportunity Score",
 )
 
 ###########################################################################
@@ -121,91 +75,30 @@ PRIMARY_METRICS = (
 ###########################################################################
 
 WEIGHTS = {
-
-    "Overall Score":
-
-        0.40,
-
-    "Performance Score":
-
-        0.20,
-
-    "Reliability Score":
-
-        0.15,
-
-    "Execution Score":
-
-        0.15,
-
-    "Opportunity Score":
-
-        0.10
-
+    "Overall Score": 0.40,
+    "Performance Score": 0.20,
+    "Reliability Score": 0.15,
+    "Execution Score": 0.15,
+    "Opportunity Score": 0.10,
 }
 
 ###########################################################################
 # GRADE RULES
 ###########################################################################
 
-GRADE_RULES = {
-
-    90:
-
-        "A+",
-
-    80:
-
-        "A",
-
-    70:
-
-        "B",
-
-    60:
-
-        "C",
-
-    50:
-
-        "D",
-
-    0:
-
-        "F"
-
-}
+GRADE_RULES = {90: "A+", 80: "A", 70: "B", 60: "C", 50: "D", 0: "F"}
 
 ###########################################################################
 # RECOMMENDATION RULES
 ###########################################################################
 
 RECOMMENDATION_RULES = {
-
-    90:
-
-        "Strong Buy",
-
-    80:
-
-        "Buy",
-
-    70:
-
-        "Watch",
-
-    60:
-
-        "Improve",
-
-    50:
-
-        "Avoid",
-
-    0:
-
-        "Reject"
-
+    90: "Strong Buy",
+    80: "Buy",
+    70: "Watch",
+    60: "Improve",
+    50: "Avoid",
+    0: "Reject",
 }
 
 ###########################################################################
@@ -263,9 +156,6 @@ APP_VERSION = "3.0.0"
 AUTHOR = "Pavan Sai Nekkala"
 
 DESCRIPTION = (
-
     "Institutional-grade strategy comparison dashboard "
-
     "for evaluating quantitative trading strategies."
-
 )

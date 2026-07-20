@@ -3,15 +3,10 @@ import pandas as pd
 
 
 def safe_numeric(series):
-
-    return pd.to_numeric(
-        series,
-        errors="coerce"
-    )
+    return pd.to_numeric(series, errors="coerce")
 
 
 def coefficient_of_variation(series):
-
     series = series.dropna()
 
     if len(series) == 0:
@@ -26,18 +21,11 @@ def coefficient_of_variation(series):
 
 
 def normalize(series):
-
     minimum = series.min()
 
     maximum = series.max()
 
     if maximum == minimum:
-        return pd.Series(
-            np.ones(len(series))*50,
-            index=series.index
-        )
+        return pd.Series(np.ones(len(series)) * 50, index=series.index)
 
-    return (
-        (series-minimum) /
-        (maximum-minimum)
-    ) * 100
+    return ((series - minimum) / (maximum - minimum)) * 100

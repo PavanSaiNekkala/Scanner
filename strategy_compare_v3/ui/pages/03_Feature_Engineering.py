@@ -14,18 +14,11 @@ import pandas as pd
 
 from feature_engineering.feature_engine import FeatureEngine
 
-st.set_page_config(
-    page_title="Feature Engineering",
-    page_icon="⚙️",
-    layout="wide"
-)
+st.set_page_config(page_title="Feature Engineering", page_icon="⚙️", layout="wide")
 
 st.title("⚙️ Feature Engineering")
 
-uploaded_file = st.file_uploader(
-    "Upload CSV / Excel",
-    type=["csv", "xlsx"]
-)
+uploaded_file = st.file_uploader("Upload CSV / Excel", type=["csv", "xlsx"])
 
 if uploaded_file is None:
     st.stop()
@@ -36,12 +29,8 @@ else:
     df = pd.read_excel(uploaded_file)
 
 if st.button("Generate Features"):
-
     engineered = FeatureEngine(df).run()
 
     st.success("Features Generated")
 
-    st.dataframe(
-        engineered,
-        use_container_width=True
-    )
+    st.dataframe(engineered, use_container_width=True)

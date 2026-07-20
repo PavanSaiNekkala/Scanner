@@ -68,17 +68,11 @@ RANDOM_STATE = 42
 DEFAULT_NORMALIZATION = "Percentile"
 
 NORMALIZATION_METHODS = [
-
     "Percentile",
-
     "Min-Max",
-
     "Z-Score",
-
     "Robust Z-Score",
-
-    "Quantile"
-
+    "Quantile",
 ]
 
 # ============================================================
@@ -86,23 +80,14 @@ NORMALIZATION_METHODS = [
 # ============================================================
 
 RECOMMENDATION_THRESHOLDS = {
-
     "STRONG BUY": 90,
-
     "BUY": 80,
-
     "ACCUMULATE": 70,
-
     "WATCH": 60,
-
     "HOLD": 50,
-
     "REDUCE": 40,
-
     "SELL": 30,
-
-    "AVOID": 0
-
+    "AVOID": 0,
 }
 
 # ============================================================
@@ -110,23 +95,14 @@ RECOMMENDATION_THRESHOLDS = {
 # ============================================================
 
 COMPOSITE_SCORE_WEIGHTS = {
-
     "Institutional Score": 0.40,
-
     "Edge Score": 0.15,
-
     "Risk Score": 0.10,
-
     "Efficiency Score": 0.10,
-
     "Stability Score": 0.10,
-
     "Reliability Score": 0.05,
-
     "Opportunity Score": 0.05,
-
-    "Execution Score": 0.05
-
+    "Execution Score": 0.05,
 }
 
 # ============================================================
@@ -134,21 +110,13 @@ COMPOSITE_SCORE_WEIGHTS = {
 # ============================================================
 
 INSTITUTIONAL_SCORE_WEIGHTS = {
-
     "Edge Score": 0.20,
-
     "Risk Score": 0.15,
-
     "Efficiency Score": 0.15,
-
     "Stability Score": 0.15,
-
     "Reliability Score": 0.15,
-
     "Opportunity Score": 0.10,
-
-    "Execution Score": 0.10
-
+    "Execution Score": 0.10,
 }
 
 # ============================================================
@@ -211,52 +179,23 @@ MAX_THREADS = 4
 # File Formats
 # ============================================================
 
-SUPPORTED_INPUT = [
+SUPPORTED_INPUT = [".csv", ".xlsx"]
 
-    ".csv",
-
-    ".xlsx"
-
-]
-
-SUPPORTED_EXPORT = [
-
-    ".xlsx",
-
-    ".csv"
-
-]
+SUPPORTED_EXPORT = [".xlsx", ".csv"]
 
 # ============================================================
 # Create Required Directories
 # ============================================================
 
 for directory in [
-
     DATA_DIR,
-
     INPUT_DIR,
-
     INTERIM_DIR,
-
     PROCESSED_DIR,
-
     OUTPUT_DIR,
-
     REPORT_DIR,
-
     EXCEL_DIR,
-
     CHART_DIR,
-
     LOG_DIR,
-
 ]:
-
-    directory.mkdir(
-
-        parents=True,
-
-        exist_ok=True
-
-    )
+    directory.mkdir(parents=True, exist_ok=True)

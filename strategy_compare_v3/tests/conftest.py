@@ -31,60 +31,24 @@ np.random.seed(42)
 
 @pytest.fixture(scope="session")
 def sample_dataframe():
-
     rows = 100
 
-    return pd.DataFrame({
-
-        "Stock":
-
-            [f"STOCK_{i}" for i in range(rows)],
-
-        "Expectancy%":
-
-            np.random.uniform(5, 40, rows),
-
-        "Profit Factor":
-
-            np.random.uniform(0.8, 4.5, rows),
-
-        "Reward Risk":
-
-            np.random.uniform(0.5, 6.0, rows),
-
-        "Trades":
-
-            np.random.randint(20, 400, rows),
-
-        "Trades / Year":
-
-            np.random.uniform(5, 120, rows),
-
-        "Win %":
-
-            np.random.uniform(25, 90, rows),
-
-        "Signal Quality":
-
-            np.random.uniform(40, 100, rows),
-
-        "Holding Efficiency":
-
-            np.random.uniform(20, 100, rows),
-
-        "Winning Exit %":
-
-            np.random.uniform(40, 95, rows),
-
-        "Losing Exit %":
-
-            np.random.uniform(5, 60, rows),
-
-        "Profit Velocity":
-
-            np.random.uniform(0.5, 8.0, rows)
-
-    })
+    return pd.DataFrame(
+        {
+            "Stock": [f"STOCK_{i}" for i in range(rows)],
+            "Expectancy%": np.random.uniform(5, 40, rows),
+            "Profit Factor": np.random.uniform(0.8, 4.5, rows),
+            "Reward Risk": np.random.uniform(0.5, 6.0, rows),
+            "Trades": np.random.randint(20, 400, rows),
+            "Trades / Year": np.random.uniform(5, 120, rows),
+            "Win %": np.random.uniform(25, 90, rows),
+            "Signal Quality": np.random.uniform(40, 100, rows),
+            "Holding Efficiency": np.random.uniform(20, 100, rows),
+            "Winning Exit %": np.random.uniform(40, 95, rows),
+            "Losing Exit %": np.random.uniform(5, 60, rows),
+            "Profit Velocity": np.random.uniform(0.5, 8.0, rows),
+        }
+    )
 
 
 # ============================================================
@@ -93,23 +57,10 @@ def sample_dataframe():
 
 
 @pytest.fixture()
-def sample_csv(
-
-    sample_dataframe,
-
-    tmp_path
-
-):
-
+def sample_csv(sample_dataframe, tmp_path):
     file = tmp_path / "sample.csv"
 
-    sample_dataframe.to_csv(
-
-        file,
-
-        index=False
-
-    )
+    sample_dataframe.to_csv(file, index=False)
 
     return file
 
@@ -120,23 +71,10 @@ def sample_csv(
 
 
 @pytest.fixture()
-def sample_excel(
-
-    sample_dataframe,
-
-    tmp_path
-
-):
-
+def sample_excel(sample_dataframe, tmp_path):
     file = tmp_path / "sample.xlsx"
 
-    sample_dataframe.to_excel(
-
-        file,
-
-        index=False
-
-    )
+    sample_dataframe.to_excel(file, index=False)
 
     return file
 
@@ -147,12 +85,7 @@ def sample_excel(
 
 
 @pytest.fixture()
-def output_directory(
-
-    tmp_path
-
-):
-
+def output_directory(tmp_path):
     directory = tmp_path / "outputs"
 
     directory.mkdir()
@@ -166,19 +99,8 @@ def output_directory(
 
 
 @pytest.fixture()
-def working_directory(
-
-    tmp_path,
-
-    monkeypatch
-
-):
-
-    monkeypatch.chdir(
-
-        tmp_path
-
-    )
+def working_directory(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
 
     return tmp_path
 
@@ -189,103 +111,26 @@ def working_directory(
 
 
 @pytest.fixture()
-def scored_dataframe(
-
-    sample_dataframe
-
-):
-
+def scored_dataframe(sample_dataframe):
     df = sample_dataframe.copy()
 
-    df["Edge Score"] = np.random.uniform(
+    df["Edge Score"] = np.random.uniform(60, 100, len(df))
 
-        60,
+    df["Risk Score"] = np.random.uniform(60, 100, len(df))
 
-        100,
+    df["Efficiency Score"] = np.random.uniform(60, 100, len(df))
 
-        len(df)
+    df["Stability Score"] = np.random.uniform(60, 100, len(df))
 
-    )
+    df["Reliability Score"] = np.random.uniform(60, 100, len(df))
 
-    df["Risk Score"] = np.random.uniform(
+    df["Opportunity Score"] = np.random.uniform(60, 100, len(df))
 
-        60,
+    df["Execution Score"] = np.random.uniform(60, 100, len(df))
 
-        100,
+    df["Institutional Score"] = np.random.uniform(60, 100, len(df))
 
-        len(df)
-
-    )
-
-    df["Efficiency Score"] = np.random.uniform(
-
-        60,
-
-        100,
-
-        len(df)
-
-    )
-
-    df["Stability Score"] = np.random.uniform(
-
-        60,
-
-        100,
-
-        len(df)
-
-    )
-
-    df["Reliability Score"] = np.random.uniform(
-
-        60,
-
-        100,
-
-        len(df)
-
-    )
-
-    df["Opportunity Score"] = np.random.uniform(
-
-        60,
-
-        100,
-
-        len(df)
-
-    )
-
-    df["Execution Score"] = np.random.uniform(
-
-        60,
-
-        100,
-
-        len(df)
-
-    )
-
-    df["Institutional Score"] = np.random.uniform(
-
-        60,
-
-        100,
-
-        len(df)
-
-    )
-
-    df["Composite Score"] = np.random.uniform(
-
-        60,
-
-        100,
-
-        len(df)
-
-    )
+    df["Composite Score"] = np.random.uniform(60, 100, len(df))
 
     return df
 
@@ -297,17 +142,9 @@ def scored_dataframe(
 
 @pytest.fixture(autouse=True)
 def cleanup_outputs():
-
     yield
 
     outputs = Path("outputs")
 
     if outputs.exists():
-
-        shutil.rmtree(
-
-            outputs,
-
-            ignore_errors=True
-
-        )
+        shutil.rmtree(outputs, ignore_errors=True)

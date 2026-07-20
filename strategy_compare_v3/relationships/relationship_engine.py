@@ -57,7 +57,6 @@ class RelationshipEngine:
         target: str | None = None,
         use_cache: bool = False,
     ):
-
         self.df = dataframe.copy()
 
         self.target = target
@@ -71,54 +70,27 @@ class RelationshipEngine:
     # ======================================================
 
     def validate(self):
-
         if self.df is None:
-
-            raise ValueError(
-                "Input dataframe is None."
-            )
+            raise ValueError("Input dataframe is None.")
 
         if self.df.empty:
+            raise ValueError("Input dataframe is empty.")
 
-            raise ValueError(
-                "Input dataframe is empty."
-            )
-
-        numeric = self.df.select_dtypes(
-            include="number"
-        )
+        numeric = self.df.select_dtypes(include="number")
 
         if numeric.empty:
-
-            raise ValueError(
-                "No numeric columns found."
-            )
+            raise ValueError("No numeric columns found.")
 
         if self.target is not None:
-
             if self.target not in self.df.columns:
-
-                raise ValueError(
-
-                    f"Target column "
-
-                    f"'{self.target}' "
-
-                    f"not found."
-
-                )
+                raise ValueError(f"Target column '{self.target}' not found.")
 
     # ======================================================
 
     def run(self):
-
         logger.info("=" * 80)
 
-        logger.info(
-
-            "Starting Relationship Engine..."
-
-        )
+        logger.info("Starting Relationship Engine...")
 
         self.validate()
 
@@ -128,163 +100,64 @@ class RelationshipEngine:
         # Correlation
         # --------------------------------------------------
 
-        logger.info(
+        logger.info("Running Correlation Engine...")
 
-            "Running Correlation Engine..."
-
-        )
-
-        correlation = CorrelationEngine(
-
-            self.df
-
-        ).generate()
+        correlation = CorrelationEngine(self.df).generate()
 
         # --------------------------------------------------
         # Dependency Matrix
         # --------------------------------------------------
 
-        logger.info(
+        logger.info("Running Dependency Matrix...")
 
-            "Running Dependency Matrix..."
-
-        )
-
-        dependency = DependencyMatrix(
-
-            self.df
-
-        ).generate()
+        dependency = DependencyMatrix(self.df).generate()
 
         # --------------------------------------------------
         # Multicollinearity
         # --------------------------------------------------
 
-        logger.info(
+        logger.info("Running Multicollinearity...")
 
-            "Running Multicollinearity..."
-
-        )
-
-        multicollinearity = Multicollinearity(
-
-            self.df
-
-        ).generate()
+        multicollinearity = Multicollinearity(self.df).generate()
 
         # --------------------------------------------------
         # Feature Selection
         # --------------------------------------------------
 
         if self.target is not None:
+            logger.info("Running Feature Selection...")
 
-            logger.info(
-
-                "Running Feature Selection..."
-
-            )
-
-            feature_selection = FeatureSelection(
-
-                self.df,
-
-                target=self.target
-
-            ).generate()
+            feature_selection = FeatureSelection(self.df, target=self.target).generate()
 
         else:
-
-            logger.info(
-
-                "Skipping Feature Selection "
-
-                "(No target column provided)."
-
-            )
+            logger.info("Skipping Feature Selection (No target column provided).")
 
             feature_selection = pd.DataFrame(
-
-                {
-
-                    "Information": [
-
-                        "Skipped"
-
-                    ],
-
-                    "Reason": [
-
-                        "No target column supplied."
-
-                    ]
-
-                }
-
+                {"Information": ["Skipped"], "Reason": ["No target column supplied."]}
             )
 
         # --------------------------------------------------
         # Dimensionality Reduction
         # --------------------------------------------------
 
-        logger.info(
+        logger.info("Running PCA...")
 
-            "Running PCA..."
-
-        )
-
-        dimensionality = DimensionalityReduction(
-
-            self.df
-
-        ).generate()
+        dimensionality = DimensionalityReduction(self.df).generate()
 
         # --------------------------------------------------
 
-        elapsed = round(
-
-            time.perf_counter() - start,
-
-            3
-
-        )
+        elapsed = round(time.perf_counter() - start, 3)
 
         self.results = {
-
-            "Correlation":
-
-                correlation,
-
-            "Dependency":
-
-                dependency,
-
-            "Multicollinearity":
-
-                multicollinearity,
-
-            "Feature Selection":
-
-                feature_selection,
-
-            "Dimensionality Reduction":
-
-                dimensionality,
-
-            "Execution Time (sec)":
-
-                elapsed
-
+            "Correlation": correlation,
+            "Dependency": dependency,
+            "Multicollinearity": multicollinearity,
+            "Feature Selection": feature_selection,
+            "Dimensionality Reduction": dimensionality,
+            "Execution Time (sec)": elapsed,
         }
 
-        logger.info(
-
-            "Relationship Engine "
-
-            "completed in %.3f seconds.",
-
-            elapsed
-
-        )
+        logger.info("Relationship Engine completed in %.3f seconds.", elapsed)
 
         logger.info("=" * 80)
 
@@ -292,29 +165,19 @@ class RelationshipEngine:
 
     # ======================================================
 
-    def get_report(
-        self,
-        name: str
-    ):
-
+    def get_report(self, name: str):
         return self.results.get(name)
 
     # ======================================================
 
     def report_names(self):
-
-        return list(
-
-            self.results.keys()
-
-        )
+        return list(self.results.keys())
 
     # ==================================================
     # PIPELINE COMPATIBILITY WRAPPER
     # ==================================================
 
     def generate(self):
-
         """
         Standard interface wrapper.
 
@@ -325,14 +188,7 @@ class RelationshipEngine:
         """
 
         return self.run()
-    
+
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import RelationshipEngine "
-
-        "from main.py"
-
-    )
+    print("Import RelationshipEngine from main.py")

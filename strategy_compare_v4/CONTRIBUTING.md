@@ -4,7 +4,7 @@ First, thank you for your interest in contributing to the **Institutional Strate
 
 We welcome bug reports, feature requests, documentation improvements, performance optimizations, and code contributions.
 
----
+______________________________________________________________________
 
 # Table of Contents
 
@@ -19,7 +19,7 @@ We welcome bug reports, feature requests, documentation improvements, performanc
 - Documentation
 - Reporting Issues
 
----
+______________________________________________________________________
 
 # Code of Conduct
 
@@ -33,7 +33,7 @@ We expect contributors to:
 - Follow the project standards.
 - Keep discussions technical and professional.
 
----
+______________________________________________________________________
 
 # Development Environment
 
@@ -84,7 +84,7 @@ Install pre-commit
 pre-commit install
 ```
 
----
+______________________________________________________________________
 
 # Project Structure
 
@@ -102,7 +102,7 @@ examples/
 
 Each module should have a single responsibility.
 
----
+______________________________________________________________________
 
 # Coding Standards
 
@@ -131,7 +131,7 @@ Type Checking
 mypy .
 ```
 
----
+______________________________________________________________________
 
 # Code Style
 
@@ -144,7 +144,7 @@ Please:
 - Avoid duplicated code.
 - Prefer reusable utility functions.
 
----
+______________________________________________________________________
 
 # Testing
 
@@ -168,7 +168,7 @@ New modules should include:
 - Edge-case tests
 - Error handling tests
 
----
+______________________________________________________________________
 
 # Branching Strategy
 
@@ -190,7 +190,7 @@ refactor/math-utils
 
 Avoid committing directly to the `main` branch.
 
----
+______________________________________________________________________
 
 # Commit Message Convention
 
@@ -212,7 +212,7 @@ test: add robustness tests
 ci: update GitHub Actions workflow
 ```
 
----
+______________________________________________________________________
 
 # Pull Requests
 
@@ -231,7 +231,7 @@ PR description should include:
 - Testing performed
 - Related issue(s)
 
----
+______________________________________________________________________
 
 # Documentation
 
@@ -242,7 +242,7 @@ If your contribution changes functionality, update:
 - Docstrings
 - Examples (if applicable)
 
----
+______________________________________________________________________
 
 # Reporting Issues
 
@@ -256,7 +256,7 @@ When reporting an issue, please include:
 - Expected behavior
 - Actual behavior
 
----
+______________________________________________________________________
 
 # Feature Requests
 
@@ -267,19 +267,19 @@ Feature requests should explain:
 - Alternatives considered
 - Expected benefits
 
----
+______________________________________________________________________
 
 # Development Workflow
 
 1. Fork the repository.
-2. Create a feature branch.
-3. Make your changes.
-4. Run formatting and tests.
-5. Commit your work.
-6. Push your branch.
-7. Open a Pull Request.
+1. Create a feature branch.
+1. Make your changes.
+1. Run formatting and tests.
+1. Commit your work.
+1. Push your branch.
+1. Open a Pull Request.
 
----
+______________________________________________________________________
 
 # Thank You
 

@@ -33,55 +33,14 @@ class RecommendationThresholds:
     """
 
     LEVELS = [
-
-        RecommendationThreshold(
-            90.0,
-            "STRONG BUY",
-            "#008000"
-        ),
-
-        RecommendationThreshold(
-            80.0,
-            "BUY",
-            "#32CD32"
-        ),
-
-        RecommendationThreshold(
-            70.0,
-            "ACCUMULATE",
-            "#00BFFF"
-        ),
-
-        RecommendationThreshold(
-            60.0,
-            "WATCH",
-            "#FFD700"
-        ),
-
-        RecommendationThreshold(
-            50.0,
-            "HOLD",
-            "#FFA500"
-        ),
-
-        RecommendationThreshold(
-            40.0,
-            "REDUCE",
-            "#FF8C00"
-        ),
-
-        RecommendationThreshold(
-            30.0,
-            "SELL",
-            "#FF4500"
-        ),
-
-        RecommendationThreshold(
-            0.0,
-            "AVOID",
-            "#DC143C"
-        ),
-
+        RecommendationThreshold(90.0, "STRONG BUY", "#008000"),
+        RecommendationThreshold(80.0, "BUY", "#32CD32"),
+        RecommendationThreshold(70.0, "ACCUMULATE", "#00BFFF"),
+        RecommendationThreshold(60.0, "WATCH", "#FFD700"),
+        RecommendationThreshold(50.0, "HOLD", "#FFA500"),
+        RecommendationThreshold(40.0, "REDUCE", "#FF8C00"),
+        RecommendationThreshold(30.0, "SELL", "#FF4500"),
+        RecommendationThreshold(0.0, "AVOID", "#DC143C"),
     ]
 
     @classmethod
@@ -91,9 +50,7 @@ class RecommendationThresholds:
         """
 
         for level in cls.LEVELS:
-
             if score >= level.minimum_score:
-
                 return level.label
 
         return "UNKNOWN"
@@ -105,63 +62,23 @@ class RecommendationThresholds:
         """
 
         for level in cls.LEVELS:
-
             if score >= level.minimum_score:
-
                 return level.color
 
         return "#808080"
 
     @classmethod
     def as_dataframe(cls):
-
         import pandas as pd
 
-        return pd.DataFrame({
-
-            "Minimum Score":
-
-                [
-
-                    level.minimum_score
-
-                    for level
-
-                    in cls.LEVELS
-
-                ],
-
-            "Recommendation":
-
-                [
-
-                    level.label
-
-                    for level
-
-                    in cls.LEVELS
-
-                ],
-
-            "Color":
-
-                [
-
-                    level.color
-
-                    for level
-
-                    in cls.LEVELS
-
-                ]
-
-        })
+        return pd.DataFrame(
+            {
+                "Minimum Score": [level.minimum_score for level in cls.LEVELS],
+                "Recommendation": [level.label for level in cls.LEVELS],
+                "Color": [level.color for level in cls.LEVELS],
+            }
+        )
 
 
 if __name__ == "__main__":
-
-    print(
-
-        RecommendationThresholds.as_dataframe()
-
-    )
+    print(RecommendationThresholds.as_dataframe())

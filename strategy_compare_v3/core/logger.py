@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from pathlib import Path
 
 from core.constants import (
     LOG_DIR,
@@ -33,9 +32,8 @@ LOG_FILE = LOG_DIR / "strategy_compare.log"
 # Configure Logger
 # ----------------------------------------------------------
 
-def get_logger(
-    name: str = "StrategyCompare"
-) -> logging.Logger:
+
+def get_logger(name: str = "StrategyCompare") -> logging.Logger:
     """
     Returns a configured logger.
 
@@ -54,38 +52,25 @@ def get_logger(
     if logger.handlers:
         return logger
 
-    logger.setLevel(
-        getattr(logging, LOG_LEVEL.upper())
-    )
+    logger.setLevel(getattr(logging, LOG_LEVEL.upper()))
 
-    formatter = logging.Formatter(
-        LOG_FORMAT
-    )
+    formatter = logging.Formatter(LOG_FORMAT)
 
     # ------------------------------------------------------
     # Console Logger
     # ------------------------------------------------------
 
-    console_handler = logging.StreamHandler(
-        sys.stdout
-    )
+    console_handler = logging.StreamHandler(sys.stdout)
 
-    console_handler.setFormatter(
-        formatter
-    )
+    console_handler.setFormatter(formatter)
 
     # ------------------------------------------------------
     # File Logger
     # ------------------------------------------------------
 
-    file_handler = logging.FileHandler(
-        LOG_FILE,
-        encoding="utf-8"
-    )
+    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
 
-    file_handler.setFormatter(
-        formatter
-    )
+    file_handler.setFormatter(formatter)
 
     # ------------------------------------------------------
 
@@ -110,7 +95,6 @@ logger = get_logger()
 # ----------------------------------------------------------
 
 if __name__ == "__main__":
-
     logger.info("Logger initialized successfully.")
 
     logger.warning("Warning message.")

@@ -28,10 +28,10 @@ from typing import Any
 
 import pandas as pd
 
-
 # ============================================================
 # Directory Utilities
 # ============================================================
+
 
 def ensure_directory(
     path: str | Path,
@@ -74,6 +74,7 @@ def directory_exists(
 # Reading Files
 # ============================================================
 
+
 def read_csv(
     file_path: str | Path,
     **kwargs: Any,
@@ -105,6 +106,7 @@ def read_excel(
 # Writing Files
 # ============================================================
 
+
 def write_csv(
     df: pd.DataFrame,
     file_path: str | Path,
@@ -127,14 +129,20 @@ def write_csv(
 
 
 def write_excel(
-    df: pd.DataFrame,
+    data: pd.DataFrame | dict[str, pd.DataFrame],
     file_path: str | Path,
     sheet_name: str = "Sheet1",
     index: bool = False,
     **kwargs: Any,
 ) -> None:
     """
-    Export a DataFrame to an Excel workbook.
+    Export either:
+
+    • A single DataFrame
+    • A dictionary of DataFrames
+      {sheet_name: dataframe}
+
+    to an Excel workbook.
     """
 
     file_path = Path(file_path)
@@ -145,18 +153,52 @@ def write_excel(
         file_path,
         engine="openpyxl",
     ) as writer:
+        # -------------------------------
+        # Multiple worksheets
+        # -------------------------------
 
-        df.to_excel(
-            writer,
-            sheet_name=sheet_name,
-            index=index,
-            **kwargs,
-        )
+        if isinstance(
+            data,
+            dict,
+        ):
+            written = False
+
+            for name, df in data.items():
+                if df is None or not isinstance(df, pd.DataFrame) or df.empty:
+                    continue
+
+                df.to_excel(
+                    writer,
+                    sheet_name=str(name)[:31],
+                    index=index,
+                    **kwargs,
+                )
+
+                written = True
+
+            if not written:
+                pd.DataFrame({"Status": ["No Data"]}).to_excel(
+                    writer,
+                    sheet_name="Summary",
+                    index=False,
+                )
+        # -------------------------------
+        # Single worksheet
+        # -------------------------------
+
+        else:
+            data.to_excel(
+                writer,
+                sheet_name=sheet_name,
+                index=index,
+                **kwargs,
+            )
 
 
 # ============================================================
 # File Discovery
 # ============================================================
+
 
 def list_files(
     directory: str | Path,
@@ -176,11 +218,7 @@ def list_directories(
     Return all immediate sub-directories.
     """
 
-    return sorted(
-        path
-        for path in Path(directory).iterdir()
-        if path.is_dir()
-    )
+    return sorted(path for path in Path(directory).iterdir() if path.is_dir())
 
 
 def find_statistics_files(
@@ -190,9 +228,7 @@ def find_statistics_files(
     Return all statistics workbooks.
     """
 
-    return sorted(
-        Path(directory).glob("**/*Statistics.xlsx")
-    )
+    return sorted(Path(directory).glob("**/*Statistics.xlsx"))
 
 
 def find_backtest_files(
@@ -202,14 +238,13 @@ def find_backtest_files(
     Return all backtest CSV files.
     """
 
-    return sorted(
-        Path(directory).glob("**/*.csv")
-    )
+    return sorted(Path(directory).glob("**/*.csv"))
 
 
 # ============================================================
 # Path Utilities
 # ============================================================
+
 
 def file_stem(
     file_path: str | Path,

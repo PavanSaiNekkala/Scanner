@@ -16,30 +16,25 @@ import pytest
 
 from core.validator import DataValidator
 
-
 # ==========================================================
 # Fixtures
 # ==========================================================
 
+
 @pytest.fixture
 def valid_dataframe():
-
-    return pd.DataFrame({
-
-        "Stock": ["ABC", "XYZ"],
-
-        "Expectancy%": [12.5, 18.2],
-
-        "Profit Factor": [1.8, 2.3],
-
-        "Trades": [50, 80]
-
-    })
+    return pd.DataFrame(
+        {
+            "Stock": ["ABC", "XYZ"],
+            "Expectancy%": [12.5, 18.2],
+            "Profit Factor": [1.8, 2.3],
+            "Trades": [50, 80],
+        }
+    )
 
 
 @pytest.fixture
 def empty_dataframe():
-
     return pd.DataFrame()
 
 
@@ -47,8 +42,8 @@ def empty_dataframe():
 # Constructor
 # ==========================================================
 
-def test_validator_creation(valid_dataframe):
 
+def test_validator_creation(valid_dataframe):
     validator = DataValidator(valid_dataframe)
 
     assert validator is not None
@@ -58,8 +53,8 @@ def test_validator_creation(valid_dataframe):
 # Valid Dataset
 # ==========================================================
 
-def test_validate_valid_dataframe(valid_dataframe):
 
+def test_validate_valid_dataframe(valid_dataframe):
     validator = DataValidator(valid_dataframe)
 
     assert validator.validate() is True
@@ -69,12 +64,11 @@ def test_validate_valid_dataframe(valid_dataframe):
 # Empty Dataset
 # ==========================================================
 
-def test_validate_empty_dataframe(empty_dataframe):
 
+def test_validate_empty_dataframe(empty_dataframe):
     validator = DataValidator(empty_dataframe)
 
     with pytest.raises(ValueError):
-
         validator.validate()
 
 
@@ -82,20 +76,13 @@ def test_validate_empty_dataframe(empty_dataframe):
 # Duplicate Columns
 # ==========================================================
 
+
 def test_duplicate_columns():
-
-    df = pd.DataFrame(
-
-        [[1, 2]],
-
-        columns=["A", "A"]
-
-    )
+    df = pd.DataFrame([[1, 2]], columns=["A", "A"])
 
     validator = DataValidator(df)
 
     with pytest.raises(ValueError):
-
         validator.validate()
 
 
@@ -103,8 +90,8 @@ def test_duplicate_columns():
 # Missing Values
 # ==========================================================
 
-def test_missing_values(valid_dataframe):
 
+def test_missing_values(valid_dataframe):
     df = valid_dataframe.copy()
 
     df.loc[0, "Profit Factor"] = None
@@ -120,8 +107,8 @@ def test_missing_values(valid_dataframe):
 # Column Exists
 # ==========================================================
 
-def test_required_column_exists(valid_dataframe):
 
+def test_required_column_exists(valid_dataframe):
     assert "Stock" in valid_dataframe.columns
 
 
@@ -129,18 +116,13 @@ def test_required_column_exists(valid_dataframe):
 # Column Missing
 # ==========================================================
 
+
 def test_required_column_missing(valid_dataframe):
-
-    df = valid_dataframe.drop(
-
-        columns=["Stock"]
-
-    )
+    df = valid_dataframe.drop(columns=["Stock"])
 
     validator = DataValidator(df)
 
     with pytest.raises(ValueError):
-
         validator.validate()
 
 
@@ -148,13 +130,9 @@ def test_required_column_missing(valid_dataframe):
 # Numeric Columns
 # ==========================================================
 
+
 def test_numeric_columns(valid_dataframe):
-
-    numeric = valid_dataframe.select_dtypes(
-
-        include="number"
-
-    )
+    numeric = valid_dataframe.select_dtypes(include="number")
 
     assert len(numeric.columns) == 3
 
@@ -163,22 +141,15 @@ def test_numeric_columns(valid_dataframe):
 # Invalid Numeric Type
 # ==========================================================
 
-def test_invalid_numeric_type(valid_dataframe):
 
+def test_invalid_numeric_type(valid_dataframe):
     df = valid_dataframe.copy()
 
-    df["Trades"] = [
-
-        "ABC",
-
-        "XYZ"
-
-    ]
+    df["Trades"] = ["ABC", "XYZ"]
 
     validator = DataValidator(df)
 
     with pytest.raises(ValueError):
-
         validator.validate()
 
 
@@ -186,8 +157,8 @@ def test_invalid_numeric_type(valid_dataframe):
 # DataFrame Shape
 # ==========================================================
 
-def test_dataframe_shape(valid_dataframe):
 
+def test_dataframe_shape(valid_dataframe):
     validator = DataValidator(valid_dataframe)
 
     validator.validate()
@@ -199,29 +170,18 @@ def test_dataframe_shape(valid_dataframe):
 # Large Dataset
 # ==========================================================
 
-def test_large_dataframe():
 
+def test_large_dataframe():
     rows = 10000
 
-    df = pd.DataFrame({
-
-        "Stock":
-
-            [f"S{i}" for i in range(rows)],
-
-        "Expectancy%":
-
-            range(rows),
-
-        "Profit Factor":
-
-            range(rows),
-
-        "Trades":
-
-            range(rows)
-
-    })
+    df = pd.DataFrame(
+        {
+            "Stock": [f"S{i}" for i in range(rows)],
+            "Expectancy%": range(rows),
+            "Profit Factor": range(rows),
+            "Trades": range(rows),
+        }
+    )
 
     validator = DataValidator(df)
 

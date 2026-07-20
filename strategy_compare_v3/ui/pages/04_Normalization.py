@@ -15,18 +15,11 @@ import pandas as pd
 from feature_engineering.feature_engine import FeatureEngine
 from normalization.normalization_engine import NormalizationEngine
 
-st.set_page_config(
-    page_title="Normalization",
-    page_icon="📏",
-    layout="wide"
-)
+st.set_page_config(page_title="Normalization", page_icon="📏", layout="wide")
 
 st.title("📏 Normalization")
 
-uploaded_file = st.file_uploader(
-    "Upload CSV / Excel",
-    type=["csv", "xlsx"]
-)
+uploaded_file = st.file_uploader("Upload CSV / Excel", type=["csv", "xlsx"])
 
 if uploaded_file is None:
     st.stop()
@@ -37,25 +30,10 @@ else:
     df = pd.read_excel(uploaded_file)
 
 if st.button("Normalize Data"):
-
     feature_df = FeatureEngine(df).run()
 
-    normalized = NormalizationEngine(
-        feature_df
-    ).run()
+    normalized = NormalizationEngine(feature_df).run()
 
-    method = st.selectbox(
+    method = st.selectbox("Normalization Method", list(normalized.keys())[:-1])
 
-        "Normalization Method",
-
-        list(normalized.keys())[:-1]
-
-    )
-
-    st.dataframe(
-
-        normalized[method],
-
-        use_container_width=True
-
-    )
+    st.dataframe(normalized[method], use_container_width=True)

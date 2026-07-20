@@ -128,6 +128,17 @@ MIN_STOCKS_FOR_COMPARISON = 5
 MIN_STRATEGIES_FOR_COMPARISON = 2
 
 # ============================================================
+# Data Validation / Outlier Detection
+# ============================================================
+
+# Maximum absolute return (%) considered reasonable.
+# Values beyond this are flagged as extreme.
+EXTREME_RETURN_THRESHOLD = 100.0
+
+# Maximum absolute expectancy (%) before flagging.
+EXTREME_EXPECTANCY_THRESHOLD = 50.0
+
+# ============================================================
 # Excel Reporting
 # ============================================================
 

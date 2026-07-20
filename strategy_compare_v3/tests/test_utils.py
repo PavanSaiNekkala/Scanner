@@ -22,30 +22,26 @@ from core.utils import (
     to_numeric,
 )
 
-
 # ==========================================================
 # safe_divide()
 # ==========================================================
 
-def test_safe_divide_normal():
 
+def test_safe_divide_normal():
     assert safe_divide(10, 2) == 5
 
 
 def test_safe_divide_zero():
-
     result = safe_divide(10, 0)
 
     assert result == 0
 
 
 def test_safe_divide_negative():
-
     assert safe_divide(-10, 2) == -5
 
 
 def test_safe_divide_numpy():
-
     a = np.array([10, 20, 30])
 
     b = np.array([2, 4, 5])
@@ -59,18 +55,16 @@ def test_safe_divide_numpy():
 # percentage()
 # ==========================================================
 
-def test_percentage():
 
+def test_percentage():
     assert percentage(25, 100) == 25
 
 
 def test_percentage_zero():
-
     assert percentage(0, 100) == 0
 
 
 def test_percentage_full():
-
     assert percentage(100, 100) == 100
 
 
@@ -78,13 +72,9 @@ def test_percentage_full():
 # to_numeric()
 # ==========================================================
 
+
 def test_to_numeric_series():
-
-    series = pd.Series(
-
-        ["10", "20", "30"]
-
-    )
+    series = pd.Series(["10", "20", "30"])
 
     converted = to_numeric(series)
 
@@ -92,12 +82,7 @@ def test_to_numeric_series():
 
 
 def test_to_numeric_invalid():
-
-    series = pd.Series(
-
-        ["10", "ABC", "20"]
-
-    )
+    series = pd.Series(["10", "ABC", "20"])
 
     converted = to_numeric(series)
 
@@ -108,62 +93,31 @@ def test_to_numeric_invalid():
 # Edge Cases
 # ==========================================================
 
+
 @pytest.mark.parametrize(
-
     "numerator, denominator",
-
     [
-
         (0, 1),
-
         (1, 0),
-
         (0, 0),
-
         (-5, 2),
-
         (5, -2),
-
     ],
-
 )
-
 def test_safe_divide_edge_cases(
-
     numerator,
-
     denominator,
-
 ):
-
-    safe_divide(
-
-        numerator,
-
-        denominator
-
-    )
+    safe_divide(numerator, denominator)
 
 
 # ==========================================================
 # Performance
 # ==========================================================
 
+
 def test_large_series_numeric():
-
-    series = pd.Series(
-
-        np.random.randint(
-
-            0,
-
-            1000,
-
-            100000
-
-        ).astype(str)
-
-    )
+    series = pd.Series(np.random.randint(0, 1000, 100000).astype(str))
 
     converted = to_numeric(series)
 

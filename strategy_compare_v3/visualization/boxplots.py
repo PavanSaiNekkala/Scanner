@@ -37,7 +37,6 @@ class BoxplotVisualizer:
         output_directory: str = "outputs/charts/boxplots",
         dpi: int = 300,
     ):
-
         self.df = dataframe.copy()
 
         self.output_directory = Path(output_directory)
@@ -52,12 +51,7 @@ class BoxplotVisualizer:
     # --------------------------------------------------
 
     def numeric_columns(self):
-
-        return self.df.select_dtypes(
-
-            include=np.number
-
-        ).columns.tolist()
+        return self.df.select_dtypes(include=np.number).columns.tolist()
 
     # --------------------------------------------------
 
@@ -65,76 +59,26 @@ class BoxplotVisualizer:
         self,
         column: str,
     ) -> str:
+        logger.info("Generating boxplot: %s", column)
 
-        logger.info(
+        fig, ax = plt.subplots(figsize=(8, 5))
 
-            "Generating boxplot: %s",
+        ax.boxplot(self.df[column].dropna(), vert=True, patch_artist=False)
 
-            column
-
-        )
-
-        fig, ax = plt.subplots(
-
-            figsize=(8, 5)
-
-        )
-
-        ax.boxplot(
-
-            self.df[column].dropna(),
-
-            vert=True,
-
-            patch_artist=False
-
-        )
-
-        ax.set_title(
-
-            f"Boxplot - {column}",
-
-            fontsize=14,
-
-            fontweight="bold"
-
-        )
+        ax.set_title(f"Boxplot - {column}", fontsize=14, fontweight="bold")
 
         ax.set_ylabel(column)
 
         plt.tight_layout()
 
         filename = (
-
-            column
-
-            .replace("/", "_")
-
-            .replace("%", "Pct")
-
-            .replace(" ", "_")
-
+            column.replace("/", "_").replace("%", "Pct").replace(" ", "_")
             + "_boxplot.png"
-
         )
 
-        output_file = (
+        output_file = self.output_directory / filename
 
-            self.output_directory
-
-            / filename
-
-        )
-
-        plt.savefig(
-
-            output_file,
-
-            dpi=self.dpi,
-
-            bbox_inches="tight"
-
-        )
+        plt.savefig(output_file, dpi=self.dpi, bbox_inches="tight")
 
         plt.close(fig)
 
@@ -143,39 +87,21 @@ class BoxplotVisualizer:
     # --------------------------------------------------
 
     def generate_all(self):
-
         outputs = {}
 
         for column in self.numeric_columns():
+            outputs[column] = self.generate_boxplot(column)
 
-            outputs[column] = (
-
-                self.generate_boxplot(
-
-                    column
-
-                )
-
-            )
-
-        logger.info(
-
-            "Generated %d boxplots.",
-
-            len(outputs)
-
-        )
+        logger.info("Generated %d boxplots.", len(outputs))
 
         return outputs
 
     # --------------------------------------------------
 
     def outlier_statistics(self):
-
         summary = []
 
         for column in self.numeric_columns():
-
             series = self.df[column].dropna()
 
             q1 = series.quantile(0.25)
@@ -188,95 +114,32 @@ class BoxplotVisualizer:
 
             upper = q3 + 1.5 * iqr
 
-            outliers = series[
+            outliers = series[(series < lower) | (series > upper)]
 
-                (series < lower)
+            summary.append(
+                {
+                    "Feature": column,
+                    "Q1": q1,
+                    "Median": series.median(),
+                    "Q3": q3,
+                    "IQR": iqr,
+                    "Lower Bound": lower,
+                    "Upper Bound": upper,
+                    "Outliers": len(outliers),
+                    "Outlier %": round(len(outliers) / len(series) * 100, 2),
+                }
+            )
 
-                |
-
-                (series > upper)
-
-            ]
-
-            summary.append({
-
-                "Feature":
-
-                    column,
-
-                "Q1":
-
-                    q1,
-
-                "Median":
-
-                    series.median(),
-
-                "Q3":
-
-                    q3,
-
-                "IQR":
-
-                    iqr,
-
-                "Lower Bound":
-
-                    lower,
-
-                "Upper Bound":
-
-                    upper,
-
-                "Outliers":
-
-                    len(outliers),
-
-                "Outlier %":
-
-                    round(
-
-                        len(outliers)
-
-                        /
-
-                        len(series)
-
-                        * 100,
-
-                        2
-
-                    )
-
-            })
-
-        return pd.DataFrame(
-
-            summary
-
-        )
+        return pd.DataFrame(summary)
 
     # --------------------------------------------------
 
     def generate(self):
-
         return {
-
-            "Files":
-
-                self.generate_all(),
-
-            "Outlier Statistics":
-
-                self.outlier_statistics()
-
+            "Files": self.generate_all(),
+            "Outlier Statistics": self.outlier_statistics(),
         }
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside dashboards.py"
-
-    )
+    print("Import inside dashboards.py")

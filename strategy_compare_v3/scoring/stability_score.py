@@ -26,116 +26,45 @@ class StabilityScoreEngine:
     """
 
     DEFAULT_WEIGHTS = {
-
         "Trade Density": 0.15,
-
         "Profit Consistency": 0.25,
-
         "Expectancy Stability": 0.20,
-
         "Reward Consistency": 0.15,
-
         "Holding Stability": 0.10,
-
-        "Stability Index": 0.15
-
+        "Stability Index": 0.15,
     }
 
-    def __init__(
-        self,
-        dataframe: pd.DataFrame,
-        weights: dict | None = None
-    ):
-
+    def __init__(self, dataframe: pd.DataFrame, weights: dict | None = None):
         self.df = dataframe.copy()
 
-        self.weights = (
-
-            weights
-
-            if weights is not None
-
-            else self.DEFAULT_WEIGHTS
-
-        )
+        self.weights = weights if weights is not None else self.DEFAULT_WEIGHTS
 
     # -----------------------------------------------------
 
     def validate(self):
-
-        missing = [
-
-            column
-
-            for column in self.weights
-
-            if column not in self.df.columns
-
-        ]
+        missing = [column for column in self.weights if column not in self.df.columns]
 
         if missing:
-
-            raise ValueError(
-
-                f"Missing columns: {missing}"
-
-            )
+            raise ValueError(f"Missing columns: {missing}")
 
     # -----------------------------------------------------
 
     def generate(self):
-
-        logger.info(
-
-            "Generating Stability Score..."
-
-        )
+        logger.info("Generating Stability Score...")
 
         self.validate()
 
-        score = np.zeros(
-
-            len(self.df)
-
-        )
+        score = np.zeros(len(self.df))
 
         for feature, weight in self.weights.items():
+            score += self.df[feature] * weight
 
-            score += (
+        self.df["Stability Score"] = score.clip(0, 100).round(2)
 
-                self.df[feature]
+        logger.info("Stability Score completed.")
 
-                * weight
-
-            )
-
-        self.df["Stability Score"] = (
-
-            score
-
-            .clip(0, 100)
-
-            .round(2)
-
-        )
-
-        logger.info(
-
-            "Stability Score completed."
-
-        )
-
-        return self.df[[
-
-            "Stability Score"
-
-        ]]
+        return self.df[["Stability Score"]]
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside scoring_engine.py"
-
-    )
+    print("Import inside scoring_engine.py")

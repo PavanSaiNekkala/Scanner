@@ -37,7 +37,6 @@ class MonteCarloSimulation:
         noise_level: float = 0.05,
         random_state: int = 42,
     ):
-
         self.df = dataframe.copy()
 
         self.objective_function = objective_function
@@ -53,32 +52,18 @@ class MonteCarloSimulation:
     # -----------------------------------------------------
 
     def perturb_data(self):
-
         """
         Apply Gaussian noise to numeric columns.
         """
 
         simulated = self.df.copy()
 
-        numeric = simulated.select_dtypes(
-
-            include=np.number
-
-        ).columns
+        numeric = simulated.select_dtypes(include=np.number).columns
 
         for column in numeric:
-
             std = simulated[column].std()
 
-            noise = np.random.normal(
-
-                0,
-
-                std * self.noise_level,
-
-                len(simulated)
-
-            )
+            noise = np.random.normal(0, std * self.noise_level, len(simulated))
 
             simulated[column] += noise
 
@@ -87,138 +72,53 @@ class MonteCarloSimulation:
     # -----------------------------------------------------
 
     def run(self):
-
-        logger.info(
-
-            "Running Monte Carlo Simulation..."
-
-        )
+        logger.info("Running Monte Carlo Simulation...")
 
         results = []
 
-        for simulation in range(
-
-            self.simulations
-
-        ):
-
+        for simulation in range(self.simulations):
             simulated = self.perturb_data()
 
-            score = self.objective_function(
+            score = self.objective_function(simulated)
 
-                simulated
-
-            )
-
-            results.append(
-
-                score
-
-            )
+            results.append(score)
 
         results = np.asarray(results)
 
-        summary = pd.DataFrame({
-
-            "Metric": [
-
-                "Mean",
-
-                "Median",
-
-                "Std",
-
-                "Minimum",
-
-                "Maximum",
-
-                "5th Percentile",
-
-                "95th Percentile"
-
-            ],
-
-            "Value": [
-
-                results.mean(),
-
-                np.median(results),
-
-                results.std(),
-
-                results.min(),
-
-                results.max(),
-
-                np.percentile(results, 5),
-
-                np.percentile(results, 95)
-
-            ]
-
-        })
-
-        logger.info(
-
-            "Monte Carlo completed."
-
+        summary = pd.DataFrame(
+            {
+                "Metric": [
+                    "Mean",
+                    "Median",
+                    "Std",
+                    "Minimum",
+                    "Maximum",
+                    "5th Percentile",
+                    "95th Percentile",
+                ],
+                "Value": [
+                    results.mean(),
+                    np.median(results),
+                    results.std(),
+                    results.min(),
+                    results.max(),
+                    np.percentile(results, 5),
+                    np.percentile(results, 95),
+                ],
+            }
         )
 
-        return {
+        logger.info("Monte Carlo completed.")
 
-            "Simulation Results":
-
-                results,
-
-            "Summary":
-
-                summary
-
-        }
+        return {"Simulation Results": results, "Summary": summary}
 
     # -----------------------------------------------------
 
-    def confidence_interval(
+    def confidence_interval(self, results: np.ndarray, confidence: float = 95):
+        alpha = (100 - confidence) / 2
 
-        self,
-
-        results: np.ndarray,
-
-        confidence: float = 95
-
-    ):
-
-        alpha = (
-
-            100 - confidence
-
-        ) / 2
-
-        return (
-
-            np.percentile(
-
-                results,
-
-                alpha
-
-            ),
-
-            np.percentile(
-
-                results,
-
-                100 - alpha
-
-            )
-
-        )
+        return (np.percentile(results, alpha), np.percentile(results, 100 - alpha))
 
 
 if __name__ == "__main__":
-
-    print(
-
-        "Import inside optimization_engine.py"
-
-    )
+    print("Import inside optimization_engine.py")

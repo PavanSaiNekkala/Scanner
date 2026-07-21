@@ -23,55 +23,102 @@ from pathlib import Path
 
 import pandas as pd
 
+from strategy_compare_v4.config.constants import (
+    EXPECTANCY,
+    STOCK,
+    STRATEGY,
+)
+from strategy_compare_v4.utils.helpers import (
+    dataframe_summary,
+    sort_dataframe,
+)
+from strategy_compare_v4.utils.io_utils import write_csv
+
 from .io import load_strategy_directory
 from .metrics import compute_trade_metrics
 
 logger = logging.getLogger(__name__)
 
+# ==========================================================
+# Preferred Column Order
+# ==========================================================
+
+PREFERRED_COLUMNS = [
+    STOCK,
+    STRATEGY,
+    "Trades",
+    "Wins",
+    "Losses",
+    "Win%",
+    "Avg Win %",
+    "Avg Loss %",
+    "Profit Factor",
+    "Reward Risk",
+    EXPECTANCY,
+    "Avg days",
+    "Years",
+    "Annual Return %",
+    "CAGR",
+    "Max Drawdown %",
+    "Sharpe",
+    "Sortino",
+    "Recovery Factor",
+]
+
 
 # ==========================================================
-# Summary Builder
-# =========================================================
+# Strategy Summary
+# ==========================================================
 
 
 def build_strategy_summary(
     strategy_directory: str | Path,
-    strategy_name: str,
+    strategy_name: str | None = None,
 ) -> pd.DataFrame:
-    strategy_directory = Path(strategy_directory)
-
     """
     Build one institutional summary table.
-
-    Parameters
-    ----------
-    strategy_directory
-        Folder containing trade CSVs.
-
-    strategy_name
-        Optional strategy name.
-
-    Returns
-    -------
-    DataFrame
     """
 
-    trade_logs = load_strategy_directory(strategy_directory)
+    strategy_directory = Path(
+        strategy_directory,
+    )
 
-    rows = []
+    logger.info(
+        "Loading strategy directory: %s",
+        strategy_directory,
+    )
+
+    trade_logs = load_strategy_directory(
+        strategy_directory,
+    )
+
+    rows: list[dict] = []
+
+    processed = 0
+
+    skipped = 0
 
     for stock, df in trade_logs.items():
+        if df.empty:
+            skipped += 1
+
+            continue
+
         metrics = compute_trade_metrics(
             stock,
             df,
         )
 
         if strategy_name is not None:
-            metrics["Strategy"] = strategy_name
+            metrics[STRATEGY] = strategy_name
 
         rows.append(metrics)
 
-    summary = pd.DataFrame(rows)
+        processed += 1
+
+    summary = pd.DataFrame(
+        rows,
+    )
 
     if summary.empty:
         logger.warning("No summary rows generated.")
@@ -82,45 +129,61 @@ def build_strategy_summary(
     # Column Ordering
     # ------------------------------------------------------
 
-    preferred = [
-        "Stock",
-        "Strategy",
-        "Trades",
-        "Wins",
-        "Losses",
-        "Win%",
-        "Avg Win %",
-        "Avg Loss %",
-        "Profit Factor",
-        "Reward Risk",
-        "Expectancy",
-        "Avg days",
-        "Years",
-        "Annual Return %",
-        "CAGR",
-        "Max Drawdown %",
-        "Sharpe",
-        "Sortino",
-        "Recovery Factor",
-    ]
+    existing = [column for column in PREFERRED_COLUMNS if column in summary.columns]
 
-    existing = [c for c in preferred if c in summary.columns]
-
-    remaining = [c for c in summary.columns if c not in existing]
+    remaining = [column for column in summary.columns if column not in existing]
 
     summary = summary[existing + remaining]
 
-    summary = summary.sort_values(
-        by="Expectancy",
-        ascending=False,
-        ignore_index=True,
+    # ------------------------------------------------------
+    # Sorting
+    # ------------------------------------------------------
+
+    if EXPECTANCY in summary.columns:
+        summary = sort_dataframe(
+            summary,
+            column=EXPECTANCY,
+            ascending=False,
+        )
+
+    # ------------------------------------------------------
+    # Diagnostics
+    # ------------------------------------------------------
+
+    diagnostics = dataframe_summary(
+        summary,
     )
 
-    logger.info("Institutional summary built.")
+    logger.info("Strategy summary completed.")
 
     logger.info(
-        "Stocks : %d",
-        len(summary),
+        "Processed : %d",
+        processed,
+    )
+
+    logger.info(
+        "Skipped : %d",
+        skipped,
+    )
+
+    logger.info(
+        "Rows : %d",
+        diagnostics["Rows"],
+    )
+
+    logger.info(
+        "Columns : %d",
+        diagnostics["Columns"],
+    )
+
+    logger.info(
+        "Missing Values : %d",
+        diagnostics["Missing Values"],
+    )
+
+    logger.info(
+        "Duplicate Rows : %d",
+        diagnostics["Duplicate Rows"],
     )
 
     return summary
@@ -133,20 +196,36 @@ def build_strategy_summary(
 
 def save_strategy_summary(
     summary: pd.DataFrame,
-    output_file: str,
+    output_file: str | Path,
 ) -> None:
     """
-    Save institutional summary.
+    Save institutional summary CSV.
     """
 
-    summary.to_csv(
+    output_file = Path(
         output_file,
-        index=False,
+    )
+
+    output_file.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    write_csv(
+        summary,
+        output_file,
+    )
+
+    logger.info("Summary saved successfully.")
+
+    logger.info(
+        "Output : %s",
+        output_file,
     )
 
     logger.info(
-        "Summary saved: %s",
-        output_file,
+        "Rows : %d",
+        len(summary),
     )
 
 

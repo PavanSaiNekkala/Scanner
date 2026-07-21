@@ -1,19 +1,19 @@
 """
-===========================================================
-Institutional Strategy Comparison Engine V3
-Module : performance_metrics.py
-Author : OpenAI
+===============================================================
+Institutional Strategy Comparison Engine V4
+
+Module
+------
+performance_metrics.py
 
 Purpose
 -------
 Derive institutional performance metrics from backtest
 results.
 
-All calculations are vectorized using pandas/numpy.
-
 Input
 -----
-DataFrame containing columns such as
+Summary DataFrame containing:
 
 Trades
 Years
@@ -26,63 +26,121 @@ Expectancy%
 
 Output
 ------
-Original dataframe + derived metrics
+Original dataframe + derived performance metrics
 
-===========================================================
+===============================================================
 """
 
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pandas as pd
 
-# ----------------------------------------------------------
+logger = logging.getLogger(__name__)
+
+
+# ============================================================
 # Utility Functions
-# ----------------------------------------------------------
+# ============================================================
 
 
-def numeric(series):
+def numeric(value):
     """
-    Convert any column to numeric.
-    Invalid values become NaN.
+    Safe numeric conversion.
     """
-    return pd.to_numeric(series, errors="coerce")
+
+    return pd.to_numeric(
+        value,
+        errors="coerce",
+    ).replace(
+        [
+            np.inf,
+            -np.inf,
+        ],
+        np.nan,
+    )
 
 
 def safe_divide(a, b):
     """
-    Safe division avoiding divide-by-zero.
+    Safe division.
     """
+
     a = numeric(a)
+
     b = numeric(b)
 
-    return np.where(b == 0, np.nan, a / b)
+    result = np.where(
+        (b == 0) | pd.isna(b),
+        np.nan,
+        a / b,
+    )
+
+    return pd.Series(result).replace(
+        [
+            np.inf,
+            -np.inf,
+        ],
+        np.nan,
+    )
 
 
-# ----------------------------------------------------------
+# ============================================================
 # Performance Metrics Engine
-# ----------------------------------------------------------
+# ============================================================
 
 
 class PerformanceMetrics:
-    def __init__(self, df: pd.DataFrame):
+    REQUIRED_COLUMNS = {
+        "Trades",
+        "Years",
+        "Win%",
+    }
+
+    def __init__(
+        self,
+        df: pd.DataFrame,
+    ):
+
         self.df = df.copy()
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Validation
+    # --------------------------------------------------------
+
+    def validate(self):
+
+        missing = self.REQUIRED_COLUMNS - set(self.df.columns)
+
+        if missing:
+            raise KeyError(f"Missing required columns: {sorted(missing)}")
+
+        return self
+
+    # --------------------------------------------------------
+    # Column Preparation
+    # --------------------------------------------------------
 
     def prepare_columns(self):
-        # Normalize legacy column names
 
-        rename_map = {
+        aliases = {
             "Avg Win %": "Avg win%",
+            "Average Win %": "Avg win%",
             "Avg Loss %": "Avg loss%",
+            "Average Loss %": "Avg loss%",
+            "Maximum Drawdown %": "Max Drawdown %",
+            "Max Drawdown": "Max Drawdown %",
+            "Total Return %": "Net %",
+            "Net Profit %": "Net %",
         }
 
-        for new_name, legacy_name in rename_map.items():
-            if new_name in self.df.columns and legacy_name not in self.df.columns:
-                self.df[legacy_name] = self.df[new_name]
+        for source, target in aliases.items():
+            if source in self.df.columns and target not in self.df.columns:
+                self.df[target] = self.df[source]
 
-        numeric_cols = [
+        numeric_columns = [
             "Trades",
             "Years",
             "Win%",
@@ -91,114 +149,104 @@ class PerformanceMetrics:
             "Reward Risk",
             "Profit Factor",
             "Expectancy",
-            "Avg Win %",
-            "Avg Loss %",
             "Avg win%",
             "Avg loss%",
             "Avg days",
             "Expectancy%",
         ]
 
-        for col in numeric_cols:
-            if col in self.df.columns:
-                self.df[col] = numeric(self.df[col])
+        for column in numeric_columns:
+            if column in self.df.columns:
+                self.df[column] = numeric(self.df[column])
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Annual Trades
+    # --------------------------------------------------------
 
     def annual_trades(self):
-        self.df["Trades / Year"] = safe_divide(self.df["Trades"], self.df["Years"])
+
+        self.df["Trades / Year"] = safe_divide(
+            self.df["Trades"],
+            self.df["Years"],
+        )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Annual Return (CAGR)
+    # --------------------------------------------------------
 
     def annual_return(self):
-        # Already calculated by Summary Engine
+
         if "Annual Return %" in self.df.columns:
             return self
 
-        # Legacy Statistics.xlsx calculation
-        if "Net %" in self.df.columns:
-            self.df["Annual Return %"] = safe_divide(
-                self.df["Net %"],
-                self.df["Years"],
+        if "Net %" in self.df.columns and "Years" in self.df.columns:
+            total_return = numeric(self.df["Net %"])
+
+            years = numeric(self.df["Years"])
+
+            growth = 1 + total_return / 100
+
+            self.df["Annual Return %"] = np.where(
+                (years <= 0) | (growth <= 0),
+                np.nan,
+                (growth ** (1 / years) - 1) * 100,
             )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Reward Risk
+    # --------------------------------------------------------
 
     def reward_risk(self):
+
         if "Reward Risk" in self.df.columns:
             return self
 
-        avg_win = (
-            self.df["Avg Win %"]
-            if "Avg Win %" in self.df.columns
-            else self.df["Avg win%"]
-        )
-
-        avg_loss = (
-            self.df["Avg Loss %"]
-            if "Avg Loss %" in self.df.columns
-            else self.df["Avg loss%"]
-        )
-
         self.df["Reward Risk"] = safe_divide(
-            avg_win,
-            avg_loss.abs(),
+            self.df["Avg win%"],
+            self.df["Avg loss%"].abs(),
         )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Expectancy
+    # --------------------------------------------------------
 
     def expectancy(self):
+
         if "Expectancy" in self.df.columns:
             return self
 
-        avg_win = (
-            self.df["Avg Win %"]
-            if "Avg Win %" in self.df.columns
-            else self.df["Avg win%"]
-        )
-
-        avg_loss = (
-            self.df["Avg Loss %"]
-            if "Avg Loss %" in self.df.columns
-            else self.df["Avg loss%"]
-        )
-
         win_rate = self.df["Win%"] / 100
+
         loss_rate = 1 - win_rate
 
-        self.df["Expectancy"] = win_rate * avg_win - loss_rate * avg_loss.abs()
+        self.df["Expectancy"] = (
+            win_rate * self.df["Avg win%"] - loss_rate * self.df["Avg loss%"].abs()
+        )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Profit Factor
+    # --------------------------------------------------------
 
     def profit_factor(self):
+
         if "Profit Factor" in self.df.columns:
             return self
 
-        avg_win = (
-            self.df["Avg Win %"]
-            if "Avg Win %" in self.df.columns
-            else self.df["Avg win%"]
+        gross_profit = self.df["Trades"] * self.df["Win%"] / 100 * self.df["Avg win%"]
+
+        gross_loss = (
+            self.df["Trades"] * (1 - self.df["Win%"] / 100) * self.df["Avg loss%"].abs()
         )
-
-        avg_loss = (
-            self.df["Avg Loss %"]
-            if "Avg Loss %" in self.df.columns
-            else self.df["Avg loss%"]
-        )
-
-        gross_profit = self.df["Trades"] * (self.df["Win%"] / 100) * avg_win
-
-        gross_loss = self.df["Trades"] * (1 - self.df["Win%"] / 100) * avg_loss.abs()
 
         self.df["Profit Factor"] = safe_divide(
             gross_profit,
@@ -207,132 +255,160 @@ class PerformanceMetrics:
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Return Per Trade
+    # --------------------------------------------------------
 
     def return_per_trade(self):
-        if "Net %" in self.df.columns:
-            self.df["Return / Trade"] = safe_divide(self.df["Net %"], self.df["Trades"])
 
-        elif "Annual Return %" in self.df.columns:
-            self.df["Return / Trade"] = safe_divide(
-                self.df["Annual Return %"], self.df["Trades / Year"]
-            )
+        value = self.df["Net %"] if "Net %" in self.df.columns else np.nan
 
-        else:
-            self.df["Return / Trade"] = np.nan
-
-        return self
-
-    # ------------------------------------------------------
-
-    def return_per_day(self):
-        total_days = self.df["Trades"] * self.df["Avg days"]
-
-        if "Net %" in self.df.columns:
-            value = self.df["Net %"]
-
-        elif "Annual Return %" in self.df.columns:
-            value = self.df["Annual Return %"] * self.df["Years"]
-
-        else:
-            value = np.nan
-
-        self.df["Return / Day"] = safe_divide(value, total_days)
-
-        return self
-
-    # ------------------------------------------------------
-
-    def holding_efficiency(self):
-        if "Net %" in self.df.columns:
-            value = self.df["Net %"]
-
-        elif "Annual Return %" in self.df.columns:
-            value = self.df["Annual Return %"] * self.df["Years"]
-
-        else:
-            value = np.nan
-
-        self.df["Holding Efficiency"] = safe_divide(value, self.df["Avg days"])
-
-        return self
-
-    # ------------------------------------------------------
-
-    def profit_velocity(self):
-        self.df["Profit Velocity"] = safe_divide(
-            self.df["Annual Return %"], self.df["Avg days"]
+        self.df["Return / Trade"] = safe_divide(
+            value,
+            self.df["Trades"],
         )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Return Per Day
+    # --------------------------------------------------------
+
+    def return_per_day(self):
+
+        holding_days = self.df["Trades"] * self.df["Avg days"]
+
+        value = self.df["Net %"]
+
+        self.df["Return / Day"] = safe_divide(
+            value,
+            holding_days,
+        )
+
+        return self
+
+    # --------------------------------------------------------
+    # Holding Efficiency
+    # --------------------------------------------------------
+
+    def holding_efficiency(self):
+
+        self.df["Holding Efficiency"] = safe_divide(
+            self.df["Annual Return %"],
+            self.df["Avg days"],
+        )
+
+        return self
+
+    # --------------------------------------------------------
+    # Profit Velocity
+    # --------------------------------------------------------
+
+    def profit_velocity(self):
+
+        self.df["Profit Velocity"] = safe_divide(
+            self.df["Annual Return %"],
+            self.df["Avg days"],
+        )
+
+        return self
+
+    # --------------------------------------------------------
+    # Win Loss Ratio
+    # --------------------------------------------------------
 
     def win_loss_ratio(self):
+
         wins = self.df["Trades"] * self.df["Win%"] / 100
 
         losses = self.df["Trades"] - wins
 
-        self.df["Win Loss Ratio"] = safe_divide(wins, losses)
+        self.df["Win Loss Ratio"] = safe_divide(
+            wins,
+            losses,
+        )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Expectancy Ratio
+    # --------------------------------------------------------
 
     def expectancy_ratio(self):
-        avg_loss = (
-            self.df["Avg Loss %"]
-            if "Avg Loss %" in self.df.columns
-            else self.df["Avg loss%"]
-        )
 
-        self.df["Expectancy Ratio"] = safe_divide(self.df["Expectancy"], avg_loss.abs())
+        self.df["Expectancy Ratio"] = safe_divide(
+            self.df["Expectancy"],
+            self.df["Avg loss%"].abs(),
+        )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Capital Turnover
+    # --------------------------------------------------------
 
     def capital_turnover(self):
+
         self.df["Capital Turnover"] = safe_divide(
-            self.df["Trades"], self.df["Avg days"]
+            self.df["Trades"],
+            self.df["Years"],
         )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Edge Per Trade
+    # --------------------------------------------------------
 
     def edge_per_trade(self):
-        self.df["Edge / Trade"] = safe_divide(self.df["Expectancy"], self.df["Trades"])
+
+        self.df["Edge / Trade"] = safe_divide(
+            self.df["Expectancy"],
+            self.df["Trades"],
+        )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Annual Edge
+    # --------------------------------------------------------
 
     def annual_edge(self):
+
         self.df["Annual Edge"] = self.df["Expectancy"] * self.df["Trades / Year"]
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Return Consistency
+    # --------------------------------------------------------
 
     def return_consistency(self):
+
         self.df["Return Consistency"] = safe_divide(
-            self.df["Annual Return %"], self.df["Profit Velocity"]
+            self.df["Annual Return %"],
+            self.df["Profit Velocity"].abs(),
         )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Trade Efficiency
+    # --------------------------------------------------------
 
     def trade_efficiency(self):
+
         self.df["Trade Efficiency"] = self.df["Reward Risk"] * self.df["Win%"] / 100
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Cleanup
+    # --------------------------------------------------------
 
     def score_inputs(self):
-        cols = [
+
+        columns = [
             "Expectancy",
             "Profit Factor",
             "Reward Risk",
@@ -341,16 +417,33 @@ class PerformanceMetrics:
             "Holding Efficiency",
         ]
 
-        for c in cols:
-            self.df[c] = self.df[c].replace([np.inf, -np.inf], np.nan)
+        for column in columns:
+            if column in self.df.columns:
+                self.df[column] = (
+                    self.df[column]
+                    .replace(
+                        [
+                            np.inf,
+                            -np.inf,
+                        ],
+                        np.nan,
+                    )
+                    .fillna(0.0)
+                )
 
         return self
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------
+    # Pipeline
+    # --------------------------------------------------------
 
     def run(self):
-        return (
+
+        logger.info("Calculating performance metrics")
+
+        result = (
             self.prepare_columns()
+            .validate()
             .annual_trades()
             .annual_return()
             .reward_risk()
@@ -371,13 +464,19 @@ class PerformanceMetrics:
             .df
         )
 
+        logger.info("Performance metrics completed")
 
-# ----------------------------------------------------------
+        return result
+
+
+# ============================================================
 # Convenience Function
-# ----------------------------------------------------------
+# ============================================================
 
 
-def derive_performance_metrics(df: pd.DataFrame):
+def derive_performance_metrics(
+    df: pd.DataFrame,
+):
     """
     Main entry point.
     """

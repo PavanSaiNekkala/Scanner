@@ -4,7 +4,7 @@ Institutional Strategy Comparison Platform V4
 Summary IO Module
 ==============================================================
 
-Responsible for:
+Responsible for
 
 • Discovering strategy trade files
 • Reading trade CSVs
@@ -12,7 +12,6 @@ Responsible for:
 • Returning DataFrames
 • Never computing metrics
 
-Author : Pavan Sai Nekkala
 ==============================================================
 """
 
@@ -23,12 +22,21 @@ from pathlib import Path
 
 import pandas as pd
 
+from strategy_compare_v4.utils.helpers import (
+    require_columns,
+    validate_dataframe,
+)
+from strategy_compare_v4.utils.io_utils import (
+    read_csv,
+)
+
 logger = logging.getLogger(__name__)
 
+# ==========================================================
+# Constants
+# ==========================================================
 
-# ==========================================================
-# Required Trade Columns
-# ==========================================================
+TRADE_FILE_PATTERN = "_backtest_"
 
 REQUIRED_COLUMNS = {
     "signal_date",
@@ -45,6 +53,23 @@ REQUIRED_COLUMNS = {
 
 
 # ==========================================================
+# Stock Name Helper
+# ==========================================================
+
+
+def extract_stock_name(
+    file: Path,
+) -> str:
+    """
+    Extract stock name from a trade filename.
+    """
+
+    return file.stem.split(
+        TRADE_FILE_PATTERN,
+    )[0]
+
+
+# ==========================================================
 # CSV Reader
 # ==========================================================
 
@@ -53,40 +78,33 @@ def load_trade_file(
     file_path: str | Path,
 ) -> pd.DataFrame:
     """
-    Read a single trade CSV.
-
-    Parameters
-    ----------
-    file_path
-        CSV file.
-
-    Returns
-    -------
-    DataFrame
+    Load and validate a trade CSV.
     """
 
-    file_path = Path(file_path)
+    file_path = Path(
+        file_path,
+    )
 
     logger.info(
-        "Loading trade file: %s",
+        "Loading %s",
         file_path.name,
     )
 
-    if not file_path.exists():
-        raise FileNotFoundError(file_path)
+    df = read_csv(
+        file_path,
+    )
 
-    df = pd.read_csv(file_path)
+    validate_dataframe(
+        df,
+    )
 
-    missing = REQUIRED_COLUMNS - set(df.columns)
-
-    if missing:
-        raise ValueError(
-            f"{file_path.name} missing columns:\n" + "\n".join(sorted(missing))
-        )
+    require_columns(
+        df,
+        REQUIRED_COLUMNS,
+    )
 
     logger.info(
-        "Loaded %s (%d trades)",
-        file_path.name,
+        "Trades : %d",
         len(df),
     )
 
@@ -94,7 +112,7 @@ def load_trade_file(
 
 
 # ==========================================================
-# Discover Trade Files
+# Trade File Discovery
 # ==========================================================
 
 
@@ -102,29 +120,33 @@ def discover_trade_files(
     strategy_directory: str | Path,
 ) -> list[Path]:
     """
-    Discover all trade CSVs inside a strategy folder.
-
-    Ignores statistics workbooks and generated reports.
+    Discover all trade CSV files.
     """
 
-    strategy_directory = Path(strategy_directory)
+    strategy_directory = Path(
+        strategy_directory,
+    )
 
     if not strategy_directory.exists():
-        raise FileNotFoundError(strategy_directory)
+        raise FileNotFoundError(
+            strategy_directory,
+        )
 
-    csv_files = sorted(
-        file for file in strategy_directory.glob("*.csv") if "_backtest_" in file.name
+    trade_files = sorted(
+        file
+        for file in strategy_directory.glob("*.csv")
+        if TRADE_FILE_PATTERN in file.name
     )
 
-    if not csv_files:
-        raise FileNotFoundError(f"No trade CSV files found in {strategy_directory}")
+    if not trade_files:
+        raise FileNotFoundError(f"No trade files found in {strategy_directory}")
 
     logger.info(
-        "Discovered %d trade files.",
-        len(csv_files),
+        "Trade files discovered : %d",
+        len(trade_files),
     )
 
-    return csv_files
+    return trade_files
 
 
 # ==========================================================
@@ -136,36 +158,61 @@ def load_strategy_directory(
     strategy_directory: str | Path,
 ) -> dict[str, pd.DataFrame]:
     """
-    Load every stock trade file.
+    Load every trade file within a strategy directory.
 
     Returns
     -------
-    dict
-
-        key   = Stock
-
-        value = Trade DataFrame
+    dict[str, pd.DataFrame]
+        Key   : Stock symbol
+        Value : Trade DataFrame
     """
 
-    trade_files = discover_trade_files(strategy_directory)
+    trade_files = discover_trade_files(
+        strategy_directory,
+    )
 
-    strategy = {}
+    strategy: dict[str, pd.DataFrame] = {}
+
+    processed = 0
+    skipped = 0
 
     for file in trade_files:
-        stock = file.stem.split("_backtest_")[0]
+        try:
+            stock = extract_stock_name(
+                file,
+            )
 
-        strategy[stock] = load_trade_file(file)
+            strategy[stock] = load_trade_file(
+                file,
+            )
+
+            processed += 1
+
+        except Exception:
+            logger.exception(
+                "Failed to load %s",
+                file.name,
+            )
+
+            skipped += 1
+
+    logger.info("Strategy loaded successfully.")
 
     logger.info(
-        "Loaded %d stocks.",
-        len(strategy),
+        "Processed : %d",
+        processed,
+    )
+
+    logger.info(
+        "Skipped : %d",
+        skipped,
     )
 
     return strategy
 
 
 # ==========================================================
-# Strategy Summary
+# Strategy File Summary
 # ==========================================================
 
 
@@ -173,35 +220,70 @@ def strategy_file_summary(
     strategy_directory: str | Path,
 ) -> pd.DataFrame:
     """
-    Return simple inventory of all trade files.
-
-    Useful for diagnostics.
+    Build a simple inventory of all trade files
+    within a strategy directory.
     """
 
-    trade_files = discover_trade_files(strategy_directory)
+    trade_files = discover_trade_files(
+        strategy_directory,
+    )
 
-    rows = []
+    rows: list[dict] = []
 
     for file in trade_files:
-        df = load_trade_file(file)
+        try:
+            df = load_trade_file(
+                file,
+            )
 
-        rows.append(
-            {
-                "Stock": file.stem.split("_backtest_")[0],
-                "Trades": len(df),
-                "Columns": len(df.columns),
-                "File": file.name,
-            }
+            validate_dataframe(
+                df,
+            )
+
+            rows.append(
+                {
+                    "Stock": extract_stock_name(file),
+                    "Trades": len(df),
+                    "Columns": len(df.columns),
+                    "Missing Values": int(df.isna().sum().sum()),
+                    "Duplicate Rows": int(df.duplicated().sum()),
+                    "File": file.name,
+                }
+            )
+
+        except Exception:
+            logger.exception(
+                "Unable to summarize %s",
+                file.name,
+            )
+
+    summary = pd.DataFrame(
+        rows,
+    )
+
+    if not summary.empty:
+        summary = summary.sort_values(
+            by="Stock",
+            kind="stable",
+            ignore_index=True,
         )
 
-    return pd.DataFrame(rows)
+    logger.info(
+        "Strategy inventory created (%d files).",
+        len(summary),
+    )
+
+    return summary
 
 
 # ==========================================================
-# Exported Symbols
+# Public API
 # ==========================================================
 
 __all__ = [
+    "REQUIRED_COLUMNS",
+    "TRADE_FILE_PATTERN",
+    "extract_stock_name",
     "discover_trade_files",
     "load_trade_file",
     "load_strategy_directory",

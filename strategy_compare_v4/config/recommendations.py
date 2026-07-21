@@ -10,10 +10,12 @@ Purpose
 -------
 Centralized institutional recommendation engine.
 
-Provides:
-    • Single recommendation function
-    • Batch dataframe assignment
-    • Recommendation ordering
+Provides
+--------
+• Single recommendation function
+• Batch dataframe assignment
+• Recommendation ordering
+• Portfolio eligibility
 
 =============================================================
 """
@@ -36,12 +38,16 @@ from strategy_compare_v4.config.constants import (
     WATCH,
 )
 from strategy_compare_v4.config.thresholds import (
+    AVOID_SCORE,
+    BUY_SCORE,
     EXCELLENT_SCORE,
     GOOD_SCORE,
+    IMPROVE_SCORE,
     MIN_COMPOSITE_SCORE,
     MIN_EDGE_SCORE,
     MIN_EFFICIENCY_SCORE,
     MIN_RELIABILITY_SCORE,
+    STRONG_BUY_SCORE,
 )
 from strategy_compare_v4.utils.helpers import require_columns
 
@@ -57,23 +63,22 @@ def get_recommendation(
     efficiency_score: float,
 ) -> str:
     """
-    Return an institutional recommendation based on
-    all institutional scores.
+    Return institutional recommendation.
     """
 
     if (
         composite_score >= EXCELLENT_SCORE
-        and edge_score >= 85
-        and reliability_score >= 85
-        and efficiency_score >= 85
+        and edge_score >= STRONG_BUY_SCORE
+        and reliability_score >= STRONG_BUY_SCORE
+        and efficiency_score >= STRONG_BUY_SCORE
     ):
         return STRONG_BUY
 
     if (
         composite_score >= GOOD_SCORE
-        and edge_score >= 75
-        and reliability_score >= 75
-        and efficiency_score >= 75
+        and edge_score >= BUY_SCORE
+        and reliability_score >= BUY_SCORE
+        and efficiency_score >= BUY_SCORE
     ):
         return BUY
 
@@ -85,10 +90,10 @@ def get_recommendation(
     ):
         return WATCH
 
-    if composite_score >= 45:
+    if composite_score >= IMPROVE_SCORE:
         return IMPROVE
 
-    if composite_score >= 30:
+    if composite_score >= AVOID_SCORE:
         return AVOID
 
     return REJECT
@@ -99,9 +104,11 @@ def get_recommendation(
 # ============================================================
 
 
-def assign_recommendations(df: pd.DataFrame) -> pd.DataFrame:
+def assign_recommendations(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Add institutional recommendations to a dataframe.
+    Assign recommendations to an entire DataFrame.
     """
 
     df = df.copy()
@@ -141,3 +148,86 @@ RECOMMENDATION_PRIORITY = {
     AVOID: 5,
     REJECT: 6,
 }
+
+# ============================================================
+# Portfolio Eligibility
+# ============================================================
+
+PORTFOLIO_ELIGIBILITY = {
+    STRONG_BUY: True,
+    BUY: True,
+    WATCH: True,
+    IMPROVE: False,
+    AVOID: False,
+    REJECT: False,
+}
+
+# ============================================================
+# Recommendation Colors
+# ============================================================
+
+RECOMMENDATION_COLORS = {
+    STRONG_BUY: "#008000",  # Green
+    BUY: "#2E8B57",  # Sea Green
+    WATCH: "#FFD700",  # Gold
+    IMPROVE: "#FFA500",  # Orange
+    AVOID: "#FF6347",  # Tomato
+    REJECT: "#DC143C",  # Crimson
+}
+
+# ============================================================
+# Recommendation Descriptions
+# ============================================================
+
+RECOMMENDATION_DESCRIPTIONS = {
+    STRONG_BUY: (
+        "Exceptional institutional-quality strategy with "
+        "strong edge, reliability and efficiency."
+    ),
+    BUY: ("High-quality strategy suitable for institutional portfolio allocation."),
+    WATCH: ("Acceptable strategy that should continue to be monitored."),
+    IMPROVE: ("Shows potential but requires further optimization."),
+    AVOID: ("Below preferred institutional standards."),
+    REJECT: ("Does not satisfy minimum institutional criteria."),
+}
+
+# ============================================================
+# Institutional Grades
+# ============================================================
+
+INSTITUTIONAL_GRADE = {
+    STRONG_BUY: "A+",
+    BUY: "A",
+    WATCH: "B",
+    IMPROVE: "C",
+    AVOID: "D",
+    REJECT: "F",
+}
+
+# ============================================================
+# Recommendation Order
+# ============================================================
+
+RECOMMENDATION_ORDER = [
+    STRONG_BUY,
+    BUY,
+    WATCH,
+    IMPROVE,
+    AVOID,
+    REJECT,
+]
+
+# ============================================================
+# Public Exports
+# ============================================================
+
+__all__ = [
+    "get_recommendation",
+    "assign_recommendations",
+    "RECOMMENDATION_PRIORITY",
+    "PORTFOLIO_ELIGIBILITY",
+    "RECOMMENDATION_COLORS",
+    "RECOMMENDATION_DESCRIPTIONS",
+    "INSTITUTIONAL_GRADE",
+    "RECOMMENDATION_ORDER",
+]

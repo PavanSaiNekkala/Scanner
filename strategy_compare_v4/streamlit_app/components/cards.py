@@ -5,11 +5,67 @@ Metric Cards
 Reusable KPI cards for the Institutional Strategy Comparison Platform.
 """
 
+from __future__ import annotations
+
+import pandas as pd
 import streamlit as st
 
-# ---------------------------------------------------------
+# ============================================================
+# Constants
+# ============================================================
+
+RECOMMENDATION_ICONS = {
+    "STRONG BUY": "🟢",
+    "BUY": "🔵",
+    "WATCH": "🟡",
+    "IMPROVE": "🟠",
+    "AVOID": "🔴",
+    "REJECT": "⚫",
+}
+
+DEFAULT_ICON = "⚪"
+
+DEFAULT_DECIMALS = 2
+
+# ============================================================
+# Helper Functions
+# ============================================================
+
+
+def format_metric(
+    value,
+    decimals: int = DEFAULT_DECIMALS,
+):
+    """
+    Format numeric values.
+    """
+
+    if isinstance(value, (int, float)):
+        return round(
+            value,
+            decimals,
+        )
+
+    return value
+
+
+def summary_metric(
+    title: str,
+    value,
+) -> None:
+    """
+    Render a formatted KPI metric.
+    """
+
+    metric_card(
+        title,
+        format_metric(value),
+    )
+
+
+# ============================================================
 # Generic Metric Card
-# ---------------------------------------------------------
+# ============================================================
 
 
 def metric_card(
@@ -17,51 +73,51 @@ def metric_card(
     value,
     delta: str | None = None,
     help_text: str | None = None,
-):
+) -> None:
     """
-    Display a standard metric card.
+    Display a standard KPI metric.
     """
 
     st.metric(
         label=title,
-        value=value,
+        value=format_metric(value),
         delta=delta,
         help=help_text,
     )
 
 
-# ---------------------------------------------------------
-# Colored Status Badge
-# ---------------------------------------------------------
+# ============================================================
+# Recommendation Badge
+# ============================================================
 
 
-def recommendation_badge(recommendation: str):
+def recommendation_badge(
+    recommendation: str,
+) -> None:
     """
     Display recommendation badge.
     """
 
-    recommendation = str(recommendation).upper()
+    recommendation = str(
+        recommendation,
+    ).upper()
 
-    colors = {
-        "STRONG BUY": "🟢",
-        "BUY": "🔵",
-        "WATCH": "🟡",
-        "IMPROVE": "🟠",
-        "AVOID": "🔴",
-        "REJECT": "⚫",
-    }
-
-    icon = colors.get(recommendation, "⚪")
+    icon = RECOMMENDATION_ICONS.get(
+        recommendation,
+        DEFAULT_ICON,
+    )
 
     st.markdown(f"### {icon} {recommendation}")
 
 
-# ---------------------------------------------------------
+# ============================================================
 # Strategy Summary Card
-# ---------------------------------------------------------
+# ============================================================
 
 
-def strategy_summary_card(df):
+def strategy_summary_card(
+    df: pd.DataFrame | None,
+) -> None:
     """
     Display summary cards for strategy or stock datasets.
     """
@@ -72,45 +128,60 @@ def strategy_summary_card(df):
 
     c1, c2, c3, c4 = st.columns(4)
 
-    # Strategy dataset
-    if "Strategy" in df.columns or "Strategy Rank" in df.columns:
-        strategy_count = (
-            df["Strategy"].nunique() if "Strategy" in df.columns else len(df)
-        )
+    # --------------------------------------------------------
+    # Strategy Dataset
+    # --------------------------------------------------------
 
+    if "Strategy" in df.columns or "Strategy Rank" in df.columns:
         with c1:
-            metric_card("Strategies", strategy_count)
+            strategies = (
+                df["Strategy"].nunique() if "Strategy" in df.columns else len(df)
+            )
+
+            metric_card(
+                "Strategies",
+                strategies,
+            )
 
         with c2:
             if "Stock" in df.columns:
-                metric_card("Stocks", df["Stock"].nunique())
+                metric_card(
+                    "Stocks",
+                    df["Stock"].nunique(),
+                )
+
             else:
-                metric_card("Records", len(df))
+                metric_card(
+                    "Records",
+                    len(df),
+                )
 
         with c3:
             if "Composite Score" in df.columns:
-                metric_card(
+                summary_metric(
                     "Avg Composite",
-                    round(df["Composite Score"].mean(), 2),
+                    df["Composite Score"].mean(),
                 )
 
         with c4:
-            edge_col = "Edge Score" if "Edge Score" in df.columns else None
-
-            if edge_col:
-                metric_card(
+            if "Edge Score" in df.columns:
+                summary_metric(
                     "Avg Edge",
-                    round(df[edge_col].mean(), 2),
+                    df["Edge Score"].mean(),
                 )
+
             elif "Profit Factor" in df.columns:
-                metric_card(
+                summary_metric(
                     "Avg Profit Factor",
-                    round(df["Profit Factor"].mean(), 2),
+                    df["Profit Factor"].mean(),
                 )
 
         return
 
-    # Stock dataset
+    # --------------------------------------------------------
+    # Stock Dataset
+    # --------------------------------------------------------
+
     if "Stock" in df.columns:
         with c1:
             metric_card(
@@ -127,12 +198,9 @@ def strategy_summary_card(df):
 
         with c3:
             if "Institutional Score" in df.columns:
-                metric_card(
+                summary_metric(
                     "Avg Score",
-                    round(
-                        df["Institutional Score"].mean(),
-                        2,
-                    ),
+                    df["Institutional Score"].mean(),
                 )
 
         with c4:
@@ -143,14 +211,16 @@ def strategy_summary_card(df):
                 )
 
 
-# ---------------------------------------------------------
+# ============================================================
 # Portfolio Summary Card
-# ---------------------------------------------------------
+# ============================================================
 
 
-def portfolio_summary_card(df):
+def portfolio_summary_card(
+    df: pd.DataFrame | None,
+) -> None:
     """
-    Portfolio statistics.
+    Display portfolio summary.
     """
 
     if df is None or df.empty:
@@ -181,14 +251,16 @@ def portfolio_summary_card(df):
             )
 
 
-# ---------------------------------------------------------
+# ============================================================
 # Robustness Summary Card
-# ---------------------------------------------------------
+# ============================================================
 
 
-def robustness_card(df):
+def robustness_card(
+    df: pd.DataFrame | None,
+) -> None:
     """
-    Robustness statistics.
+    Display robustness summary.
     """
 
     if df is None or df.empty:
@@ -196,29 +268,42 @@ def robustness_card(df):
 
         return
 
-    numeric = df.select_dtypes("number")
+    numeric = df.select_dtypes(
+        include="number",
+    )
 
     if numeric.empty:
         return
 
-    cols = st.columns(min(4, len(numeric.columns)))
+    columns = st.columns(
+        min(
+            4,
+            len(numeric.columns),
+        )
+    )
 
-    for column, container in zip(numeric.columns[:4], cols, strict=False):
+    for container, column in zip(
+        columns,
+        numeric.columns[:4],
+        strict=False,
+    ):
         with container:
-            metric_card(
+            summary_metric(
                 column,
-                round(numeric[column].mean(), 2),
+                numeric[column].mean(),
             )
 
 
-# ---------------------------------------------------------
+# ============================================================
 # Recommendation Distribution
-# ---------------------------------------------------------
+# ============================================================
 
 
-def recommendation_distribution(df):
+def recommendation_distribution(
+    df: pd.DataFrame | None,
+) -> None:
     """
-    Show recommendation counts.
+    Display recommendation counts.
     """
 
     if df is None or df.empty or "Recommendation" not in df.columns:
@@ -226,15 +311,29 @@ def recommendation_distribution(df):
 
         return
 
-    counts = df["Recommendation"].value_counts().reset_index()
-
-    counts.columns = [
-        "Recommendation",
-        "Count",
-    ]
+    counts = (
+        df["Recommendation"]
+        .value_counts()
+        .rename_axis("Recommendation")
+        .reset_index(name="Count")
+    )
 
     st.dataframe(
         counts,
         use_container_width=True,
         hide_index=True,
     )
+
+
+# ============================================================
+# Public API
+# ============================================================
+
+__all__ = [
+    "metric_card",
+    "recommendation_badge",
+    "strategy_summary_card",
+    "portfolio_summary_card",
+    "robustness_card",
+    "recommendation_distribution",
+]

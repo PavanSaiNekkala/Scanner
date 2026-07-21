@@ -1,6 +1,6 @@
 """
 ===============================================================
-Institutional Strategy Comparison Engine V3
+Institutional Strategy Comparison Engine V4
 
 Module
 ------
@@ -8,42 +8,164 @@ exit_metrics.py
 
 Purpose
 -------
-Derive exit behaviour metrics from backtest results.
+Derive institutional exit behaviour metrics
+from strategy backtest results.
 
-Author
-------
-OpenAI
+Metrics Covered
+---------------
+- Target Exit Behaviour
+- Trailing Exit Behaviour
+- Stop Dependency
+- Time Dependency
+- Exit Diversity
+- Exit Concentration
+- Exit Entropy
+- Exit Quality
+- Institutional Exit Score
 
 ===============================================================
 """
 
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pandas as pd
+
+from strategy_compare_v4.utils.helpers import (
+    normalize,
+    require_columns,
+)
+
+logger = logging.getLogger(__name__)
+
 
 # ===============================================================
 # Utility Functions
 # ===============================================================
 
 
-def numeric(series):
+def numeric(value):
     """
-    Convert a Series to numeric.
+    Safely convert values to numeric.
+
+    Supports:
+    - Series
+    - ndarray
+    - scalar
+
     Invalid values become NaN.
     """
-    return pd.to_numeric(series, errors="coerce")
+
+    converted = pd.to_numeric(
+        value,
+        errors="coerce",
+    )
+
+    if isinstance(
+        converted,
+        pd.Series,
+    ):
+        return converted.replace(
+            [
+                np.inf,
+                -np.inf,
+            ],
+            np.nan,
+        )
+
+    if isinstance(
+        converted,
+        np.ndarray,
+    ):
+        return pd.Series(converted).replace(
+            [
+                np.inf,
+                -np.inf,
+            ],
+            np.nan,
+        )
+
+    if pd.isna(converted):
+        return np.nan
+
+    return float(converted)
 
 
 def safe_divide(a, b):
     """
-    Division without divide-by-zero.
+    Safe division.
+
+    Handles:
+    - Series / Series
+    - Series / scalar
+    - scalar / Series
+    - scalar / scalar
     """
 
     a = numeric(a)
+
     b = numeric(b)
 
-    return np.where((b == 0) | (pd.isna(b)), np.nan, a / b)
+    # Scalar / Scalar
+    if np.isscalar(a) and np.isscalar(b):
+        if b == 0 or pd.isna(b):
+            return np.nan
+
+        return a / b
+
+    # Series / Series
+    if isinstance(a, pd.Series) and isinstance(b, pd.Series):
+        return a.divide(b.where((b != 0) & (~b.isna()))).replace(
+            [
+                np.inf,
+                -np.inf,
+            ],
+            np.nan,
+        )
+
+    # Series / Scalar
+
+    if isinstance(
+        a,
+        pd.Series,
+    ):
+        if b == 0 or pd.isna(b):
+            return pd.Series(
+                np.nan,
+                index=a.index,
+            )
+
+        return (a / b).replace(
+            [
+                np.inf,
+                -np.inf,
+            ],
+            np.nan,
+        )
+
+    # Scalar / Series
+
+    if isinstance(
+        b,
+        pd.Series,
+    ):
+        return (
+            a
+            / b.replace(
+                0,
+                np.nan,
+            )
+        ).replace(
+            [
+                np.inf,
+                -np.inf,
+            ],
+            np.nan,
+        )
+
+    return np.nan
 
 
 # ===============================================================
@@ -52,400 +174,463 @@ def safe_divide(a, b):
 
 
 class ExitMetrics:
-    def __init__(self, df: pd.DataFrame):
+    """
+    Institutional Exit Metrics Engine.
+    """
+
+    REQUIRED_COLUMNS = {
+        "Trades",
+        "Target #",
+        "Trail #",
+        "Stop #",
+        "Time #",
+        "Avg days",
+    }
+
+    def __init__(
+        self,
+        df: pd.DataFrame,
+    ):
+
         self.df = df.copy()
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Validation
+    # ---------------------------------------------------------
 
-    def prepare_columns(self):
-        cols = ["Trades", "Target #", "Trail #", "Stop #", "Time #", "Win%", "Avg days"]
+    def validate(self):
 
-        for col in cols:
-            if col in self.df.columns:
-                self.df[col] = numeric(self.df[col])
+        require_columns(
+            self.df,
+            self.REQUIRED_COLUMNS,
+        )
 
         return self
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Prepare Columns
+    # ---------------------------------------------------------
 
-    def target_exit_pct(self):
+    def prepare_columns(self):
         """
-        Percentage of exits
-        through Target.
+        Standardize columns
+        and convert numeric fields.
+        """
+
+        aliases = {
+            "Target Count": "Target #",
+            "Trail Count": "Trail #",
+            "Stop Count": "Stop #",
+            "Time Count": "Time #",
+            "Average Days": "Avg days",
+            "Winning %": "Win%",
+        }
+
+        for old, new in aliases.items():
+            if old in self.df.columns and new not in self.df.columns:
+                self.df.rename(
+                    columns={
+                        old: new,
+                    },
+                    inplace=True,
+                )
+
+        numeric_columns = [
+            "Trades",
+            "Target #",
+            "Trail #",
+            "Stop #",
+            "Time #",
+            "Win%",
+            "Avg days",
+        ]
+
+        for column in numeric_columns:
+            if column in self.df.columns:
+                self.df[column] = numeric(self.df[column])
+
+        return self
+
+    # ---------------------------------------------------------
+    # Target Exit %
+    # ---------------------------------------------------------
+
+    def target_exit_percentage(self):
+        """
+        Percentage of trades exited
+        through target booking.
         """
 
         self.df["Target Exit %"] = (
-            safe_divide(self.df["Target #"], self.df["Trades"]) * 100
+            safe_divide(
+                self.df["Target #"],
+                self.df["Trades"],
+            )
+            * 100
         )
 
         return self
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Trailing Exit %
+    # ---------------------------------------------------------
 
-    def trailing_exit_pct(self):
+    def trailing_exit_percentage(self):
+        """
+        Percentage of trades exited
+        through trailing stop.
+        """
+
         self.df["Trailing Exit %"] = (
-            safe_divide(self.df["Trail #"], self.df["Trades"]) * 100
+            safe_divide(
+                self.df["Trail #"],
+                self.df["Trades"],
+            )
+            * 100
         )
 
         return self
 
-    # -----------------------------------------------------------
-
-    def stop_exit_pct(self):
-        self.df["Stop Exit %"] = safe_divide(self.df["Stop #"], self.df["Trades"]) * 100
-
-        return self
-
-    # -----------------------------------------------------------
-
-    def time_exit_pct(self):
-        self.df["Time Exit %"] = safe_divide(self.df["Time #"], self.df["Trades"]) * 100
-
-        return self
-
-    # -----------------------------------------------------------
-
-    def winning_exit_pct(self):
-        """
-        Winning exits are
-
-        Target +
-
-        Trail
-
-        """
-
-        winners = self.df["Target #"] + self.df["Trail #"]
-
-        self.df["Winning Exit %"] = safe_divide(winners, self.df["Trades"]) * 100
-
-        return self
-
-    # -----------------------------------------------------------
-
-    def losing_exit_pct(self):
-        """
-        Losing exits
-
-        Stop +
-
-        Time
-
-        """
-
-        losers = self.df["Stop #"] + self.df["Time #"]
-
-        self.df["Losing Exit %"] = safe_divide(losers, self.df["Trades"]) * 100
-
-        return self
-
-    # -----------------------------------------------------------
-
-    def target_capture_ratio(self):
-        """
-        Target exits
-        versus
-        winning exits.
-        """
-
-        winners = self.df["Target #"] + self.df["Trail #"]
-
-        self.df["Target Capture"] = safe_divide(self.df["Target #"], winners)
-
-        return self
-
-    # -----------------------------------------------------------
-
-    def trailing_capture_ratio(self):
-        winners = self.df["Target #"] + self.df["Trail #"]
-
-        self.df["Trailing Capture"] = safe_divide(self.df["Trail #"], winners)
-
-        return self
-
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Stop Dependency
+    # ---------------------------------------------------------
 
     def stop_dependency(self):
-        self.df["Stop Dependency"] = safe_divide(self.df["Stop #"], self.df["Trades"])
+        """
+        Measures dependence on stop losses.
+
+        Higher value means higher risk.
+        """
+
+        self.df["Stop Dependency"] = (
+            safe_divide(
+                self.df["Stop #"],
+                self.df["Trades"],
+            )
+            * 100
+        )
 
         return self
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Time Dependency
+    # ---------------------------------------------------------
 
     def time_dependency(self):
         """
-        Percentage of exits
-        caused by timeout.
+        Measures percentage of exits
+        caused by time expiration.
         """
 
-        self.df["Time Dependency"] = safe_divide(self.df["Time #"], self.df["Trades"])
+        self.df["Time Dependency"] = (
+            safe_divide(
+                self.df["Time #"],
+                self.df["Trades"],
+            )
+            * 100
+        )
 
         return self
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Winning Exit %
+    # ---------------------------------------------------------
+
+    def winning_exit_percentage(self):
+        """
+        Calculate profitable exit behaviour.
+
+        Uses actual Win% when available.
+        """
+
+        if "Win%" in self.df.columns:
+            self.df["Winning Exit %"] = numeric(self.df["Win%"])
+
+        else:
+            self.df["Winning Exit %"] = (
+                self.df["Target Exit %"] + self.df["Trailing Exit %"]
+            )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Losing Exit %
+    # ---------------------------------------------------------
+
+    def losing_exit_percentage(self):
+        """
+        Calculate losing exit behaviour.
+        """
+
+        self.df["Losing Exit %"] = (
+            self.df["Stop Dependency"] + self.df["Time Dependency"]
+        )
+
+        return self
+
+    # ---------------------------------------------------------
+    # Exit Diversity
+    # ---------------------------------------------------------
 
     def exit_diversity(self):
         """
-        Number of exit types
-        actually used.
+        Shannon entropy based exit diversity.
+
+        Higher value:
+        - balanced exits
+
+        Lower value:
+        - concentrated exits
         """
 
-        exit_cols = ["Target #", "Trail #", "Stop #", "Time #"]
+        components = [
+            "Target #",
+            "Trail #",
+            "Stop #",
+            "Time #",
+        ]
 
-        self.df["Exit Diversity"] = (self.df[exit_cols] > 0).sum(axis=1)
+        total = self.df[components].sum(axis=1)
+
+        probabilities = []
+
+        for column in components:
+            probabilities.append(
+                safe_divide(
+                    self.df[column],
+                    total,
+                )
+            )
+
+        entropy = 0
+
+        for probability in probabilities:
+            entropy += probability * np.log2(
+                probability.replace(
+                    0,
+                    np.nan,
+                )
+            )
+
+        self.df["Exit Entropy"] = -entropy
 
         return self
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Exit Distribution Score
+    # ---------------------------------------------------------
 
-    def exit_concentration(self):
+    def exit_distribution_score(self):
         """
-        Largest exit type
-        as % of all trades.
-        """
+        Normalize exit entropy.
 
-        exit_cols = ["Target #", "Trail #", "Stop #", "Time #"]
-
-        self.df["Exit Concentration"] = safe_divide(
-            self.df[exit_cols].max(axis=1), self.df["Trades"]
-        )
-
-        return self
-
-    # -----------------------------------------------------------
-
-    def exit_balance(self):
-        """
-        Measures balance
-        between winning
-        and losing exits.
-        """
-
-        winners = self.df["Target #"] + self.df["Trail #"]
-
-        losers = self.df["Stop #"] + self.df["Time #"]
-
-        self.df["Exit Balance"] = 1 - np.abs(
-            safe_divide(winners, self.df["Trades"])
-            - safe_divide(losers, self.df["Trades"])
-        )
-
-        return self
-
-    # -----------------------------------------------------------
-
-    def exit_entropy(self):
-        """
-        Shannon entropy of
+        Higher means more stable
         exit distribution.
         """
 
-        exits = self.df[["Target #", "Trail #", "Stop #", "Time #"]].copy()
+        max_entropy = np.log2(4)
 
-        totals = exits.sum(axis=1)
-
-        probs = exits.div(totals, axis=0)
-
-        entropy = -(probs * np.log2(probs.replace(0, np.nan))).sum(axis=1)
-
-        self.df["Exit Entropy"] = entropy
+        self.df["Exit Diversity Score"] = safe_divide(
+            self.df["Exit Entropy"],
+            max_entropy,
+        )
 
         return self
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Exit Concentration
+    # ---------------------------------------------------------
 
-    def exit_stability(self):
+    def exit_concentration(self):
         """
-        Higher entropy
-        implies more
-        diversified exits.
+        Measures dominance of one exit type.
         """
 
-        self.df["Exit Stability"] = safe_divide(self.df["Exit Entropy"], np.log2(4))
+        components = [
+            "Target #",
+            "Trail #",
+            "Stop #",
+            "Time #",
+        ]
+
+        total = self.df[components].sum(axis=1)
+
+        shares = []
+
+        for column in components:
+            shares.append(
+                safe_divide(
+                    self.df[column],
+                    total,
+                )
+            )
+
+        concentration = pd.concat(
+            shares,
+            axis=1,
+        ).max(axis=1)
+
+        self.df["Exit Concentration"] = concentration
 
         return self
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Exit Efficiency
+    # ---------------------------------------------------------
 
     def exit_efficiency(self):
         """
-        Winning exits
-        per average
-        holding day.
+        Measures quality of profitable exits.
+
+        Higher is better.
         """
 
-        self.df["Exit Efficiency"] = safe_divide(
-            self.df["Winning Exit %"], self.df["Avg days"]
+        win_quality = normalize(self.df["Winning Exit %"])
+
+        stop_penalty = normalize(self.df["Stop Dependency"])
+
+        diversity = normalize(self.df["Exit Diversity Score"])
+
+        self.df["Exit Efficiency"] = (
+            win_quality * 0.50 + diversity * 0.30 - stop_penalty * 0.20
         )
 
         return self
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Exit Robustness
+    # ---------------------------------------------------------
 
     def exit_robustness(self):
         """
-        Penalize strategies
-        relying heavily
-        on stop exits.
+        Measures stability of exit behaviour.
+
+        Considers:
+        - exit diversity
+        - low stop dependency
+        - winning exits
         """
 
-        self.df["Exit Robustness"] = self.df["Winning Exit %"] - self.df["Stop Exit %"]
-
-        return self
-
-    # -----------------------------------------------------------
-
-    def exit_consistency(self):
-        """
-        Ratio of
-        target exits
-        to stop exits.
-        """
-
-        self.df["Exit Consistency"] = safe_divide(
-            self.df["Target #"], self.df["Stop #"]
+        self.df["Exit Robustness"] = (
+            self.df["Exit Diversity Score"] * 0.40
+            + safe_divide(
+                self.df["Winning Exit %"],
+                100,
+            )
+            * 0.40
+            + (
+                1
+                - safe_divide(
+                    self.df["Stop Dependency"],
+                    100,
+                )
+            )
+            * 0.20
         )
 
         return self
 
-    # -----------------------------------------------------------
-
-    def exit_quality(self):
-        """
-        Composite quality
-        of exit behaviour.
-        """
-
-        self.df["Exit Quality"] = (
-            (self.df["Winning Exit %"] * 0.40)
-            + (self.df["Target Exit %"] * 0.25)
-            + (self.df["Trailing Exit %"] * 0.15)
-            + (self.df["Exit Stability"] * 100 * 0.20)
-        )
-
-        return self
-
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Institutional Exit Score
+    # ---------------------------------------------------------
 
     def institutional_exit_score(self):
         """
-        Institutional score
-        scaled 0-100.
+        Final institutional exit score.
+
+        Components:
+
+        - Exit efficiency
+        - Exit robustness
+        - Exit diversity
+        - Exit concentration penalty
         """
 
-        score = (
-            self.df["Exit Quality"]
-            - self.df["Stop Exit %"] * 0.20
-            - self.df["Time Exit %"] * 0.10
+        concentration_penalty = 1 - self.df["Exit Concentration"]
+
+        self.df["Institutional Exit Score"] = (
+            normalize(self.df["Exit Efficiency"]) * 0.45
+            + normalize(self.df["Exit Robustness"]) * 0.35
+            + normalize(self.df["Exit Diversity Score"]) * 0.20
         )
 
-        self.df["Institutional Exit Score"] = score.clip(0, 100)
+        self.df["Institutional Exit Score"] = (
+            self.df["Institutional Exit Score"] * concentration_penalty
+        )
 
         return self
 
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Cleanup
+    # ---------------------------------------------------------
 
     def cleanup(self):
         """
-        Clean invalid values before returning.
+        Remove invalid values.
         """
 
-        self.df.replace([np.inf, -np.inf], np.nan, inplace=True)
-
-        metric_cols = [
+        columns = [
             "Target Exit %",
             "Trailing Exit %",
-            "Stop Exit %",
-            "Time Exit %",
-            "Winning Exit %",
-            "Losing Exit %",
-            "Target Capture",
-            "Trailing Capture",
             "Stop Dependency",
             "Time Dependency",
-            "Exit Diversity",
-            "Exit Concentration",
-            "Exit Balance",
+            "Winning Exit %",
+            "Losing Exit %",
             "Exit Entropy",
-            "Exit Stability",
+            "Exit Diversity Score",
+            "Exit Concentration",
             "Exit Efficiency",
             "Exit Robustness",
-            "Exit Consistency",
-            "Exit Quality",
             "Institutional Exit Score",
         ]
 
-        for col in metric_cols:
-            if col in self.df.columns:
-                self.df[col] = self.df[col].fillna(0)
+        for column in columns:
+            if column in self.df.columns:
+                self.df[column] = (
+                    self.df[column]
+                    .replace(
+                        [
+                            np.inf,
+                            -np.inf,
+                        ],
+                        np.nan,
+                    )
+                    .fillna(0.0)
+                    .round(4)
+                )
 
         return self
 
-    # -----------------------------------------------------------
-
-    def round_metrics(self):
-        """
-        Round derived metrics.
-        """
-
-        metric_cols = [
-            "Target Exit %",
-            "Trailing Exit %",
-            "Stop Exit %",
-            "Time Exit %",
-            "Winning Exit %",
-            "Losing Exit %",
-            "Target Capture",
-            "Trailing Capture",
-            "Stop Dependency",
-            "Time Dependency",
-            "Exit Diversity",
-            "Exit Concentration",
-            "Exit Balance",
-            "Exit Entropy",
-            "Exit Stability",
-            "Exit Efficiency",
-            "Exit Robustness",
-            "Exit Consistency",
-            "Exit Quality",
-            "Institutional Exit Score",
-        ]
-
-        for col in metric_cols:
-            if col in self.df.columns:
-                self.df[col] = self.df[col].round(4)
-
-        return self
-
-    # -----------------------------------------------------------
+    # ---------------------------------------------------------
+    # Run Pipeline
+    # ---------------------------------------------------------
 
     def run(self):
-        return (
+
+        logger.info("Calculating exit metrics")
+
+        result = (
             self.prepare_columns()
-            .target_exit_pct()
-            .trailing_exit_pct()
-            .stop_exit_pct()
-            .time_exit_pct()
-            .winning_exit_pct()
-            .losing_exit_pct()
-            .target_capture_ratio()
-            .trailing_capture_ratio()
+            .validate()
+            .target_exit_percentage()
+            .trailing_exit_percentage()
             .stop_dependency()
             .time_dependency()
+            .winning_exit_percentage()
+            .losing_exit_percentage()
             .exit_diversity()
+            .exit_distribution_score()
             .exit_concentration()
-            .exit_balance()
-            .exit_entropy()
-            .exit_stability()
             .exit_efficiency()
             .exit_robustness()
-            .exit_consistency()
-            .exit_quality()
             .institutional_exit_score()
             .cleanup()
-            .round_metrics()
             .df
         )
+
+        logger.info("Exit metrics completed")
+
+        return result
 
 
 # ===============================================================
@@ -453,9 +638,17 @@ class ExitMetrics:
 # ===============================================================
 
 
-def derive_exit_metrics(df: pd.DataFrame) -> pd.DataFrame:
+def derive_exit_metrics(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Derive all exit-related institutional metrics.
+    Public API wrapper.
     """
 
     return ExitMetrics(df).run()
+
+
+__all__ = [
+    "ExitMetrics",
+    "derive_exit_metrics",
+]

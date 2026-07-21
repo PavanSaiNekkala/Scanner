@@ -55,6 +55,17 @@ class ValidationMetrics:
     institutional-quality validation metrics.
     """
 
+    REQUIRED_COLUMNS = {
+        "Trades",
+        "Win%",
+        "Expectancy",
+        "Profit Factor",
+        "Reward Risk",
+        "Annual Return %",
+        "Avg days",
+        "Years",
+    }
+
     def __init__(
         self,
         df: pd.DataFrame,
@@ -70,39 +81,28 @@ class ValidationMetrics:
         Convert validation columns to numeric.
         """
 
-        numeric_columns = [
-            "Trades",
-            "Win%",
-            "Expectancy",
-            "Profit Factor",
-            "Reward Risk",
-            "Annual Return %",
-            "Avg days",
-            "Years",
-        ]
-
         require_columns(
             self.df,
-            numeric_columns,
+            self.REQUIRED_COLUMNS,
         )
 
-        for column in numeric_columns:
+        for column in self.REQUIRED_COLUMNS:
             self.df[column] = numeric(self.df[column])
 
         logger.info(
             "Prepared %d validation columns.",
-            len(numeric_columns),
+            len(self.REQUIRED_COLUMNS),
         )
 
         return self
 
     # ---------------------------------------------------------
-    # Missing Values
+    # Missing Value Count
     # ---------------------------------------------------------
 
     def missing_values(self):
         """
-        Count missing values per row.
+        Calculate missing value count per row.
         """
 
         self.df["Missing Values"] = self.df.isna().sum(axis=1)
@@ -110,20 +110,21 @@ class ValidationMetrics:
         return self
 
     # ---------------------------------------------------------
-    # Missing Percentage
+    # Missing Value Percentage
     # ---------------------------------------------------------
 
     def missing_percent(self):
         """
-        Calculate missing percentage.
+        Calculate missing percentage per row.
         """
 
-        total_columns = max(
-            len(self.df.columns),
-            1,
-        )
+        total_columns = len(self.df.columns)
 
-        self.df["Missing %"] = self.df["Missing Values"] / total_columns * 100
+        if total_columns == 0:
+            self.df["Missing %"] = 0
+
+        else:
+            self.df["Missing %"] = self.df["Missing Values"] / total_columns * 100
 
         return self
 

@@ -11,15 +11,6 @@ Purpose
 Centralized constants shared across the entire
 Institutional Strategy Comparison Platform.
 
-Guidelines
-----------
-• Column Names
-• Report Names
-• Excel Sheet Names
-• Recommendation Labels
-• File Names
-• Default Configuration
-
 =============================================================
 """
 
@@ -37,6 +28,30 @@ INPUT_DIRECTORY = PROJECT_ROOT
 
 OUTPUT_DIRECTORY = PROJECT_ROOT / "output"
 
+REPORT_DIRECTORY = OUTPUT_DIRECTORY / "reports"
+
+EXPORT_DIRECTORY = OUTPUT_DIRECTORY / "exports"
+
+LOG_DIRECTORY = OUTPUT_DIRECTORY / "logs"
+
+# ============================================================
+# Platform Defaults
+# ============================================================
+
+EPSILON = 1e-12
+
+DEFAULT_ROUNDING = 2
+
+DEFAULT_SHEET_NAME = "Sheet1"
+
+MAX_SHEET_NAME = 31
+
+DEFAULT_PATTERN = "*"
+
+CSV_PATTERN = "**/*.csv"
+
+STATISTICS_PATTERN = "**/*Statistics.xlsx"
+
 # ============================================================
 # Portfolio Defaults
 # ============================================================
@@ -46,6 +61,20 @@ CAPITAL = 1_000_000
 TOP_STOCKS = 25
 
 MAX_POSITION_WEIGHT = 10.0
+
+MIN_POSITION_WEIGHT = 0.0
+
+# ============================================================
+# Normalization
+# ============================================================
+
+NORMALIZED_MIN = 0.0
+
+NORMALIZED_MAX = 100.0
+
+DEFAULT_WINSOR_LOWER = 0.05
+
+DEFAULT_WINSOR_UPPER = 0.95
 
 # ============================================================
 # Common Column Names
@@ -61,11 +90,19 @@ RECOMMENDATION = "Recommendation"
 
 WEIGHT = "Weight"
 
+VALIDATION_STATUS = "Validation Status"
+
 # ============================================================
-# Validation Metrics
+# Required Columns
 # ============================================================
 
-VALIDATION_STATUS = "Validation Status"
+REQUIRED_COMPARISON_COLUMNS = [
+    STOCK,
+    STRATEGY,
+    INSTITUTION_RANK,
+    "Composite Score",
+    RECOMMENDATION,
+]
 
 # ============================================================
 # Strategy Discovery
@@ -80,18 +117,6 @@ STRATEGY_FOLDERS = [
     "backtest_WF_ATR_Tr",
     "backtest_WF_Str_FT",
     "backtest_WF_Str_Tr",
-]
-
-# ============================================================
-# Required Columns
-# ============================================================
-
-REQUIRED_COMPARISON_COLUMNS = [
-    "Stock",
-    "Strategy",
-    "Institution Rank",
-    "Composite Score",
-    "Recommendation",
 ]
 
 # ============================================================
@@ -231,7 +256,7 @@ COMPARISON_REPORT = "Strategy_Comparison.xlsx"
 
 FINAL_REPORT = "Institutional_Strategy_Report.xlsx"
 
-FINAL_INSTITUTIONAL_REPORT = "Institutional_Strategy_Report.xlsx"
+FINAL_INSTITUTIONAL_REPORT = FINAL_REPORT
 
 PORTFOLIO_REPORT = "Institutional_Portfolio.xlsx"
 

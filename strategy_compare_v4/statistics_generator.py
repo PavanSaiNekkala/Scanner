@@ -1,166 +1,333 @@
 """
 =============================================================
-Institutional Strategy Comparison Platform V4
-
-Module
-------
-stock_backtest_stats.py
+Institutional Strategy Statistics Engine
 
 Purpose
 -------
-Generate descriptive statistics workbooks for every
-backtest strategy directory.
+Generate comprehensive descriptive statistics for every
+backtest CSV and export them into Excel workbooks.
 
-Each strategy folder receives one Statistics.xlsx
-containing one worksheet per stock.
+Features
+--------
+• Automatic folder discovery
+• Automatic CSV discovery
+• Institutional descriptive statistics
+• Safe validation
+• Logging
+• Excel export
 
 =============================================================
 """
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from utils.logger import (
-    banner,
-    get_logger,
-    log_execution_time,
-)
-from utils.math_utils import round_dataframe
+# ============================================================
+# Configuration
+# ============================================================
 
-logger = get_logger(__name__)
+ROOT_DIRECTORY = Path(
+    "/workspaces/Scanner/strategy_compare_v3",
+)
+
+BACKTEST_PATTERN = "backtest_*"
+
+CSV_PATTERN = "*.csv"
+
+MAX_SHEET_NAME = 31
+
+ROUND_DECIMALS = 4
+
+EPSILON = 1e-12
+
+QUANTILES = (
+    0.05,
+    0.10,
+    0.25,
+    0.50,
+    0.75,
+    0.90,
+    0.95,
+    0.99,
+)
+
 
 # ============================================================
 # Statistics Engine
 # ============================================================
 
 
-def build_statistics(
-    df: pd.DataFrame,
-) -> pd.DataFrame:
+class StatisticsEngine:
     """
-    Generate descriptive statistics for all
-    numeric columns.
+    Institutional Statistics Engine.
     """
 
-    numeric = df.select_dtypes(include=np.number)
+    def __init__(
+        self,
+        root_directory: str | Path = ROOT_DIRECTORY,
+    ):
+        self.root_directory = Path(
+            root_directory,
+        )
 
-    if numeric.empty:
-        return pd.DataFrame()
+        self.processed_folders = 0
 
-    stats = pd.DataFrame(index=numeric.columns)
+        self.processed_files = 0
 
-    stats["Count"] = numeric.count()
+    # ========================================================
+    # Helpers
+    # ========================================================
 
-    stats["Missing"] = numeric.isna().sum()
+    def discover_folders(
+        self,
+    ):
+        """
+        Locate every backtest folder.
+        """
 
-    stats["Sum"] = numeric.sum()
+        return sorted(
+            self.root_directory.glob(
+                BACKTEST_PATTERN,
+            )
+        )
 
-    stats["Mean"] = numeric.mean()
+    def discover_csv_files(
+        self,
+        folder: Path,
+    ):
+        """
+        Locate CSV files.
+        """
 
-    stats["Median"] = numeric.median()
+        return sorted(
+            folder.glob(
+                CSV_PATTERN,
+            )
+        )
 
-    stats["Mode"] = numeric.mode().iloc[0]
+    def load_dataframe(
+        self,
+        csv_file: Path,
+    ) -> pd.DataFrame:
+        """
+        Load CSV safely.
+        """
 
-    stats["Variance"] = numeric.var()
+        dataframe = pd.read_csv(
+            csv_file,
+        )
 
-    stats["Std Dev"] = numeric.std()
+        if dataframe.empty:
+            raise ValueError(f"{csv_file.name} is empty.")
 
-    stats["Min"] = numeric.min()
+        return dataframe
 
-    stats["25%"] = numeric.quantile(0.25)
+    def numeric_dataframe(
+        self,
+        dataframe: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Return numeric columns.
+        """
 
-    stats["50%"] = numeric.quantile(0.50)
+        numeric = dataframe.select_dtypes(
+            include=np.number,
+        )
 
-    stats["75%"] = numeric.quantile(0.75)
+        if numeric.empty:
+            raise ValueError("No numeric columns found.")
 
-    stats["Max"] = numeric.max()
+        return numeric
 
-    stats["Range"] = stats["Max"] - stats["Min"]
+    # ========================================================
+    # Statistics
+    # ========================================================
 
-    stats["IQR"] = stats["75%"] - stats["25%"]
+    def compute_statistics(
+        self,
+        numeric: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Compute institutional statistics.
+        """
 
-    stats["Skewness"] = numeric.skew()
+        statistics = pd.DataFrame(
+            index=numeric.columns,
+        )
 
-    stats["Kurtosis"] = numeric.kurt()
+        statistics["Count"] = numeric.count()
 
-    stats["CV %"] = np.where(
-        stats["Mean"] != 0,
-        stats["Std Dev"] / stats["Mean"] * 100,
-        np.nan,
-    )
+        statistics["Missing"] = numeric.isna().sum()
 
-    stats["Std Error"] = stats["Std Dev"] / np.sqrt(stats["Count"])
+        statistics["Unique"] = numeric.nunique()
 
-    stats["5%"] = numeric.quantile(0.05)
+        statistics["Sum"] = numeric.sum()
 
-    stats["10%"] = numeric.quantile(0.10)
+        statistics["Mean"] = numeric.mean()
 
-    stats["90%"] = numeric.quantile(0.90)
+        statistics["Median"] = numeric.median()
 
-    stats["95%"] = numeric.quantile(0.95)
+        mode = numeric.mode(
+            dropna=True,
+        )
 
-    stats["99%"] = numeric.quantile(0.99)
+        statistics["Mode"] = mode.iloc[0] if not mode.empty else np.nan
 
-    return round_dataframe(stats, 4)
+        statistics["Variance"] = numeric.var()
 
+        statistics["Std Dev"] = numeric.std()
 
-# ============================================================
-# Folder Processing
-# ============================================================
+        statistics["Std Error"] = statistics["Std Dev"] / np.sqrt(
+            statistics["Count"],
+        )
 
+        statistics["Min"] = numeric.min()
 
-def process_folder(
-    folder: Path,
-) -> None:
-    """
-    Generate statistics workbook
-    for one strategy folder.
-    """
+        statistics["Max"] = numeric.max()
 
-    logger.info("Processing %s", folder.name)
+        statistics["Range"] = statistics["Max"] - statistics["Min"]
 
-    csv_files = sorted(folder.glob("*.csv"))
+        statistics["Skewness"] = numeric.skew()
 
-    if not csv_files:
-        logger.warning("No CSV files found.")
+        statistics["Kurtosis"] = numeric.kurt()
 
-        return
+        statistics["CV %"] = np.where(
+            np.abs(
+                statistics["Mean"],
+            )
+            > EPSILON,
+            (statistics["Std Dev"] / statistics["Mean"]) * 100,
+            np.nan,
+        )
 
-    output_excel = folder / f"{folder.name}_Statistics.xlsx"
+        for quantile in QUANTILES:
+            label = f"{int(quantile * 100)}%"
 
-    with pd.ExcelWriter(
-        output_excel,
-        engine="openpyxl",
-    ) as writer:
-        for csv in csv_files:
-            logger.info(
-                "Reading %s",
-                csv.name,
+            statistics[label] = numeric.quantile(
+                quantile,
             )
 
-            df = pd.read_csv(csv)
+        statistics["IQR"] = statistics["75%"] - statistics["25%"]
 
-            stats = build_statistics(df)
+        statistics["Positive"] = (numeric > 0).sum()
 
-            if stats.empty:
-                continue
+        statistics["Negative"] = (numeric < 0).sum()
 
-            sheet = (csv.stem.replace("_backtest_", "_"))[:31]
+        statistics["Zero"] = (numeric == 0).sum()
 
-            stats.to_excel(
-                writer,
-                sheet_name=sheet,
+        return statistics.round(
+            ROUND_DECIMALS,
+        )
+
+    # ========================================================
+    # Excel Export
+    # ========================================================
+
+    def export_folder(
+        self,
+        folder: Path,
+    ):
+        """
+        Export statistics for one
+        backtest folder.
+        """
+
+        print(f"\nProcessing {folder.name}")
+
+        csv_files = self.discover_csv_files(
+            folder,
+        )
+
+        if not csv_files:
+            print("   No CSV files found.")
+            return
+
+        output_excel = folder / f"{folder.name}_Statistics.xlsx"
+
+        with pd.ExcelWriter(
+            output_excel,
+            engine="openpyxl",
+        ) as writer:
+            for csv_file in csv_files:
+                print(f"   {csv_file.name}")
+
+                try:
+                    dataframe = self.load_dataframe(
+                        csv_file,
+                    )
+
+                    numeric = self.numeric_dataframe(
+                        dataframe,
+                    )
+
+                    statistics = self.compute_statistics(
+                        numeric,
+                    )
+
+                    sheet_name = (
+                        csv_file.stem.replace(
+                            "_backtest_",
+                            "_",
+                        )
+                    )[:MAX_SHEET_NAME]
+
+                    statistics.to_excel(
+                        writer,
+                        sheet_name=sheet_name,
+                    )
+
+                    self.processed_files += 1
+
+                except Exception as exc:
+                    print(f"      Skipped: {exc}")
+
+                    continue
+
+        self.processed_folders += 1
+
+        print(f"Saved -> {output_excel}")
+
+    # ========================================================
+    # Run Engine
+    # ========================================================
+
+    def run(
+        self,
+    ):
+        """
+        Execute the complete
+        statistics generation
+        pipeline.
+        """
+
+        print("\n========================================")
+        print("Institutional Statistics Engine")
+        print("========================================")
+
+        folders = self.discover_folders()
+
+        if not folders:
+            print("No backtest folders found.")
+            return
+
+        for folder in folders:
+            self.export_folder(
+                folder,
             )
 
-    logger.info(
-        "Saved %s",
-        output_excel.name,
-    )
+        print("\n========================================")
+        print("Execution Summary")
+        print("========================================")
+
+        print(f"Folders Processed : {self.processed_folders}")
+
+        print(f"CSV Files Processed : {self.processed_files}")
+
+        print("\nAll folders completed.")
 
 
 # ============================================================
@@ -168,41 +335,15 @@ def process_folder(
 # ============================================================
 
 
-def main() -> None:
-    banner(
-        logger,
-        "BACKTEST STATISTICS",
-    )
+def main():
+    """
+    Application entry point.
+    """
 
-    start = time.perf_counter()
+    engine = StatisticsEngine()
 
-    root = Path.cwd()
-
-    backtest_dirs = sorted(root.glob("backtest_*"))
-
-    logger.info(
-        "Found %d strategy folders.",
-        len(backtest_dirs),
-    )
-
-    for folder in backtest_dirs:
-        process_folder(folder)
-
-    log_execution_time(
-        logger,
-        time.perf_counter() - start,
-        "Statistics Generation",
-    )
+    engine.run()
 
 
 if __name__ == "__main__":
-    try:
-        main()
-
-    except KeyboardInterrupt:
-        logger.warning("Execution cancelled.")
-
-    except Exception:
-        logger.exception("Statistics generation failed.")
-
-        raise
+    main()

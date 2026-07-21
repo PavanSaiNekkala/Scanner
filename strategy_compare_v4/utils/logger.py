@@ -8,15 +8,7 @@ utils/logger.py
 
 Purpose
 -------
-Centralized logging utilities used throughout the
-Institutional Strategy Comparison Platform.
-
-Provides
---------
-• Configured application logger
-• Console logging
-• Optional file logging
-• Section banners
+Centralized logging utilities.
 
 =============================================================
 """
@@ -24,6 +16,7 @@ Provides
 from __future__ import annotations
 
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 # ============================================================
@@ -35,6 +28,10 @@ LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 DEFAULT_LEVEL = logging.INFO
+
+MAX_LOG_SIZE = 10 * 1024 * 1024  # 10 MB
+
+BACKUP_COUNT = 5
 
 
 # ============================================================
@@ -49,29 +46,19 @@ def get_logger(
 ) -> logging.Logger:
     """
     Create or retrieve a configured logger.
-
-    Parameters
-    ----------
-    name : str
-        Logger name.
-
-    log_file : str | Path | None
-        Optional log file.
-
-    level : int
-        Logging level.
-
-    Returns
-    -------
-    logging.Logger
     """
 
-    logger = logging.getLogger(name)
+    logger = logging.getLogger(
+        name,
+    )
 
     if logger.handlers:
         return logger
 
-    logger.setLevel(level)
+    logger.setLevel(
+        level,
+    )
+
     logger.propagate = False
 
     formatter = logging.Formatter(
@@ -85,34 +72,50 @@ def get_logger(
 
     console_handler = logging.StreamHandler()
 
-    console_handler.setLevel(level)
+    console_handler.setLevel(
+        level,
+    )
 
-    console_handler.setFormatter(formatter)
+    console_handler.setFormatter(
+        formatter,
+    )
 
-    logger.addHandler(console_handler)
+    logger.addHandler(
+        console_handler,
+    )
 
     # --------------------------------------------------------
-    # File Handler (Optional)
+    # Rotating File Handler
     # --------------------------------------------------------
 
     if log_file is not None:
-        log_file = Path(log_file)
+        log_file = Path(
+            log_file,
+        )
 
         log_file.parent.mkdir(
             parents=True,
             exist_ok=True,
         )
 
-        file_handler = logging.FileHandler(
+        file_handler = RotatingFileHandler(
             log_file,
+            maxBytes=MAX_LOG_SIZE,
+            backupCount=BACKUP_COUNT,
             encoding="utf-8",
         )
 
-        file_handler.setLevel(level)
+        file_handler.setLevel(
+            level,
+        )
 
-        file_handler.setFormatter(formatter)
+        file_handler.setFormatter(
+            formatter,
+        )
 
-        logger.addHandler(file_handler)
+        logger.addHandler(
+            file_handler,
+        )
 
     return logger
 
@@ -128,20 +131,16 @@ def banner(
     width: int = 70,
 ) -> None:
     """
-    Log a section banner.
-
-    Example
-    -------
-    ======================================================
-                    DERIVED METRICS
-    ======================================================
+    Print a section banner.
     """
 
     line = "=" * width
 
     logger.info(line)
 
-    logger.info(title.center(width))
+    logger.info(
+        title.center(width),
+    )
 
     logger.info(line)
 
@@ -160,7 +159,9 @@ def divider(
     Log a divider line.
     """
 
-    logger.info(character * width)
+    logger.info(
+        character * width,
+    )
 
 
 # ============================================================
@@ -179,13 +180,130 @@ def log_execution_time(
 
     if task:
         logger.info(
-            "%s completed in %.2f seconds",
+            "%s completed in %.3f seconds.",
             task,
             seconds,
         )
 
     else:
         logger.info(
-            "Execution completed in %.2f seconds",
+            "Execution completed in %.3f seconds.",
             seconds,
         )
+
+
+# ============================================================
+# DataFrame Summary
+# ============================================================
+
+
+def log_dataframe_summary(
+    logger: logging.Logger,
+    dataframe,
+    name: str = "DataFrame",
+) -> None:
+    """
+    Log a concise DataFrame summary.
+    """
+
+    try:
+        import pandas as pd
+
+        if dataframe is None:
+            logger.warning(
+                "%s is None.",
+                name,
+            )
+
+            return
+
+        if not isinstance(
+            dataframe,
+            pd.DataFrame,
+        ):
+            logger.warning(
+                "%s is not a pandas DataFrame.",
+                name,
+            )
+
+            return
+
+        logger.info(
+            "%s Summary",
+            name,
+        )
+
+        logger.info(
+            "Rows             : %d",
+            len(dataframe),
+        )
+
+        logger.info(
+            "Columns          : %d",
+            len(dataframe.columns),
+        )
+
+        logger.info(
+            "Missing Values   : %d",
+            int(dataframe.isna().sum().sum()),
+        )
+
+        logger.info(
+            "Duplicate Rows   : %d",
+            int(dataframe.duplicated().sum()),
+        )
+
+    except Exception:
+        logger.exception("Unable to log DataFrame summary.")
+
+
+# ============================================================
+# Stage Logger
+# ============================================================
+
+
+def log_stage(
+    logger: logging.Logger,
+    stage: str,
+) -> None:
+    """
+    Log a pipeline stage banner.
+    """
+
+    banner(
+        logger,
+        stage,
+    )
+
+
+# ============================================================
+# Exception Logger
+# ============================================================
+
+
+def log_exception(
+    logger: logging.Logger,
+    message: str,
+) -> None:
+    """
+    Log an exception with traceback.
+    """
+
+    logger.exception(
+        message,
+    )
+
+
+# ============================================================
+# Public API
+# ============================================================
+
+__all__ = [
+    "get_logger",
+    "banner",
+    "divider",
+    "log_execution_time",
+    "log_dataframe_summary",
+    "log_stage",
+    "log_exception",
+]

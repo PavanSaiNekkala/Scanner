@@ -7,6 +7,7 @@ Institutional Strategy Analytics Dashboard
 
 from __future__ import annotations
 
+import pandas as pd
 import streamlit as st
 from components.cards import strategy_summary_card
 from components.charts import (
@@ -18,12 +19,9 @@ from components.charts import (
 from services.loader import get_sheet
 from themes import apply_theme
 
-st.set_page_config(
-    page_title="Strategies",
-    page_icon="📈",
-    layout="wide",
-)
-apply_theme()
+# ============================================================
+# Page Configuration
+# ============================================================
 
 st.set_page_config(
     page_title="Strategy Analytics",
@@ -31,168 +29,501 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("📈 Strategy Analytics")
+apply_theme()
 
-st.caption("Institutional comparison of all trading strategies.")
+# ============================================================
+# Constants
+# ============================================================
 
-# ---------------------------------------------------------
+PAGE_TITLE = "📈 Strategy Analytics"
+
+PAGE_CAPTION = "Institutional comparison of all trading strategies."
+
+SHEET_NAME = "Strategy Ranking"
+
+DEFAULT_TOP_N = 10
+
+# ============================================================
+# Header
+# ============================================================
+
+
+def render_header() -> None:
+    """
+    Render page header.
+    """
+
+    st.title(PAGE_TITLE)
+
+    st.caption(PAGE_CAPTION)
+
+    st.divider()
+
+
+# ============================================================
 # Validation
-# ---------------------------------------------------------
+# ============================================================
 
-if not st.session_state.get(
-    "reports_loaded",
-    False,
-):
-    st.warning("Please load reports from the Data Load page.")
-    st.stop()
 
-# ---------------------------------------------------------
-# Load Data
-# ---------------------------------------------------------
+def validate_session() -> None:
+    """
+    Validate whether reports have been loaded.
+    """
 
-strategy_df = get_sheet(
-    st.session_state.strategy_report,
-    "Strategy Ranking",
-)
+    if not st.session_state.get(
+        "reports_loaded",
+        False,
+    ):
+        st.warning("Please load reports from the Data Load page.")
 
-if strategy_df.empty:
-    st.error("Strategy Ranking sheet not found.")
-    st.stop()
+        st.stop()
 
-# ---------------------------------------------------------
+
+# ============================================================
+# Data Loading
+# ============================================================
+
+
+@st.cache_data(show_spinner=False)
+def load_strategy_data() -> pd.DataFrame:
+    """
+    Load the Strategy Ranking worksheet.
+    """
+
+    return get_sheet(
+        st.session_state.strategy_report,
+        SHEET_NAME,
+    )
+
+
+def validate_strategy_data(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Validate loaded strategy data.
+    """
+
+    if df is None or df.empty:
+        st.error(f"'{SHEET_NAME}' worksheet was not found or is empty.")
+
+        st.stop()
+
+
+# ============================================================
 # Summary
-# ---------------------------------------------------------
+# ============================================================
 
-strategy_summary_card(strategy_df)
 
-st.divider()
+def render_summary(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Render strategy summary metrics.
+    """
 
-# ---------------------------------------------------------
-# Filter
-# ---------------------------------------------------------
+    strategy_summary_card(df)
 
-top_n = st.slider(
-    "Top Strategies",
-    1,
-    len(strategy_df),
-    min(
-        10,
-        len(strategy_df),
-    ),
-)
+    st.divider()
 
-filtered = (
-    strategy_df.sort_values(
-        "Composite Score",
-        ascending=False,
-    )
-    .head(top_n)
-    .reset_index(drop=True)
-)
 
-# ---------------------------------------------------------
-# Ranking Table
-# ---------------------------------------------------------
+# ============================================================
+# Filters
+# ============================================================
 
-st.subheader("Strategy Ranking")
 
-dataframe(filtered)
+def render_filters(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Render dashboard filters and return the filtered dataset.
+    """
 
-# ---------------------------------------------------------
+    st.subheader("Filters")
+
+    left, right = st.columns([1, 3])
+
+    # --------------------------------------------------------
+    # Top N
+    # --------------------------------------------------------
+
+    with left:
+        top_n = st.slider(
+            "Top Strategies",
+            min_value=1,
+            max_value=len(df),
+            value=min(
+                DEFAULT_TOP_N,
+                len(df),
+            ),
+            help="Display the highest ranked strategies.",
+        )
+
+    # --------------------------------------------------------
+    # Search Strategy
+    # --------------------------------------------------------
+
+    with right:
+        search = st.text_input(
+            "Search Strategy",
+            placeholder="Enter strategy name...",
+        )
+
+    # --------------------------------------------------------
+    # Filtering
+    # --------------------------------------------------------
+
+    filtered = df.copy()
+
+    if search and "Strategy" in filtered.columns:
+        filtered = filtered[
+            filtered["Strategy"]
+            .astype(str)
+            .str.contains(
+                search,
+                case=False,
+                na=False,
+            )
+        ]
+
+    # --------------------------------------------------------
+    # Ranking
+    # --------------------------------------------------------
+
+    if "Composite Score" in filtered.columns:
+        filtered = (
+            filtered.sort_values(
+                "Composite Score",
+                ascending=False,
+            )
+            .head(top_n)
+            .reset_index(
+                drop=True,
+            )
+        )
+
+    st.caption(f"Showing **{len(filtered):,}** of **{len(df):,}** strategies.")
+
+    st.divider()
+
+    return filtered
+
+
+# ============================================================
+# Strategy Ranking
+# ============================================================
+
+
+def render_strategy_table(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Render the filtered strategy ranking table.
+    """
+
+    st.subheader("Strategy Ranking")
+
+    dataframe(df)
+
+    st.divider()
+
+
+# ============================================================
 # Charts
-# ---------------------------------------------------------
+# ============================================================
 
-st.divider()
 
-c1, c2 = st.columns(2)
+def render_charts(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Render strategy analytics charts.
+    """
 
-with c1:
-    bar_chart(
-        filtered,
-        x="Strategy Rank",
-        y="Composite Score",
-        title="Composite Score",
-    )
+    if df.empty:
+        return
 
-with c2:
-    bar_chart(
-        filtered,
-        x="Strategy Rank",
-        y="Expectancy",
-        title="Expectancy",
-    )
+    st.subheader("Strategy Analytics")
 
-# ---------------------------------------------------------
+    # --------------------------------------------------------
+    # Bar Charts
+    # --------------------------------------------------------
 
-c1, c2 = st.columns(2)
+    left, right = st.columns(2)
 
-with c1:
-    histogram(
-        filtered,
+    with left:
+        if "Strategy Rank" in df.columns and "Composite Score" in df.columns:
+            bar_chart(
+                df,
+                x="Strategy Rank",
+                y="Composite Score",
+                title="Composite Score",
+            )
+
+    with right:
+        if "Strategy Rank" in df.columns and "Expectancy" in df.columns:
+            bar_chart(
+                df,
+                x="Strategy Rank",
+                y="Expectancy",
+                title="Expectancy",
+            )
+
+    # --------------------------------------------------------
+    # Histograms
+    # --------------------------------------------------------
+
+    left, right = st.columns(2)
+
+    with left:
+        if "Composite Score" in df.columns:
+            histogram(
+                df,
+                "Composite Score",
+                "Composite Score Distribution",
+            )
+
+    with right:
+        if "Profit Factor" in df.columns:
+            histogram(
+                df,
+                "Profit Factor",
+                "Profit Factor Distribution",
+            )
+
+    st.divider()
+
+
+# ============================================================
+# Strategy Radar
+# ============================================================
+
+
+def render_strategy_radar(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Render radar chart for a selected strategy.
+    """
+
+    if df.empty:
+        return
+
+    required_columns = [
+        "Strategy Rank",
         "Composite Score",
-        "Composite Score Distribution",
-    )
-
-with c2:
-    histogram(
-        filtered,
+        "Expectancy",
         "Profit Factor",
-        "Profit Factor Distribution",
+        "Reward Risk",
+        "Trades",
+    ]
+
+    if not all(column in df.columns for column in required_columns):
+        return
+
+    st.subheader("Strategy Radar")
+
+    selected_strategy = st.selectbox(
+        "Strategy Rank",
+        options=df["Strategy Rank"].tolist(),
     )
 
-# ---------------------------------------------------------
-# Radar
-# ---------------------------------------------------------
+    strategy = df.loc[df["Strategy Rank"] == selected_strategy].iloc[0]
 
-st.divider()
+    radar_chart(
+        {
+            "Composite": strategy["Composite Score"],
+            "Expectancy": strategy["Expectancy"],
+            "Profit Factor": strategy["Profit Factor"],
+            "Reward Risk": strategy["Reward Risk"],
+            "Trades": strategy["Trades"],
+        },
+        str(selected_strategy),
+    )
 
-st.subheader("Strategy Radar")
+    st.divider()
 
-selected = st.selectbox(
-    "Strategy Rank",
-    filtered["Strategy Rank"].tolist(),
-)
 
-row = filtered[filtered["Strategy Rank"] == selected].iloc[0]
+# ============================================================
+# Strategy Details
+# ============================================================
 
-radar_chart(
-    {
-        "Composite": row["Composite Score"],
-        "Expectancy": row["Expectancy"],
-        "Profit Factor": row["Profit Factor"],
-        "Reward Risk": row["Reward Risk"],
-        "Trades": row["Trades"],
-    },
-    str(selected),
-)
 
-# ---------------------------------------------------------
-# Details
-# ---------------------------------------------------------
+def render_strategy_details(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Display detailed information for a selected strategy.
+    """
 
-st.divider()
+    if df.empty:
+        return
 
-st.subheader("Strategy Details")
+    if "Strategy Rank" not in df.columns:
+        return
 
-st.dataframe(
-    row.to_frame().T,
-    use_container_width=True,
-    hide_index=True,
-)
+    st.subheader("Strategy Details")
 
-# ---------------------------------------------------------
-# Download
-# ---------------------------------------------------------
+    selected_strategy = st.selectbox(
+        "Select Strategy",
+        options=df["Strategy Rank"].tolist(),
+        key="strategy_details",
+    )
 
-st.divider()
+    strategy = df.loc[df["Strategy Rank"] == selected_strategy]
 
-csv = filtered.to_csv(
-    index=False,
-)
+    st.dataframe(
+        strategy,
+        use_container_width=True,
+        hide_index=True,
+        height=200,
+    )
 
-st.download_button(
-    label="📥 Download Strategy Ranking",
-    data=csv,
-    file_name="strategy_ranking.csv",
-    mime="text/csv",
-)
+    st.divider()
+
+
+# ============================================================
+# Downloads
+# ============================================================
+
+
+def render_downloads(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Render download section.
+    """
+
+    if df.empty:
+        return
+
+    st.subheader("Export")
+
+    csv = df.to_csv(
+        index=False,
+    )
+
+    st.download_button(
+        label="📥 Download Strategy Ranking (CSV)",
+        data=csv,
+        file_name="strategy_ranking.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+
+
+# ============================================================
+# Empty State
+# ============================================================
+
+
+def render_empty_state() -> None:
+    """
+    Render empty state when no strategy data is available.
+    """
+
+    st.info("""
+### 📈 Strategy Analytics
+
+This dashboard provides institutional analysis of all
+generated trading strategies.
+
+Features included:
+
+- Strategy Rankings
+- KPI Summary
+- Composite Score Analysis
+- Expectancy Analysis
+- Profit Factor Distribution
+- Radar Comparison
+- Strategy Details
+- CSV Export
+
+Load reports from the **Data Load** page to begin.
+""")
+
+
+# ============================================================
+# Footer
+# ============================================================
+
+
+def render_footer() -> None:
+    """
+    Render page footer.
+    """
+
+    st.divider()
+
+    left, right = st.columns([3, 1])
+
+    with left:
+        st.caption("Institutional Strategy Comparison Platform")
+
+    with right:
+        st.caption("Version 4.0")
+
+
+# ============================================================
+# Main
+# ============================================================
+
+
+def main() -> None:
+    """
+    Render Strategy Analytics dashboard.
+    """
+
+    render_header()
+
+    validate_session()
+
+    strategy_df = load_strategy_data()
+
+    validate_strategy_data(
+        strategy_df,
+    )
+
+    if strategy_df.empty:
+        render_empty_state()
+
+        return
+
+    render_summary(
+        strategy_df,
+    )
+
+    filtered_df = render_filters(
+        strategy_df,
+    )
+
+    render_strategy_table(
+        filtered_df,
+    )
+
+    render_charts(
+        filtered_df,
+    )
+
+    render_strategy_radar(
+        filtered_df,
+    )
+
+    render_strategy_details(
+        filtered_df,
+    )
+
+    render_downloads(
+        filtered_df,
+    )
+
+    render_footer()
+
+
+# ============================================================
+# Entry Point
+# ============================================================
+
+if __name__ == "__main__":
+    main()
+else:
+    main()

@@ -31,6 +31,23 @@ import numpy as np
 import pandas as pd
 
 # ============================================================
+# Constants
+# ============================================================
+
+EPSILON = 1e-12
+
+NORMALIZED_MIN = 0.0
+
+NORMALIZED_MAX = 100.0
+
+DEFAULT_ROUNDING = 2
+
+DEFAULT_WINSOR_LOWER = 0.05
+
+DEFAULT_WINSOR_UPPER = 0.95
+
+
+# ============================================================
 # Numeric Conversion
 # ============================================================
 
@@ -39,8 +56,9 @@ def numeric(
     series: pd.Series | Any,
 ) -> pd.Series:
     """
-    Convert a Series to numeric values.
-    Invalid entries become NaN.
+    Convert values to numeric.
+
+    Invalid values become NaN.
     """
 
     return pd.to_numeric(
@@ -54,32 +72,75 @@ def numeric(
 # ============================================================
 
 
-def safe_divide(a, b):
+def safe_divide(
+    a,
+    b,
+):
     """
     Safe element-wise division.
 
-    • Preserves pandas Series/DataFrame type.
-    • Returns 0 where denominator is 0 or NaN.
-    • Supports scalars, numpy arrays and pandas objects.
+    Supports
+
+    • scalar
+    • ndarray
+    • Series
+    • DataFrame
+
+    Returns zero whenever the
+    denominator is zero or NaN.
     """
 
-    if isinstance(a, (pd.Series, pd.DataFrame)):
+    if isinstance(
+        a,
+        (
+            pd.Series,
+            pd.DataFrame,
+        ),
+    ):
         denominator = (
-            b.replace(0, np.nan) if isinstance(b, (pd.Series, pd.DataFrame)) else b
+            b.replace(
+                0,
+                np.nan,
+            )
+            if isinstance(
+                b,
+                (
+                    pd.Series,
+                    pd.DataFrame,
+                ),
+            )
+            else b
         )
 
-        result = a.divide(denominator)
+        result = a.divide(
+            denominator,
+        )
 
-        return result.fillna(0)
+        return result.fillna(
+            0,
+        )
 
-    a = np.asarray(a, dtype=float)
-    b = np.asarray(b, dtype=float)
+    a = np.asarray(
+        a,
+        dtype=float,
+    )
+
+    b = np.asarray(
+        b,
+        dtype=float,
+    )
 
     return np.divide(
         a,
         b,
-        out=np.zeros_like(a, dtype=float),
-        where=(b != 0) & (~np.isnan(b)),
+        out=np.zeros_like(
+            a,
+            dtype=float,
+        ),
+        where=np.abs(
+            b,
+        )
+        > EPSILON,
     )
 
 
@@ -92,10 +153,13 @@ def normalize(
     series: pd.Series,
 ) -> pd.Series:
     """
-    Scale values between 0 and 100.
+    Normalize values between
+    0 and 100.
     """
 
-    series = numeric(series)
+    series = numeric(
+        series,
+    )
 
     minimum = series.min()
 
@@ -103,17 +167,22 @@ def normalize(
 
     if pd.isna(minimum) or pd.isna(maximum):
         return pd.Series(
-            0.0,
+            NORMALIZED_MIN,
             index=series.index,
         )
 
-    if maximum == minimum:
+    if (
+        abs(
+            maximum - minimum,
+        )
+        < EPSILON
+    ):
         return pd.Series(
-            100.0,
+            NORMALIZED_MAX,
             index=series.index,
         )
 
-    return (series - minimum) / (maximum - minimum) * 100
+    return ((series - minimum) / (maximum - minimum)) * NORMALIZED_MAX
 
 
 # ============================================================
@@ -129,7 +198,9 @@ def reverse_normalize(
     lower values are better.
     """
 
-    return 100 - normalize(series)
+    return NORMALIZED_MAX - normalize(
+        series,
+    )
 
 
 # ============================================================
@@ -141,16 +212,25 @@ def percentile_rank(
     series: pd.Series,
 ) -> pd.Series:
     """
-    Percentile ranking (0-100).
+    Percentile ranking
+    between 0 and 100.
     """
 
-    ranked = numeric(series).rank(pct=True)
-
-    return ranked.mul(100.0)
+    return (
+        numeric(
+            series,
+        )
+        .rank(
+            pct=True,
+        )
+        .mul(
+            NORMALIZED_MAX,
+        )
+    )
 
 
 # ============================================================
-# Z-Score
+# Z Score
 # ============================================================
 
 
@@ -158,14 +238,16 @@ def z_score(
     series: pd.Series,
 ) -> pd.Series:
     """
-    Compute standard score.
+    Standard score.
     """
 
-    series = numeric(series)
+    series = numeric(
+        series,
+    )
 
     std = series.std()
 
-    if std == 0 or pd.isna(std):
+    if pd.isna(std) or abs(std) < EPSILON:
         return pd.Series(
             0.0,
             index=series.index,
@@ -183,17 +265,21 @@ def coefficient_of_variation(
     series: pd.Series,
 ) -> float:
     """
-    Compute coefficient of variation.
+    Coefficient of variation.
     """
 
-    series = numeric(series)
+    series = numeric(
+        series,
+    )
 
     mean = series.mean()
 
-    if mean == 0 or pd.isna(mean):
+    if pd.isna(mean) or abs(mean) < EPSILON:
         return np.nan
 
-    return float(series.std() / mean)
+    return float(
+        series.std() / mean,
+    )
 
 
 # ============================================================
@@ -203,16 +289,23 @@ def coefficient_of_variation(
 
 def winsorize(
     series: pd.Series,
-    lower: float = 0.05,
-    upper: float = 0.95,
+    lower: float = DEFAULT_WINSOR_LOWER,
+    upper: float = DEFAULT_WINSOR_UPPER,
 ) -> pd.Series:
     """
-    Cap extreme outliers.
+    Winsorize a Series.
     """
 
-    lower_bound = series.quantile(lower)
+    if not (0 <= lower < upper <= 1):
+        raise ValueError("Invalid winsorization limits.")
 
-    upper_bound = series.quantile(upper)
+    lower_bound = series.quantile(
+        lower,
+    )
+
+    upper_bound = series.quantile(
+        upper,
+    )
 
     return series.clip(
         lower=lower_bound,
@@ -227,11 +320,12 @@ def winsorize(
 
 def clamp(
     series: pd.Series,
-    minimum: float = 0.0,
-    maximum: float = 100.0,
+    minimum: float = NORMALIZED_MIN,
+    maximum: float = NORMALIZED_MAX,
 ) -> pd.Series:
     """
-    Restrict values to a range.
+    Restrict values to a
+    specified range.
     """
 
     return series.clip(
@@ -251,18 +345,29 @@ def weighted_average(
 ) -> float:
     """
     Compute weighted average.
+
+    Raises
+    ------
+    ValueError
+        If lengths differ.
     """
 
-    values = np.asarray(values, dtype=float)
+    values = np.asarray(
+        values,
+        dtype=float,
+    )
 
     weights = np.asarray(
         weights,
         dtype=float,
     )
 
+    if len(values) != len(weights):
+        raise ValueError("Values and weights must have the same length.")
+
     total = weights.sum()
 
-    if total == 0:
+    if abs(total) < EPSILON:
         return 0.0
 
     return float(
@@ -284,7 +389,8 @@ def cagr(
     years: float,
 ) -> float:
     """
-    Compute Compound Annual Growth Rate.
+    Compound Annual
+    Growth Rate.
     """
 
     if beginning <= 0 or ending <= 0 or years <= 0:
@@ -294,24 +400,163 @@ def cagr(
 
 
 # ============================================================
-# Round DataFrame
+# Safe Percentage
+# ============================================================
+
+
+def safe_percentage(
+    part,
+    total,
+):
+    """
+    Safely compute percentage.
+    """
+
+    return (
+        safe_divide(
+            part,
+            total,
+        )
+        * 100
+    )
+
+
+# ============================================================
+# Median Absolute Deviation
+# ============================================================
+
+
+def median_absolute_deviation(
+    series: pd.Series,
+) -> float:
+    """
+    Median Absolute
+    Deviation (MAD).
+    """
+
+    series = numeric(
+        series,
+    )
+
+    median = series.median()
+
+    return float((series - median).abs().median())
+
+
+# ============================================================
+# Interquartile Range
+# ============================================================
+
+
+def interquartile_range(
+    series: pd.Series,
+) -> float:
+    """
+    Interquartile Range.
+    """
+
+    series = numeric(
+        series,
+    )
+
+    return float(
+        series.quantile(
+            0.75,
+        )
+        - series.quantile(
+            0.25,
+        )
+    )
+
+
+# ============================================================
+# Outlier Mask
+# ============================================================
+
+
+def outlier_mask(
+    series: pd.Series,
+) -> pd.Series:
+    """
+    Return an IQR-based
+    outlier mask.
+    """
+
+    series = numeric(
+        series,
+    )
+
+    q1 = series.quantile(
+        0.25,
+    )
+
+    q3 = series.quantile(
+        0.75,
+    )
+
+    iqr = q3 - q1
+
+    lower = q1 - 1.5 * iqr
+
+    upper = q3 + 1.5 * iqr
+
+    return (series < lower) | (series > upper)
+
+
+# ============================================================
+# Round Utilities
 # ============================================================
 
 
 def round_dataframe(
-    df: pd.DataFrame,
-    decimals: int = 2,
-) -> pd.DataFrame:
+    data: pd.DataFrame | pd.Series,
+    decimals: int = DEFAULT_ROUNDING,
+):
     """
-    Round numeric columns.
+    Round numeric values in a
+    DataFrame or Series.
     """
 
-    df = df.copy()
+    if isinstance(
+        data,
+        pd.Series,
+    ):
+        return data.round(
+            decimals,
+        )
 
-    numeric_columns = df.select_dtypes(
+    data = data.copy()
+
+    numeric_columns = data.select_dtypes(
         include="number",
     ).columns
 
-    df[numeric_columns] = df[numeric_columns].round(decimals)
+    data[numeric_columns] = data[numeric_columns].round(
+        decimals,
+    )
 
-    return df
+    return data
+
+
+# ============================================================
+# Public Exports
+# ============================================================
+
+__all__ = [
+    "numeric",
+    "safe_divide",
+    "normalize",
+    "reverse_normalize",
+    "percentile_rank",
+    "z_score",
+    "coefficient_of_variation",
+    "winsorize",
+    "clamp",
+    "weighted_average",
+    "cagr",
+    "safe_percentage",
+    "median_absolute_deviation",
+    "interquartile_range",
+    "outlier_mask",
+    "round_dataframe",
+]

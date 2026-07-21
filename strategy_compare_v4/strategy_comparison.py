@@ -327,6 +327,8 @@ class StrategyComparisonPlatform:
             [
                 "Strategy",
                 "Stock",
+                "Recommendation",
+                "Composite Score",
             ],
         )
 
@@ -355,6 +357,43 @@ class StrategyComparisonPlatform:
             "Rows : %d",
             len(df),
         )
+
+    # ============================================================
+    # Input Validation
+    # ============================================================
+
+    def validate_inputs(self):
+        """
+        Validate pipeline inputs before execution.
+        """
+
+        banner(
+            logger,
+            "Stage -1 : Input Validation",
+        )
+
+        if not self.input_directory.exists():
+            raise FileNotFoundError(
+                f"Input directory not found: {self.input_directory}"
+            )
+
+        missing = []
+
+        for strategy in STRATEGY_FOLDERS:
+            strategy_dir = self.input_directory / strategy
+
+            if not strategy_dir.exists():
+                missing.append(strategy)
+
+        if missing:
+            logger.warning(
+                "Missing strategy folders:\n%s",
+                "\n".join(missing),
+            )
+
+        logger.info("Input validation completed.")
+
+        return self
 
     # ============================================================
     # Pipeline Stages
@@ -667,6 +706,7 @@ class StrategyComparisonPlatform:
         start = time.perf_counter()
 
         pipeline = [
+            self.validate_inputs,
             self.run_derived_metrics,
             self.run_strategy_comparison,
             self.run_stock_comparison,
@@ -684,10 +724,13 @@ class StrategyComparisonPlatform:
                 pipeline,
                 start=1,
             ):
+                progress = (index / total) * 100
+
                 logger.info(
-                    "[%d/%d] %s",
+                    "[%d/%d] (%.0f%%) %s",
                     index,
                     total,
+                    progress,
                     stage.__name__,
                 )
 

@@ -13,7 +13,12 @@ import pandas as pd
 import streamlit as st
 from components.cards import metric_card
 from components.sidebar import render_sidebar
-from services.loader import get_sheet
+from services.loader import (
+    DEFAULT_OUTPUT_FOLDER,
+    get_sheet,
+    load_excel,
+    refresh_reports,
+)
 from themes import apply_theme
 
 # ============================================================
@@ -51,28 +56,62 @@ def load_dashboard_data() -> tuple[
     Load dashboard datasets.
     """
 
-    if not st.session_state.get(
-        "reports_loaded",
-        False,
-    ):
+    output_folder = DEFAULT_OUTPUT_FOLDER
+
+    if not output_folder.exists():
         return (
             pd.DataFrame(),
             pd.DataFrame(),
             pd.DataFrame(),
         )
 
+    strategy_report = (
+        output_folder
+        /
+        "Strategy_Comparison.xlsx"
+    )
+
+    stock_report = (
+        output_folder
+        /
+        "Stock_Comparison.xlsx"
+    )
+
+    portfolio_report = (
+        output_folder
+        /
+        "Portfolio_Report.xlsx"
+    )
+
+
+    strategy_workbook = load_excel(
+        strategy_report,
+        strategy_report.stat().st_mtime,
+    )
+
+    stock_workbook = load_excel(
+        stock_report,
+        stock_report.stat().st_mtime,
+    )
+
+    portfolio_workbook = load_excel(
+        portfolio_report,
+        portfolio_report.stat().st_mtime,
+    )
+
+
     strategy_df = get_sheet(
-        st.session_state.strategy_report,
+        strategy_workbook,
         SHEET_STRATEGY,
     )
 
     stock_df = get_sheet(
-        st.session_state.stock_report,
+        stock_workbook,
         SHEET_STOCK,
     )
 
     portfolio_df = get_sheet(
-        st.session_state.portfolio_report,
+        portfolio_workbook,
         SHEET_PORTFOLIO,
     )
 
@@ -102,6 +141,12 @@ def render_header() -> None:
     )
 
     st.divider()
+
+    if st.button("🔄 Refresh Latest Reports"):
+
+        refresh_reports()
+
+        st.rerun()
 
 
 # ============================================================

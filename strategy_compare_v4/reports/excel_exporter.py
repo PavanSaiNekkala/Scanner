@@ -48,6 +48,7 @@ from openpyxl.utils import (
 from strategy_compare_v4.config.constants import (
     RECOMMENDATION,
 )
+from strategy_compare_v4.reports.final_columns import FINAL_COLUMNS
 from strategy_compare_v4.utils.logger import (
     banner,
     get_logger,
@@ -756,6 +757,11 @@ def export_excel(
             )
 
             continue
+
+        if sheet_name == "Comparison":
+            dataframe = dataframe[
+                [column for column in FINAL_COLUMNS if column in dataframe.columns]
+            ]
 
         exporter.add_sheet(
             dataframe,

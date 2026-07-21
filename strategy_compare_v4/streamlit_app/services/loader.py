@@ -23,6 +23,10 @@ logger = get_logger(__name__)
 # Report Configuration
 # ============================================================
 
+DEFAULT_OUTPUT_FOLDER = Path(
+    "strategy_compare_v4/output"
+)
+
 REPORT_FILES: dict[str, str] = {
     "strategy_report": "Strategy_Comparison.xlsx",
     "stock_report": "Stock_Comparison.xlsx",
@@ -37,10 +41,12 @@ REPORT_FILES: dict[str, str] = {
 # Cache Excel Reads
 # ============================================================
 
-
-@st.cache_data(show_spinner=False)
+@st.cache_data(
+    show_spinner=False,
+)
 def load_excel(
     file: Path,
+    modified_time: float,
 ) -> dict[str, pd.DataFrame]:
     """
     Load every worksheet from an Excel workbook.
@@ -74,10 +80,10 @@ def load_excel(
 # Cache CSV Reads
 # ============================================================
 
-
 @st.cache_data(show_spinner=False)
 def load_csv(
     file: Path,
+    modified_time: float,
 ) -> pd.DataFrame:
     """
     Read CSV file.
@@ -118,9 +124,8 @@ def validate_output_folder(
 # Load All Reports
 # ============================================================
 
-
 def load_reports(
-    output_folder: str | Path,
+    output_folder: str | Path = DEFAULT_OUTPUT_FOLDER,
 ) -> None:
     """
     Load all generated reports into Session State.
@@ -139,8 +144,11 @@ def load_reports(
     )
 
     for session_key, filename in REPORT_FILES.items():
+        report_file = folder / filename
+
         st.session_state[session_key] = load_excel(
-            folder / filename,
+            report_file,
+            report_file.stat().st_mtime,
         )
 
     st.session_state.output_folder = str(folder)
@@ -192,7 +200,6 @@ def workbook_sheets(
 # Session Management
 # ============================================================
 
-
 def clear_session() -> None:
     """
     Reset loaded reports.
@@ -210,6 +217,30 @@ def clear_session() -> None:
 
     logger.info("Session cleared.")
 
+
+
+# ============================================================
+# Refresh Reports
+# ============================================================
+
+def refresh_reports(
+    output_folder: str | Path = DEFAULT_OUTPUT_FOLDER,
+) -> None:
+    """
+    Reload latest generated reports.
+    """
+
+    logger.info(
+        "Refreshing reports..."
+    )
+
+    st.cache_data.clear()
+
+    clear_session()
+
+    load_reports(
+        output_folder,
+    )
 
 # ============================================================
 # Report Summary
@@ -239,11 +270,13 @@ def report_summary() -> dict[str, object]:
 # ============================================================
 
 __all__ = [
+    "DEFAULT_OUTPUT_FOLDER",
     "REPORT_FILES",
     "load_excel",
     "load_csv",
     "validate_output_folder",
     "load_reports",
+    "refresh_reports",
     "get_sheet",
     "workbook_sheets",
     "clear_session",

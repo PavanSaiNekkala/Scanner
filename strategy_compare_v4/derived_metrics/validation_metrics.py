@@ -70,6 +70,7 @@ class ValidationMetrics:
         self,
         df: pd.DataFrame,
     ):
+
         self.df = df.copy()
 
     # ---------------------------------------------------------
@@ -87,7 +88,9 @@ class ValidationMetrics:
         )
 
         for column in self.REQUIRED_COLUMNS:
-            self.df[column] = numeric(self.df[column])
+            self.df[column] = numeric(
+                self.df[column],
+            )
 
         logger.info(
             "Prepared %d validation columns.",
@@ -115,10 +118,16 @@ class ValidationMetrics:
 
     def missing_percent(self):
         """
-        Calculate missing percentage per row.
+        Calculate missing percentage.
+
+        Uses original validation columns
+        instead of dynamically changing
+        derived columns.
         """
 
-        total_columns = len(self.df.columns)
+        total_columns = len(
+            self.REQUIRED_COLUMNS,
+        )
 
         if total_columns == 0:
             self.df["Missing %"] = 0
@@ -134,10 +143,15 @@ class ValidationMetrics:
 
     def duplicate_rows(self):
         """
-        Detect duplicate records.
+        Detect duplicate strategy records.
+
+        Duplicate detection is performed
+        only on original validation fields.
         """
 
-        self.df["Duplicate Row"] = self.df.duplicated().astype(int)
+        self.df["Duplicate Row"] = self.df.duplicated(
+            subset=list(self.REQUIRED_COLUMNS),
+        ).astype(int)
 
         return self
 
@@ -146,6 +160,10 @@ class ValidationMetrics:
     # ---------------------------------------------------------
 
     def zero_trade_flag(self):
+        """
+        Detect strategies without trades.
+        """
+
         self.df["Zero Trades"] = (self.df["Trades"] <= 0).astype(int)
 
         return self
@@ -155,6 +173,10 @@ class ValidationMetrics:
     # ---------------------------------------------------------
 
     def invalid_win_rate(self):
+        """
+        Detect invalid win percentage.
+        """
+
         self.df["Invalid Win%"] = (
             (self.df["Win%"] < 0) | (self.df["Win%"] > 100)
         ).astype(int)
@@ -166,6 +188,10 @@ class ValidationMetrics:
     # ---------------------------------------------------------
 
     def invalid_reward_risk(self):
+        """
+        Detect invalid reward-risk ratio.
+        """
+
         self.df["Invalid Reward Risk"] = (self.df["Reward Risk"] <= 0).astype(int)
 
         return self
@@ -175,6 +201,10 @@ class ValidationMetrics:
     # ---------------------------------------------------------
 
     def invalid_profit_factor(self):
+        """
+        Detect invalid profit factor.
+        """
+
         self.df["Invalid Profit Factor"] = (self.df["Profit Factor"] < 0).astype(int)
 
         return self
@@ -184,6 +214,10 @@ class ValidationMetrics:
     # ---------------------------------------------------------
 
     def invalid_holding_period(self):
+        """
+        Detect invalid holding periods.
+        """
+
         self.df["Invalid Holding"] = (self.df["Avg days"] <= 0).astype(int)
 
         return self
@@ -193,90 +227,171 @@ class ValidationMetrics:
     # ---------------------------------------------------------
 
     def invalid_years(self):
+        """
+        Detect invalid backtest duration.
+        """
+
         self.df["Invalid Years"] = (self.df["Years"] <= 0).astype(int)
 
         return self
 
     # ---------------------------------------------------------
-    # Z-Score Outlier Detection
+    # Z Score Outliers
     # ---------------------------------------------------------
 
-    def zscore_outlier_detection(self):
+    def zscore_outliers(self):
         """
-        Detect statistical outliers
-        using Z-score analysis.
+        Detect statistical outliers.
+
+        Uses important performance metrics.
         """
 
         metrics = [
+            "Annual Return %",
             "Expectancy",
             "Profit Factor",
             "Reward Risk",
-            "Annual Return %",
         ]
 
-        outliers = np.zeros(
-            len(self.df),
-            dtype=int,
-        )
+        zscore_flags = []
 
         for metric in metrics:
             if metric not in self.df.columns:
                 continue
 
-            std = self.df[metric].std()
+            series = numeric(self.df[metric])
+
+            mean = series.mean()
+
+            std = series.std()
 
             if pd.isna(std) or std == 0:
                 continue
 
-            z_score = (self.df[metric] - self.df[metric].mean()) / std
+            z_score = (series - mean) / std
 
-            outliers += (np.abs(z_score) > 3).astype(int)
+            zscore_flags.append(z_score.abs() > 3)
 
-        self.df["ZScore Outliers"] = outliers
+        if zscore_flags:
+            self.df["ZScore Outliers"] = pd.concat(
+                zscore_flags,
+                axis=1,
+            ).sum(axis=1)
+
+        else:
+            self.df["ZScore Outliers"] = 0
 
         return self
 
     # ---------------------------------------------------------
-    # IQR Outlier Detection
+    # IQR Outliers
     # ---------------------------------------------------------
 
-    def iqr_outlier_detection(self):
+    def iqr_outliers(self):
         """
-        Detect statistical outliers
-        using the IQR method.
+        Detect extreme values using
+        interquartile range.
         """
 
         metrics = [
+            "Annual Return %",
             "Expectancy",
             "Profit Factor",
             "Reward Risk",
-            "Annual Return %",
         ]
 
-        outliers = np.zeros(
-            len(self.df),
-            dtype=int,
-        )
+        flags = []
 
         for metric in metrics:
             if metric not in self.df.columns:
                 continue
 
-            q1 = self.df[metric].quantile(0.25)
+            series = numeric(self.df[metric])
 
-            q3 = self.df[metric].quantile(0.75)
+            q1 = series.quantile(0.25)
+
+            q3 = series.quantile(0.75)
 
             iqr = q3 - q1
 
-            lower = q1 - 1.5 * iqr
+            if pd.isna(iqr) or iqr == 0:
+                continue
 
-            upper = q3 + 1.5 * iqr
+            lower = q1 - (1.5 * iqr)
 
-            outliers += ((self.df[metric] < lower) | (self.df[metric] > upper)).astype(
-                int
-            )
+            upper = q3 + (1.5 * iqr)
 
-        self.df["IQR Outliers"] = outliers
+            flags.append((series < lower) | (series > upper))
+
+        if flags:
+            self.df["IQR Outliers"] = pd.concat(
+                flags,
+                axis=1,
+            ).sum(axis=1)
+
+        else:
+            self.df["IQR Outliers"] = 0
+
+        return self
+
+    # ---------------------------------------------------------
+    # Extreme Return Detection
+    # ---------------------------------------------------------
+
+    def extreme_return(self):
+        """
+        Detect unrealistic returns.
+
+        Both positive and negative
+        extremes are considered.
+        """
+
+        self.df["Extreme Return"] = (
+            self.df["Annual Return %"].abs() > EXTREME_RETURN_THRESHOLD
+        ).astype(int)
+
+        return self
+
+    # ---------------------------------------------------------
+    # Extreme Expectancy Detection
+    # ---------------------------------------------------------
+
+    def extreme_expectancy(self):
+        """
+        Detect unrealistic expectancy values.
+        """
+
+        self.df["Extreme Expectancy"] = (
+            self.df["Expectancy"].abs() > EXTREME_EXPECTANCY_THRESHOLD
+        ).astype(int)
+
+        return self
+
+    # ---------------------------------------------------------
+    # Logical Error Detection
+    # ---------------------------------------------------------
+
+    def logical_errors(self):
+        """
+        Detect impossible combinations.
+
+        Examples:
+
+        - Winning percentage invalid
+        - No trades but returns exist
+        - Invalid risk metrics
+        """
+
+        errors = (
+            self.df["Zero Trades"]
+            + self.df["Invalid Win%"]
+            + self.df["Invalid Reward Risk"]
+            + self.df["Invalid Profit Factor"]
+            + self.df["Invalid Holding"]
+            + self.df["Invalid Years"]
+        )
+
+        self.df["Logical Errors"] = errors
 
         return self
 
@@ -286,69 +401,15 @@ class ValidationMetrics:
 
     def completeness_score(self):
         """
-        Calculate data completeness.
+        Measures availability of
+        required data.
         """
 
-        self.df["Completeness Score"] = (100 - self.df["Missing %"]).clip(
-            lower=0,
-            upper=100,
-        )
+        self.df["Completeness Score"] = 100 - (self.df["Missing %"])
 
-        return self
-
-    # ---------------------------------------------------------
-    # Logical Integrity
-    # ---------------------------------------------------------
-
-    def logical_integrity(self):
-        """
-        Perform logical consistency checks.
-        """
-
-        errors = np.zeros(
-            len(self.df),
-            dtype=int,
-        )
-
-        if "Win%" in self.df.columns:
-            errors += ((self.df["Win%"] < 0) | (self.df["Win%"] > 100)).astype(int)
-
-        if "Profit Factor" in self.df.columns:
-            errors += (self.df["Profit Factor"] <= 0).astype(int)
-
-        if "Reward Risk" in self.df.columns:
-            errors += (self.df["Reward Risk"] <= 0).astype(int)
-
-        self.df["Logical Errors"] = errors
-
-        return self
-
-    # ---------------------------------------------------------
-    # Extreme Return Flag
-    # ---------------------------------------------------------
-
-    def extreme_return_flag(self):
-        """
-        Flag unrealistic annual returns.
-        """
-
-        self.df["Extreme Return"] = (
-            self.df["Annual Return %"] > EXTREME_RETURN_THRESHOLD
-        )
-
-        return self
-
-    # ---------------------------------------------------------
-    # Extreme Expectancy Flag
-    # ---------------------------------------------------------
-
-    def extreme_expectancy_flag(self):
-        """
-        Flag unrealistic expectancy values.
-        """
-
-        self.df["Extreme Expectancy"] = (
-            self.df["Expectancy"] > EXTREME_EXPECTANCY_THRESHOLD
+        self.df["Completeness Score"] = self.df["Completeness Score"].clip(
+            0,
+            100,
         )
 
         return self
@@ -359,20 +420,34 @@ class ValidationMetrics:
 
     def statistical_reliability(self):
         """
-        Estimate statistical reliability
-        based on trade sample size.
+        Institutional reliability score.
+
+        Trade quantity + historical duration.
+
+        Formula:
+
+        Trades     70%
+        Years      30%
+
         """
 
-        self.df["Statistical Reliability"] = (
-            np.minimum(
-                safe_divide(
-                    self.df["Trades"],
-                    100,
-                ),
-                1,
-            )
-            * 100
+        trade_quality = np.minimum(
+            safe_divide(
+                self.df["Trades"],
+                100,
+            ),
+            1,
         )
+
+        time_quality = np.minimum(
+            safe_divide(
+                self.df["Years"],
+                3,
+            ),
+            1,
+        )
+
+        self.df["Statistical Reliability"] = trade_quality * 70 + time_quality * 30
 
         return self
 
@@ -380,87 +455,48 @@ class ValidationMetrics:
     # Validation Consistency
     # ---------------------------------------------------------
 
-    def consistency_score(self):
+    def validation_consistency(self):
         """
-        Compute validation consistency score.
+        Final validation quality score.
+
+        Logical errors have higher penalty.
         """
 
-        penalties = (
-            self.df["Logical Errors"]
-            + self.df["ZScore Outliers"]
-            + self.df["IQR Outliers"]
+        penalty = (
+            self.df["Logical Errors"] * 15
+            + self.df["ZScore Outliers"] * 5
+            + self.df["IQR Outliers"] * 5
+            + self.df["Extreme Return"] * 10
+            + self.df["Extreme Expectancy"] * 10
         )
 
-        self.df["Validation Consistency"] = (100 - penalties * 10).clip(
-            lower=0,
-            upper=100,
+        self.df["Validation Consistency"] = (100 - penalty).clip(
+            0,
+            100,
         )
 
         return self
 
     # ---------------------------------------------------------
-    # Data Confidence
+    # Final Validation Score
     # ---------------------------------------------------------
 
-    def confidence_score(self):
+    def validation_score(self):
         """
-        Calculate confidence in
-        overall dataset quality.
+        Final institutional validation score.
+
+        Weighting:
+
+        Completeness          30%
+        Statistical Reliability 40%
+        Validation Consistency  30%
+
         """
 
-        self.df["Data Confidence"] = (
-            self.df["Completeness Score"] * 0.40
+        self.df["Validation Score"] = (
+            self.df["Completeness Score"] * 0.30
+            + self.df["Statistical Reliability"] * 0.40
             + self.df["Validation Consistency"] * 0.30
-            + self.df["Statistical Reliability"] * 0.30
-        )
-
-        return self
-
-    # ---------------------------------------------------------
-    # Institutional Validation Score
-    # ---------------------------------------------------------
-
-    def institutional_validation_score(self):
-        """
-        Calculate overall institutional
-        validation score.
-        """
-
-        self.df["Institutional Validation Score"] = (
-            self.df["Data Confidence"] * 0.60
-            + self.df["Completeness Score"] * 0.20
-            + self.df["Validation Consistency"] * 0.20
-        )
-
-        return self
-
-    # ---------------------------------------------------------
-    # Validation Grade
-    # ---------------------------------------------------------
-
-    def validation_grade(self):
-        """
-        Assign institutional validation grade.
-        """
-
-        score = self.df["Institutional Validation Score"]
-
-        self.df["Validation Grade"] = np.select(
-            [
-                score >= 95,
-                score >= 90,
-                score >= 80,
-                score >= 70,
-                score >= 60,
-            ],
-            [
-                "Excellent",
-                "Very Good",
-                "Good",
-                "Fair",
-                "Poor",
-            ],
-            default="Critical",
         )
 
         return self
@@ -471,61 +507,31 @@ class ValidationMetrics:
 
     def validation_status(self):
         """
-        Determine overall validation status.
+        Assign validation quality status.
         """
 
-        critical = (
-            self.df["Zero Trades"].astype(bool)
-            | self.df["Invalid Win%"].astype(bool)
-            | self.df["Invalid Reward Risk"].astype(bool)
-            | self.df["Invalid Profit Factor"].astype(bool)
-            | self.df["Invalid Holding"].astype(bool)
-            | self.df["Invalid Years"].astype(bool)
-        )
-
-        warnings = (
-            (self.df["Missing %"].fillna(0) > 5)
-            | (self.df["Logical Errors"].fillna(0) > 0)
-            | (self.df["ZScore Outliers"].fillna(0) > 0)
-            | (self.df["IQR Outliers"].fillna(0) > 0)
-        )
+        score = self.df["Validation Score"]
 
         self.df[VALIDATION_STATUS] = np.select(
             [
-                critical,
-                warnings,
+                score >= 90,
+                score >= 75,
+                score >= 60,
+                score >= 40,
             ],
             [
-                "FAILED",
-                "WARNING",
+                "PASS",
+                "PASS_WITH_WARNING",
+                "REVIEW",
+                "FAIL",
             ],
-            default="PASSED",
+            default="FAIL",
         )
 
         return self
 
     # ---------------------------------------------------------
-    # Validation Rank
-    # ---------------------------------------------------------
-
-    def validation_rank(self):
-        """
-        Rank datasets by validation quality.
-        """
-
-        self.df["Validation Rank"] = (
-            self.df["Institutional Validation Score"]
-            .rank(
-                ascending=False,
-                method="dense",
-            )
-            .astype(int)
-        )
-
-        return self
-
-    # ---------------------------------------------------------
-    # Normalize Scores
+    # Normalize Metrics
     # ---------------------------------------------------------
 
     def normalize_scores(self):
@@ -535,15 +541,16 @@ class ValidationMetrics:
 
         metrics = [
             "Completeness Score",
-            "Validation Consistency",
             "Statistical Reliability",
-            "Data Confidence",
-            "Institutional Validation Score",
+            "Validation Consistency",
+            "Validation Score",
         ]
 
         for metric in metrics:
-            if metric in self.df.columns:
-                self.df[f"{metric} (Norm)"] = normalize(self.df[metric])
+            if metric not in self.df.columns:
+                continue
+
+            self.df[f"{metric} Norm"] = normalize(self.df[metric])
 
         return self
 
@@ -553,16 +560,23 @@ class ValidationMetrics:
 
     def cleanup(self):
         """
-        Replace invalid numeric values.
+        Clean invalid numeric values.
         """
 
-        self.df.replace(
-            [
-                np.inf,
-                -np.inf,
-            ],
-            np.nan,
-            inplace=True,
+        numeric_columns = self.df.select_dtypes(
+            include="number",
+        ).columns
+
+        self.df[numeric_columns] = (
+            self.df[numeric_columns]
+            .replace(
+                [
+                    np.inf,
+                    -np.inf,
+                ],
+                np.nan,
+            )
+            .fillna(0.0)
         )
 
         return self
@@ -573,33 +587,29 @@ class ValidationMetrics:
 
     def round_metrics(self):
         """
-        Round all numeric validation metrics.
+        Round validation metrics.
         """
 
-        from strategy_compare_v4.utils.math_utils import (
-            round_dataframe,
-        )
+        numeric_columns = self.df.select_dtypes(
+            include="number",
+        ).columns
 
-        self.df = round_dataframe(
-            self.df,
-            decimals=2,
-        )
+        self.df[numeric_columns] = self.df[numeric_columns].round(2)
 
         return self
 
     # ---------------------------------------------------------
-    # Execute Engine
+    # Run Validation Pipeline
     # ---------------------------------------------------------
 
     def run(self):
         """
-        Execute complete institutional
-        validation pipeline.
+        Execute complete validation pipeline.
         """
 
-        logger.info("Running Institutional Validation Engine...")
+        logger.info("Running Validation Metrics Engine...")
 
-        return (
+        result = (
             self.prepare_columns()
             .missing_values()
             .missing_percent()
@@ -610,28 +620,29 @@ class ValidationMetrics:
             .invalid_profit_factor()
             .invalid_holding_period()
             .invalid_years()
-            .zscore_outlier_detection()
-            .iqr_outlier_detection()
+            .zscore_outliers()
+            .iqr_outliers()
+            .extreme_return()
+            .extreme_expectancy()
+            .logical_errors()
             .completeness_score()
-            .logical_integrity()
-            .extreme_return_flag()
-            .extreme_expectancy_flag()
             .statistical_reliability()
-            .consistency_score()
-            .confidence_score()
-            .institutional_validation_score()
-            .validation_grade()
+            .validation_consistency()
+            .validation_score()
             .validation_status()
-            .validation_rank()
             .normalize_scores()
             .cleanup()
             .round_metrics()
             .df
         )
 
+        logger.info("Validation Metrics completed.")
+
+        return result
+
 
 # ============================================================
-# Convenience Function
+# Public API
 # ============================================================
 
 
@@ -639,9 +650,15 @@ def derive_validation_metrics(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Derive institutional validation metrics.
+    Public validation interface.
     """
 
-    logger.info("Deriving Institutional Validation Metrics...")
+    logger.info("Deriving validation metrics...")
 
     return ValidationMetrics(df).run()
+
+
+__all__ = [
+    "ValidationMetrics",
+    "derive_validation_metrics",
+]

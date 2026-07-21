@@ -8,19 +8,19 @@ risk_metrics.py
 
 Purpose
 -------
-Derive institutional risk metrics from backtest results.
+Derive institutional risk metrics from strategy statistics.
 
-Metrics Covered
----------------
+Institutional Risk Metrics
+--------------------------
 - Annual Loss
 - Loss Velocity
 - Downside Risk
 - Drawdown Proxy
 - Risk Adjusted Return
-- Tail Risk
 - Recovery Factor
 - Capital Preservation
 - Safety Margin
+- Risk Quality
 
 ===============================================================
 """
@@ -42,7 +42,9 @@ logger = logging.getLogger(__name__)
 
 def numeric(value):
     """
-    Safe numeric conversion.
+    Convert values safely to numeric.
+
+    Invalid values become NaN.
     """
 
     return pd.to_numeric(
@@ -60,16 +62,26 @@ def numeric(value):
 def safe_divide(a, b):
     """
     Safe division.
+
+    Handles:
+    - Series / Series
+    - Series / scalar
+    - invalid divisions
     """
 
     a = numeric(a)
 
     b = numeric(b)
 
-    result = np.where(
-        (b == 0) | pd.isna(b),
-        np.nan,
-        a / b,
+    result = np.divide(
+        a,
+        b,
+        out=np.full_like(
+            np.asarray(a, dtype=float),
+            np.nan,
+            dtype=float,
+        ),
+        where=(np.asarray(b) != 0),
     )
 
     return pd.Series(result).replace(
@@ -87,6 +99,10 @@ def safe_divide(a, b):
 
 
 class RiskMetrics:
+    """
+    Institutional Risk Calculation Engine.
+    """
+
     REQUIRED_COLUMNS = {
         "Trades",
         "Years",
@@ -116,10 +132,13 @@ class RiskMetrics:
         return self
 
     # --------------------------------------------------------
-    # Prepare Columns
+    # Column Preparation
     # --------------------------------------------------------
 
     def prepare_columns(self):
+        """
+        Normalize legacy columns.
+        """
 
         aliases = {
             "Avg Win %": "Avg win%",
@@ -162,11 +181,28 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def annual_loss(self):
+        """
+        Annualized loss exposure.
 
-        self.df["Annual Loss %"] = self.df["Avg loss%"].abs() * safe_divide(
-            self.df["Trades"],
-            self.df["Years"],
-        )
+        Formula:
+
+        Average Loss × Loss Frequency
+
+        """
+
+        if "Losses" in self.df.columns:
+            loss_frequency = safe_divide(
+                self.df["Losses"],
+                self.df["Years"],
+            )
+
+        else:
+            loss_frequency = safe_divide(
+                self.df["Trades"],
+                self.df["Years"],
+            )
+
+        self.df["Annual Loss %"] = self.df["Avg loss%"].abs() * loss_frequency
 
         return self
 
@@ -175,6 +211,9 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def loss_velocity(self):
+        """
+        Loss generated per holding day.
+        """
 
         self.df["Loss Velocity"] = safe_divide(
             self.df["Avg loss%"].abs(),
@@ -188,6 +227,10 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def downside_risk(self):
+        """
+        Trade frequency adjusted downside risk.
+
+        """
 
         trade_frequency = safe_divide(
             self.df["Trades"],
@@ -195,9 +238,7 @@ class RiskMetrics:
         )
 
         self.df["Downside Risk"] = self.df["Avg loss%"].abs() * np.sqrt(
-            trade_frequency.clip(
-                lower=0,
-            )
+            trade_frequency.clip(lower=0)
         )
 
         return self
@@ -207,14 +248,23 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def drawdown_proxy(self):
+        """
+        Estimate drawdown risk.
+
+        Priority:
+
+        1. Actual Max Drawdown %
+        2. Trade-loss based estimate
+
+        """
 
         if "Max Drawdown %" in self.df.columns:
-            self.df["Drawdown Proxy"] = self.df["Max Drawdown %"].abs()
+            drawdown = self.df["Max Drawdown %"].abs()
 
         else:
-            self.df["Drawdown Proxy"] = self.df["Avg loss%"].abs() * np.log1p(
-                self.df["Trades"]
-            )
+            drawdown = self.df["Avg loss%"].abs() * np.log1p(self.df["Trades"])
+
+        self.df["Drawdown Proxy"] = drawdown
 
         return self
 
@@ -223,9 +273,25 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def risk_adjusted_return(self):
+        """
+        Return generated per unit drawdown.
+
+        Similar to Calmar Ratio.
+
+        Formula:
+
+        CAGR / Maximum Drawdown
+
+        """
+
+        if "Annual Return %" in self.df.columns:
+            annual_return = self.df["Annual Return %"]
+
+        else:
+            annual_return = np.nan
 
         self.df["Risk Adjusted Return"] = safe_divide(
-            self.df["Annual Return %"],
+            annual_return,
             self.df["Drawdown Proxy"],
         )
 
@@ -236,6 +302,15 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def stop_efficiency(self):
+        """
+        Measures exit efficiency.
+
+        Formula:
+
+        Average Loss / Stop Loss
+
+        Higher is worse.
+        """
 
         if "Stop %" in self.df.columns:
             self.df["Stop Efficiency"] = safe_divide(
@@ -253,6 +328,17 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def downside_capture(self):
+        """
+        Reward to loss relationship.
+
+        NOTE:
+        Column retained for backward compatibility.
+
+        Formula:
+
+        Average Win / Average Loss
+
+        """
 
         self.df["Downside Capture"] = safe_divide(
             self.df["Avg win%"],
@@ -266,10 +352,22 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def tail_risk(self):
+        """
+        Approximate tail risk.
 
-        days = self.df["Avg days"] if "Avg days" in self.df.columns else 1
+        Current implementation:
 
-        self.df["Tail Risk"] = self.df["Avg loss%"].abs() * np.sqrt(days)
+        Loss magnitude adjusted by holding duration.
+
+        Future upgrade:
+
+        Replace with CVaR 95%.
+
+        """
+
+        holding_factor = np.sqrt(self.df["Avg days"].clip(lower=0))
+
+        self.df["Tail Risk"] = self.df["Avg loss%"].abs() * holding_factor
 
         return self
 
@@ -278,6 +376,10 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def risk_reward_balance(self):
+        """
+        Reward generated per unit tail risk.
+
+        """
 
         self.df["Risk Reward Balance"] = safe_divide(
             self.df["Reward Risk"],
@@ -291,16 +393,22 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def annual_risk(self):
+        """
+        Annualized downside exposure.
+
+        Formula:
+
+        Downside Risk × sqrt(trades/year)
+
+        """
 
         trade_frequency = safe_divide(
             self.df["Trades"],
             self.df["Years"],
         )
 
-        self.df["Annual Risk"] = self.df["Drawdown Proxy"] * np.sqrt(
-            trade_frequency.clip(
-                lower=0,
-            )
+        self.df["Annual Risk"] = self.df["Downside Risk"] * np.sqrt(
+            trade_frequency.clip(lower=0)
         )
 
         return self
@@ -310,6 +418,13 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def loss_consistency(self):
+        """
+        Measures stability of losses.
+
+        Higher means losses are
+        more consistently controlled.
+
+        """
 
         self.df["Loss Consistency"] = safe_divide(
             self.df["Annual Loss %"],
@@ -323,18 +438,19 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def recovery_factor(self):
+        """
+        Recovery capability.
 
-        if "Net %" in self.df.columns:
-            value = self.df["Net %"]
+        Formula:
 
-        elif "Annual Return %" in self.df.columns:
-            value = self.df["Annual Return %"] * self.df["Years"]
+        Net Profit / Maximum Drawdown
 
-        else:
-            value = np.nan
+        """
+
+        net_return = self.df["Net %"] if "Net %" in self.df.columns else np.nan
 
         self.df["Recovery Factor"] = safe_divide(
-            value,
+            net_return,
             self.df["Drawdown Proxy"],
         )
 
@@ -345,6 +461,11 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def capital_preservation(self):
+        """
+        Measures return generated
+        against annual risk.
+
+        """
 
         self.df["Capital Preservation"] = safe_divide(
             self.df["Annual Return %"],
@@ -358,40 +479,158 @@ class RiskMetrics:
     # --------------------------------------------------------
 
     def safety_margin(self):
+        """
+        Risk buffer.
+
+        Formula:
+
+        Reward Risk - Loss Velocity
+
+        """
 
         self.df["Safety Margin"] = self.df["Reward Risk"] - self.df["Loss Velocity"]
 
         return self
 
     # --------------------------------------------------------
-    # Downside Efficiency
+    # Risk Quality
     # --------------------------------------------------------
 
-    def downside_efficiency(self):
+    def risk_quality(self):
+        """
+        Composite institutional risk quality.
 
-        self.df["Downside Efficiency"] = safe_divide(
-            self.df["Holding Efficiency"],
-            self.df["Tail Risk"],
+        Components:
+
+        - Risk Adjusted Return
+        - Recovery Factor
+        - Capital Preservation
+        - Loss Consistency
+
+        """
+
+        self.df["Risk Quality"] = (
+            self.df["Risk Adjusted Return"] * 0.30
+            + self.df["Recovery Factor"] * 0.25
+            + self.df["Capital Preservation"] * 0.25
+            + self.df["Loss Consistency"] * 0.20
         )
 
         return self
 
     # --------------------------------------------------------
-    # Risk Score Inputs
+    # Risk Efficiency
     # --------------------------------------------------------
 
-    def risk_score_inputs(self):
+    def risk_efficiency(self):
+        """
+        Measures return generated
+        against risk taken.
 
-        columns = [
-            "Drawdown Proxy",
+        """
+
+        self.df["Risk Efficiency"] = safe_divide(
+            self.df["Risk Quality"],
+            self.df["Annual Risk"],
+        )
+
+        return self
+
+    # --------------------------------------------------------
+    # Risk Score
+    # --------------------------------------------------------
+
+    def risk_score(self):
+        """
+        Institutional risk score.
+
+        Higher is better.
+
+        """
+
+        self.df["Risk Score"] = (
+            self.df["Risk Adjusted Return"] * 0.30
+            + self.df["Recovery Factor"] * 0.25
+            + self.df["Capital Preservation"] * 0.25
+            + self.df["Safety Margin"] * 0.20
+        )
+
+        return self
+
+    # --------------------------------------------------------
+    # Normalization
+    # --------------------------------------------------------
+
+    def normalize_scores(self):
+        """
+        Normalize risk metrics.
+
+        Scale:
+
+        0 - 100
+
+        """
+
+        metrics = [
             "Risk Adjusted Return",
             "Recovery Factor",
             "Capital Preservation",
-            "Safety Margin",
-            "Tail Risk",
+            "Risk Quality",
+            "Risk Efficiency",
+            "Risk Score",
         ]
 
-        for column in columns:
+        for metric in metrics:
+            if metric not in self.df.columns:
+                continue
+
+            minimum = self.df[metric].min()
+
+            maximum = self.df[metric].max()
+
+            if pd.isna(minimum) or pd.isna(maximum):
+                continue
+
+            if maximum == minimum:
+                self.df[f"{metric} Norm"] = 50.0
+
+            else:
+                self.df[f"{metric} Norm"] = (
+                    (self.df[metric] - minimum) / (maximum - minimum) * 100
+                )
+
+        return self
+
+    # --------------------------------------------------------
+    # Cleanup
+    # --------------------------------------------------------
+
+    def cleanup(self):
+        """
+        Clean invalid values.
+        """
+
+        derived_columns = [
+            "Annual Loss %",
+            "Loss Velocity",
+            "Downside Risk",
+            "Drawdown Proxy",
+            "Risk Adjusted Return",
+            "Stop Efficiency",
+            "Downside Capture",
+            "Tail Risk",
+            "Risk Reward Balance",
+            "Annual Risk",
+            "Loss Consistency",
+            "Recovery Factor",
+            "Capital Preservation",
+            "Safety Margin",
+            "Risk Quality",
+            "Risk Efficiency",
+            "Risk Score",
+        ]
+
+        for column in derived_columns:
             if column in self.df.columns:
                 self.df[column] = (
                     self.df[column]
@@ -408,12 +647,50 @@ class RiskMetrics:
         return self
 
     # --------------------------------------------------------
-    # Run Pipeline
+    # Rounding
+    # --------------------------------------------------------
+
+    def round_metrics(self):
+        """
+        Round derived metrics.
+        """
+
+        columns = [
+            "Annual Loss %",
+            "Loss Velocity",
+            "Downside Risk",
+            "Drawdown Proxy",
+            "Risk Adjusted Return",
+            "Stop Efficiency",
+            "Downside Capture",
+            "Tail Risk",
+            "Risk Reward Balance",
+            "Annual Risk",
+            "Loss Consistency",
+            "Recovery Factor",
+            "Capital Preservation",
+            "Safety Margin",
+            "Risk Quality",
+            "Risk Efficiency",
+            "Risk Score",
+        ]
+
+        for column in columns:
+            if column in self.df.columns:
+                self.df[column] = self.df[column].round(4)
+
+        return self
+
+    # --------------------------------------------------------
+    # Execution Pipeline
     # --------------------------------------------------------
 
     def run(self):
+        """
+        Execute complete risk pipeline.
+        """
 
-        logger.info("Calculating risk metrics")
+        logger.info("Calculating institutional risk metrics")
 
         result = (
             self.prepare_columns()
@@ -432,8 +709,12 @@ class RiskMetrics:
             .recovery_factor()
             .capital_preservation()
             .safety_margin()
-            .downside_efficiency()
-            .risk_score_inputs()
+            .risk_quality()
+            .risk_efficiency()
+            .risk_score()
+            .normalize_scores()
+            .cleanup()
+            .round_metrics()
             .df
         )
 
@@ -443,12 +724,21 @@ class RiskMetrics:
 
 
 # ============================================================
-# Convenience Function
+# Convenience API
 # ============================================================
 
 
 def derive_risk_metrics(
     df: pd.DataFrame,
-):
+) -> pd.DataFrame:
+    """
+    Public risk metric interface.
+    """
 
     return RiskMetrics(df).run()
+
+
+__all__ = [
+    "RiskMetrics",
+    "derive_risk_metrics",
+]

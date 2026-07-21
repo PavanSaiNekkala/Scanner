@@ -188,12 +188,10 @@ class PerformanceMetrics:
 
             years = numeric(self.df["Years"])
 
-            growth = 1 + total_return / 100
-
             self.df["Annual Return %"] = np.where(
-                (years <= 0) | (growth <= 0),
+                (years <= 0),
                 np.nan,
-                (growth ** (1 / years) - 1) * 100,
+                total_return / years,
             )
 
         return self

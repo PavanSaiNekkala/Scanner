@@ -4,6 +4,12 @@ cache.py
 
 Caching utilities for the
 Institutional Strategy Platform.
+
+Provides:
+- Cached file readers
+- DataFrame utilities
+- Session helpers
+- Cache management
 """
 
 from __future__ import annotations
@@ -13,23 +19,35 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+
 # ==========================================================
 # Cached CSV Loader
 # ==========================================================
 
 
 @st.cache_data(show_spinner=False)
-def read_csv(file: str | Path) -> pd.DataFrame:
+def read_csv(
+    file: str | Path,
+    modified_time: float,
+) -> pd.DataFrame:
     """
     Cached CSV reader.
+
+    modified_time forces cache refresh
+    when the source file changes.
     """
+
+    _ = modified_time
 
     file = Path(file)
 
     if not file.exists():
         raise FileNotFoundError(file)
 
-    return pd.read_csv(file)
+    return pd.read_csv(
+        file,
+        low_memory=False,
+    )
 
 
 # ==========================================================
@@ -38,27 +56,40 @@ def read_csv(file: str | Path) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def read_excel(file: str | Path) -> dict[str, pd.DataFrame]:
+def read_excel(
+    file: str | Path,
+    modified_time: float,
+) -> dict[str, pd.DataFrame]:
     """
     Cached Excel reader.
+
+    Returns all worksheets.
     """
+
+    _ = modified_time
 
     file = Path(file)
 
     if not file.exists():
         raise FileNotFoundError(file)
 
-    excel = pd.ExcelFile(file)
+    excel = pd.ExcelFile(
+        file,
+    )
 
     sheets = {}
 
     for sheet in excel.sheet_names:
+
         sheets[sheet] = pd.read_excel(
             excel,
             sheet_name=sheet,
         )
 
-    return {str(k): v for k, v in sheets.items()}
+    return {
+        str(key): value
+        for key, value in sheets.items()
+    }
 
 
 # ==========================================================
@@ -67,17 +98,24 @@ def read_excel(file: str | Path) -> dict[str, pd.DataFrame]:
 
 
 @st.cache_data(show_spinner=False)
-def read_parquet(file: str | Path) -> pd.DataFrame:
+def read_parquet(
+    file: str | Path,
+    modified_time: float,
+) -> pd.DataFrame:
     """
     Cached parquet reader.
     """
+
+    _ = modified_time
 
     file = Path(file)
 
     if not file.exists():
         raise FileNotFoundError(file)
 
-    return pd.read_parquet(file)
+    return pd.read_parquet(
+        file,
+    )
 
 
 # ==========================================================
@@ -86,13 +124,23 @@ def read_parquet(file: str | Path) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def dataframe_memory(df: pd.DataFrame) -> float:
+def dataframe_memory(
+    df: pd.DataFrame,
+) -> float:
     """
     Memory usage in MB.
     """
 
     return round(
-        float(df.memory_usage(deep=True).sum() / 1024 / 1024),
+        float(
+            df.memory_usage(
+                deep=True,
+            ).sum()
+            /
+            1024
+            /
+            1024
+        ),
         2,
     )
 
@@ -103,7 +151,13 @@ def dataframe_memory(df: pd.DataFrame) -> float:
 
 
 @st.cache_data(show_spinner=False)
-def dataframe_shape(df: pd.DataFrame):
+def dataframe_shape(
+    df: pd.DataFrame,
+) -> tuple[int, int]:
+    """
+    Return dataframe shape.
+    """
+
     return df.shape
 
 
@@ -113,7 +167,13 @@ def dataframe_shape(df: pd.DataFrame):
 
 
 @st.cache_data(show_spinner=False)
-def column_summary(df: pd.DataFrame):
+def column_summary(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Generate column information.
+    """
+
     return pd.DataFrame(
         {
             "Column": df.columns,
@@ -130,8 +190,16 @@ def column_summary(df: pd.DataFrame):
 
 
 @st.cache_data(show_spinner=False)
-def numeric_summary(df: pd.DataFrame):
-    numeric = df.select_dtypes(include="number")
+def numeric_summary(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Numeric statistics summary.
+    """
+
+    numeric = df.select_dtypes(
+        include="number",
+    )
 
     if numeric.empty:
         return pd.DataFrame()
@@ -147,7 +215,11 @@ def numeric_summary(df: pd.DataFrame):
 def set_data(
     key: str,
     value,
-):
+) -> None:
+    """
+    Store session data.
+    """
+
     st.session_state[key] = value
 
 
@@ -155,6 +227,10 @@ def get_data(
     key: str,
     default=None,
 ):
+    """
+    Retrieve session data.
+    """
+
     return st.session_state.get(
         key,
         default,
@@ -163,18 +239,30 @@ def get_data(
 
 def has_data(
     key: str,
-):
+) -> bool:
+    """
+    Check session key.
+    """
+
     return key in st.session_state
 
 
 def remove_data(
     key: str,
-):
+) -> None:
+    """
+    Remove session key.
+    """
+
     if key in st.session_state:
         del st.session_state[key]
 
 
-def clear_session():
+def clear_session() -> None:
+    """
+    Clear Streamlit session.
+    """
+
     st.session_state.clear()
 
 
@@ -183,7 +271,7 @@ def clear_session():
 # ==========================================================
 
 
-def clear_cache():
+def clear_cache() -> None:
     """
     Clear all Streamlit caches.
     """
@@ -191,6 +279,8 @@ def clear_cache():
     st.cache_data.clear()
 
     st.cache_resource.clear()
+
+    st.session_state.clear()
 
 
 # ==========================================================
@@ -204,7 +294,13 @@ def filter_dataframe(
     column: str,
     value,
 ) -> pd.DataFrame:
-    return df[df[column] == value]
+    """
+    Filter dataframe.
+    """
+
+    return df[
+        df[column] == value
+    ]
 
 
 # ==========================================================
@@ -216,8 +312,12 @@ def filter_dataframe(
 def sort_dataframe(
     df: pd.DataFrame,
     column: str,
-    ascending=False,
-):
+    ascending: bool = False,
+) -> pd.DataFrame:
+    """
+    Sort dataframe.
+    """
+
     return df.sort_values(
         column,
         ascending=ascending,
@@ -234,11 +334,18 @@ def top_n(
     df: pd.DataFrame,
     column: str,
     n: int = 20,
-):
-    return df.sort_values(
-        column,
-        ascending=False,
-    ).head(n)
+) -> pd.DataFrame:
+    """
+    Return top N rows.
+    """
+
+    return (
+        df.sort_values(
+            column,
+            ascending=False,
+        )
+        .head(n)
+    )
 
 
 # ==========================================================
@@ -251,11 +358,18 @@ def bottom_n(
     df: pd.DataFrame,
     column: str,
     n: int = 20,
-):
-    return df.sort_values(
-        column,
-        ascending=True,
-    ).head(n)
+) -> pd.DataFrame:
+    """
+    Return bottom N rows.
+    """
+
+    return (
+        df.sort_values(
+            column,
+            ascending=True,
+        )
+        .head(n)
+    )
 
 
 # ==========================================================
@@ -266,8 +380,14 @@ def bottom_n(
 @st.cache_data(show_spinner=False)
 def correlation_matrix(
     df: pd.DataFrame,
-):
-    numeric = df.select_dtypes(include="number")
+) -> pd.DataFrame:
+    """
+    Generate correlation matrix.
+    """
+
+    numeric = df.select_dtypes(
+        include="number",
+    )
 
     return numeric.corr()
 
@@ -280,7 +400,11 @@ def correlation_matrix(
 @st.cache_data(show_spinner=False)
 def missing_values(
     df: pd.DataFrame,
-):
+) -> pd.Series:
+    """
+    Return missing value counts.
+    """
+
     return (
         df.isna()
         .sum()
@@ -295,8 +419,44 @@ def missing_values(
 # ==========================================================
 
 
-def cache_info():
+def cache_info() -> dict[str, object]:
+    """
+    Return cache/session information.
+    """
+
     return {
-        "Cached Objects": len(st.session_state),
-        "Session Keys": list(st.session_state.keys()),
+        "Cached Objects": len(
+            st.session_state,
+        ),
+        "Session Keys": list(
+            st.session_state.keys(),
+        ),
     }
+
+
+# ==========================================================
+# Public API
+# ==========================================================
+
+__all__ = [
+    "read_csv",
+    "read_excel",
+    "read_parquet",
+    "dataframe_memory",
+    "dataframe_shape",
+    "column_summary",
+    "numeric_summary",
+    "set_data",
+    "get_data",
+    "has_data",
+    "remove_data",
+    "clear_session",
+    "clear_cache",
+    "filter_dataframe",
+    "sort_dataframe",
+    "top_n",
+    "bottom_n",
+    "correlation_matrix",
+    "missing_values",
+    "cache_info",
+]

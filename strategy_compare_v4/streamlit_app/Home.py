@@ -17,6 +17,7 @@ from services.loader import (
     DEFAULT_OUTPUT_FOLDER,
     get_sheet,
     load_excel,
+    load_reports,
     refresh_reports,
 )
 from themes import apply_theme
@@ -38,7 +39,7 @@ apply_theme()
 # Constants
 # ============================================================
 
-SHEET_STRATEGY = "Strategy Ranking"
+SHEET_STRATEGY = "Comparison"
 SHEET_STOCK = "Stock Rankings"
 SHEET_PORTFOLIO = "Portfolio"
 
@@ -80,7 +81,7 @@ def load_dashboard_data() -> tuple[
     portfolio_report = (
         output_folder
         /
-        "Portfolio_Report.xlsx"
+        "Institutional_Portfolio.xlsx"
     )
 
 
@@ -383,6 +384,15 @@ def main() -> None:
     # --------------------------------------------------------
 
     render_sidebar()
+
+    if not st.session_state.get(
+        "reports_loaded",
+        False,
+    ):
+
+        load_reports(
+            DEFAULT_OUTPUT_FOLDER,
+        )
 
     # --------------------------------------------------------
     # Header

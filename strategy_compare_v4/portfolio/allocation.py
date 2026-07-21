@@ -28,6 +28,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pandas as pd
+
 from strategy_compare_v4.config.constants import (
     COMPOSITE_SCORE,
     EDGE_SCORE,

@@ -11,87 +11,98 @@ import streamlit as st
 
 
 def render_sidebar() -> None:
-    """Render the application sidebar."""
+    """Render application sidebar."""
 
     with st.sidebar:
+        # -----------------------------------------------------
+        # Branding
+        # -----------------------------------------------------
+
         st.title("📊 Strategy Platform")
 
         st.caption("Institutional Strategy Comparison v4")
 
         st.divider()
 
+        # -----------------------------------------------------
+        # Navigation
+        # -----------------------------------------------------
+
         st.subheader("Navigation")
 
-        st.markdown("""
-🏠 Home
+        st.page_link("Home.py", label="🏠 Home")
 
-📂 Data Load
+        st.page_link(
+            "pages/1_Data_Load.py",
+            label="📂 Data Load",
+        )
 
-📈 Strategies
+        st.page_link(
+            "pages/2_Strategies.py",
+            label="📈 Strategies",
+        )
 
-🏢 Stocks
+        st.page_link(
+            "pages/3_Stocks.py",
+            label="📊 Stocks",
+        )
 
-🏆 Leaderboards
+        st.page_link(
+            "pages/4_Leaderboards.py",
+            label="🏆 Leaderboards",
+        )
 
-💼 Portfolio
+        st.page_link(
+            "pages/5_Portfolio.py",
+            label="💼 Portfolio",
+        )
 
-🛡 Robustness
+        st.page_link(
+            "pages/6_Robustness.py",
+            label="🛡 Robustness",
+        )
 
-🔗 Correlation
+        st.page_link(
+            "pages/7_Correlation.py",
+            label="🔗 Correlation",
+        )
 
-📄 Reports
+        st.page_link(
+            "pages/8_Reports.py",
+            label="📄 Reports",
+        )
 
-⚙ Settings
-""")
+        st.page_link(
+            "pages/9_Settings.py",
+            label="⚙ Settings",
+        )
+
+        st.page_link(
+            "pages/10_Executive_Dashboard.py",
+            label="📋 Executive Dashboard",
+        )
 
         st.divider()
 
-        st.subheader("Project")
+        # -----------------------------------------------------
+        # Status
+        # -----------------------------------------------------
 
-        st.write("Version")
-        st.success("v4.0")
+        reports_loaded = st.session_state.get(
+            "reports_loaded",
+            False,
+        )
 
-        st.write("Author")
-        st.info("Pavan Sai Nekkala")
-
-        st.divider()
-
-        st.subheader("Current Status")
-
-        if st.session_state.get("reports_loaded", False):
-            st.success("Reports Loaded")
-
+        if reports_loaded:
+            st.success("🟢 Reports Loaded")
         else:
-            st.warning("Reports Not Loaded")
+            st.warning("🟡 Reports Not Loaded")
 
-        output = st.session_state.get("output_folder")
+        output = st.session_state.get(
+            "output_folder",
+        )
 
-        if output is None:
-            st.info("Output Folder : Not Selected")
+        if output:
+            st.caption(f"📁 {Path(output).name}")
 
-        else:
-            st.success(Path(output).name)
-
-        st.divider()
-
-        st.subheader("Quick Statistics")
-
-        strategy_df = st.session_state.get("strategy_df")
-        stock_df = st.session_state.get("stock_df")
-        portfolio_df = st.session_state.get("portfolio_df")
-
-        strategies = strategy_df["Strategy"].nunique() if strategy_df is not None else 0
-
-        stocks = stock_df["Stock"].nunique() if stock_df is not None else 0
-
-        portfolio = len(portfolio_df) if portfolio_df is not None else 0
-
-        st.metric("Strategies", strategies)
-
-        st.metric("Stocks", stocks)
-
-        st.metric("Portfolio", portfolio)
-
-        st.divider()
-
-        st.caption("© 2026 Institutional Strategy Analytics Platform")
+        st.caption("Version v4.0")

@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 import pandas as pd
+
 from strategy_compare_v4.config.constants import (
     COMPOSITE_SCORE,
     INSTITUTION_RANK,

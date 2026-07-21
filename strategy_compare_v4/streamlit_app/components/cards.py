@@ -63,39 +63,84 @@ def recommendation_badge(recommendation: str):
 
 def strategy_summary_card(df):
     """
-    Show summary of strategy dataframe.
+    Display summary cards for strategy or stock datasets.
     """
 
     if df is None or df.empty:
-        st.info("No strategy data loaded.")
-
+        st.info("No data loaded.")
         return
 
     c1, c2, c3, c4 = st.columns(4)
 
-    with c1:
-        metric_card(
-            "Strategies",
-            df["Strategy"].nunique(),
+    # Strategy dataset
+    if "Strategy" in df.columns or "Strategy Rank" in df.columns:
+        strategy_count = (
+            df["Strategy"].nunique() if "Strategy" in df.columns else len(df)
         )
 
-    with c2:
-        metric_card(
-            "Stocks",
-            df["Stock"].nunique(),
-        )
+        with c1:
+            metric_card("Strategies", strategy_count)
 
-    with c3:
-        metric_card(
-            "Average Composite",
-            round(df["Composite Score"].mean(), 2),
-        )
+        with c2:
+            if "Stock" in df.columns:
+                metric_card("Stocks", df["Stock"].nunique())
+            else:
+                metric_card("Records", len(df))
 
-    with c4:
-        metric_card(
-            "Average Edge",
-            round(df["Edge Score"].mean(), 2),
-        )
+        with c3:
+            if "Composite Score" in df.columns:
+                metric_card(
+                    "Avg Composite",
+                    round(df["Composite Score"].mean(), 2),
+                )
+
+        with c4:
+            edge_col = "Edge Score" if "Edge Score" in df.columns else None
+
+            if edge_col:
+                metric_card(
+                    "Avg Edge",
+                    round(df[edge_col].mean(), 2),
+                )
+            elif "Profit Factor" in df.columns:
+                metric_card(
+                    "Avg Profit Factor",
+                    round(df["Profit Factor"].mean(), 2),
+                )
+
+        return
+
+    # Stock dataset
+    if "Stock" in df.columns:
+        with c1:
+            metric_card(
+                "Stocks",
+                df["Stock"].nunique(),
+            )
+
+        with c2:
+            if "Strategies" in df.columns:
+                metric_card(
+                    "Strategies",
+                    df["Strategies"].nunique(),
+                )
+
+        with c3:
+            if "Institutional Score" in df.columns:
+                metric_card(
+                    "Avg Score",
+                    round(
+                        df["Institutional Score"].mean(),
+                        2,
+                    ),
+                )
+
+        with c4:
+            if "Recommendation" in df.columns:
+                metric_card(
+                    "Recommendations",
+                    df["Recommendation"].nunique(),
+                )
 
 
 # ---------------------------------------------------------

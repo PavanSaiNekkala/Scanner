@@ -13,6 +13,14 @@ from components.charts import (
     dataframe,
 )
 from services.loader import get_sheet
+from themes import apply_theme
+
+st.set_page_config(
+    page_title="Strategies",
+    page_icon="📈",
+    layout="wide",
+)
+apply_theme()
 
 st.set_page_config(
     page_title="Leaderboards",
@@ -21,7 +29,6 @@ st.set_page_config(
 )
 
 st.title("🏆 Institutional Leaderboards")
-
 st.caption("Overall institutional rankings across strategies and stocks.")
 
 # ---------------------------------------------------------
@@ -30,7 +37,6 @@ st.caption("Overall institutional rankings across strategies and stocks.")
 
 if not st.session_state.get("reports_loaded", False):
     st.warning("Please load reports first.")
-
     st.stop()
 
 # ---------------------------------------------------------
@@ -39,29 +45,29 @@ if not st.session_state.get("reports_loaded", False):
 
 overall_df = get_sheet(
     st.session_state.leaderboard_report,
-    "Overall Leaderboard",
+    "Overall",
 )
 
 strategy_df = get_sheet(
     st.session_state.leaderboard_report,
-    "Strategy Leaderboard",
+    "Strategies",
 )
 
 stock_df = get_sheet(
     st.session_state.leaderboard_report,
-    "Stock Leaderboard",
+    "Stocks",
 )
 
 edge_df = get_sheet(
     st.session_state.leaderboard_report,
-    "Edge Leaderboard",
+    "Edge",
 )
 
 # ---------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------
 
-tabs = st.tabs(
+tab1, tab2, tab3, tab4 = st.tabs(
     [
         "Overall",
         "Strategies",
@@ -74,29 +80,33 @@ tabs = st.tabs(
 # Overall
 # =========================================================
 
-with tabs[0]:
+with tab1:
     st.subheader("Overall Leaderboard")
 
     dataframe(overall_df)
 
     if not overall_df.empty:
-        score_column = (
-            "Composite Score"
-            if "Composite Score" in overall_df.columns
-            else overall_df.columns[-1]
-        )
-
-        label_column = (
+        x_col = (
             "Strategy"
             if "Strategy" in overall_df.columns
             else ("Stock" if "Stock" in overall_df.columns else overall_df.columns[0])
         )
 
+        y_col = (
+            "Composite Score"
+            if "Composite Score" in overall_df.columns
+            else (
+                "Composite"
+                if "Composite" in overall_df.columns
+                else overall_df.columns[-1]
+            )
+        )
+
         bar_chart(
             overall_df.head(20),
-            x=label_column,
-            y=score_column,
-            color=score_column,
+            x=x_col,
+            y=y_col,
+            color=y_col,
             title="Top Overall Rankings",
         )
 
@@ -104,23 +114,27 @@ with tabs[0]:
 # Strategy Leaderboard
 # =========================================================
 
-with tabs[1]:
+with tab2:
     st.subheader("Strategy Leaderboard")
 
     dataframe(strategy_df)
 
     if not strategy_df.empty:
-        score_column = (
-            "Composite Score"
-            if "Composite Score" in strategy_df.columns
-            else strategy_df.columns[-1]
+        y_col = (
+            "Composite"
+            if "Composite" in strategy_df.columns
+            else (
+                "Composite Score"
+                if "Composite Score" in strategy_df.columns
+                else strategy_df.columns[-1]
+            )
         )
 
         bar_chart(
             strategy_df.head(20),
             x="Strategy",
-            y=score_column,
-            color=score_column,
+            y=y_col,
+            color=y_col,
             title="Top Strategies",
         )
 
@@ -128,23 +142,27 @@ with tabs[1]:
 # Stock Leaderboard
 # =========================================================
 
-with tabs[2]:
+with tab3:
     st.subheader("Stock Leaderboard")
 
     dataframe(stock_df)
 
     if not stock_df.empty:
-        score_column = (
-            "Institutional Score"
-            if "Institutional Score" in stock_df.columns
-            else stock_df.columns[-1]
+        y_col = (
+            "Composite Score"
+            if "Composite Score" in stock_df.columns
+            else (
+                "Institutional Score"
+                if "Institutional Score" in stock_df.columns
+                else stock_df.columns[-1]
+            )
         )
 
         bar_chart(
             stock_df.head(20),
             x="Stock",
-            y=score_column,
-            color=score_column,
+            y=y_col,
+            color=y_col,
             title="Top Stocks",
         )
 
@@ -152,13 +170,13 @@ with tabs[2]:
 # Edge Leaderboard
 # =========================================================
 
-with tabs[3]:
+with tab4:
     st.subheader("Edge Leaderboard")
 
     dataframe(edge_df)
 
     if not edge_df.empty:
-        label_column = (
+        x_col = (
             "Strategy"
             if "Strategy" in edge_df.columns
             else ("Stock" if "Stock" in edge_df.columns else edge_df.columns[0])
@@ -166,7 +184,7 @@ with tabs[3]:
 
         bar_chart(
             edge_df.head(20),
-            x=label_column,
+            x=x_col,
             y="Edge Score",
             color="Edge Score",
             title="Highest Edge Score",
@@ -179,11 +197,9 @@ with tabs[3]:
 st.divider()
 
 if not overall_df.empty:
-    csv = overall_df.to_csv(index=False)
-
     st.download_button(
         "📥 Download Overall Leaderboard",
-        csv,
+        overall_df.to_csv(index=False),
         "overall_leaderboard.csv",
         "text/csv",
     )

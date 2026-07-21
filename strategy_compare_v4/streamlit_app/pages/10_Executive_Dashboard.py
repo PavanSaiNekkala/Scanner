@@ -15,6 +15,14 @@ from components.charts import (
 )
 from components.metrics import executive_dashboard
 from services.loader import get_sheet
+from themes import apply_theme
+
+st.set_page_config(
+    page_title="Strategies",
+    page_icon="📈",
+    layout="wide",
+)
+apply_theme()
 
 st.set_page_config(
     page_title="Executive Dashboard",
@@ -41,7 +49,7 @@ if not st.session_state.get("reports_loaded", False):
 
 strategy_df = get_sheet(
     st.session_state.strategy_report,
-    "Strategy Rankings",
+    "Strategy Ranking",
 )
 
 stock_df = get_sheet(
@@ -56,7 +64,7 @@ portfolio_df = get_sheet(
 
 correlation_df = get_sheet(
     st.session_state.correlation_report,
-    "Correlation",
+    "Heatmap",
 )
 
 # ---------------------------------------------------------
@@ -80,9 +88,12 @@ left, right = st.columns(2)
 with left:
     st.subheader("Recommendation Mix")
 
-    recommendation_chart(
-        strategy_df,
+    recommendation_df = get_sheet(
+        st.session_state.strategy_report,
+        "Recommendations",
     )
+
+    recommendation_chart(recommendation_df)
 
 with right:
     if "Recommendation" in stock_df.columns and "Stock" in stock_df.columns:

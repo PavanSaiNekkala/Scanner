@@ -7,10 +7,20 @@ Institutional Strategy Platform Settings
 
 from __future__ import annotations
 
+import platform
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 from services.loader import clear_session
+from themes import apply_theme
+
+st.set_page_config(
+    page_title="Strategies",
+    page_icon="📈",
+    layout="wide",
+)
+apply_theme()
 
 st.set_page_config(
     page_title="Settings",
@@ -20,87 +30,88 @@ st.set_page_config(
 
 st.title("⚙ Settings")
 
-st.caption("Application configuration and maintenance.")
+st.caption("Application configuration, diagnostics and maintenance.")
 
 # ==========================================================
-# Session
+# Session Overview
 # ==========================================================
 
-st.header("Session")
+reports_loaded = st.session_state.get(
+    "reports_loaded",
+    False,
+)
 
-c1, c2 = st.columns(2)
+output_folder = st.session_state.get(
+    "output_folder",
+    "output",
+)
+
+c1, c2, c3 = st.columns(3)
 
 with c1:
     st.metric(
-        "Reports Loaded",
-        (
-            "Yes"
-            if st.session_state.get(
-                "reports_loaded",
-                False,
-            )
-            else "No"
-        ),
+        "Reports",
+        "Loaded" if reports_loaded else "Not Loaded",
     )
 
 with c2:
     st.metric(
         "Output Folder",
-        st.session_state.get(
-            "output_folder",
-            "Not Selected",
-        ),
+        Path(output_folder).name,
+    )
+
+with c3:
+    st.metric(
+        "Version",
+        "v4.0",
     )
 
 # ==========================================================
-# Output Folder
+# Output Directory
 # ==========================================================
 
 st.divider()
 
-st.header("Output Directory")
+st.subheader("Output Directory")
 
 folder = st.text_input(
-    "Default Output Folder",
-    value=st.session_state.get(
-        "output_folder",
-        "output",
-    ),
+    "Output Folder",
+    value=output_folder,
 )
 
 if Path(folder).exists():
-    st.success("Directory Exists")
+    st.success("Directory exists.")
 
 else:
-    st.warning("Directory Not Found")
+    st.warning("Directory not found.")
 
 # ==========================================================
-# Cache
+# Maintenance
 # ==========================================================
 
 st.divider()
 
-st.header("Cache")
+st.subheader("Maintenance")
 
 left, right = st.columns(2)
 
 with left:
     if st.button(
-        "Clear Streamlit Cache",
+        "🧹 Clear Cache",
         use_container_width=True,
     ):
         st.cache_data.clear()
 
-        st.success("Cache Cleared")
+        st.success("Cache cleared.")
 
 with right:
     if st.button(
-        "Reset Session",
+        "🔄 Reset Session",
         use_container_width=True,
     ):
         clear_session()
 
-        st.success("Session Reset")
+        st.success("Session reset.")
 
 # ==========================================================
 # Environment
@@ -108,68 +119,69 @@ with right:
 
 st.divider()
 
-st.header("Environment")
+st.subheader("Environment")
 
-st.json(
+env = pd.DataFrame(
     {
-        "Python": st.__version__,
-        "Framework": "Streamlit",
-        "Application": "Institutional Strategy Platform",
-        "Version": "4.0",
+        "Property": [
+            "Application",
+            "Version",
+            "Framework",
+            "Streamlit",
+            "Python",
+            "Platform",
+        ],
+        "Value": [
+            "Institutional Strategy Platform",
+            "4.0",
+            "Streamlit",
+            st.__version__,
+            platform.python_version(),
+            platform.system(),
+        ],
     }
 )
 
+st.dataframe(
+    env,
+    hide_index=True,
+    use_container_width=True,
+)
+
 # ==========================================================
-# Theme
+# Reports
 # ==========================================================
 
 st.divider()
 
-st.header("Dashboard Preferences")
+st.subheader("Loaded Reports")
 
-theme = st.selectbox(
-    "Theme",
-    [
-        "System",
-        "Light",
-        "Dark",
-    ],
+reports = pd.DataFrame(
+    {
+        "Report": [
+            "Strategy",
+            "Stock",
+            "Leaderboard",
+            "Portfolio",
+            "Robustness",
+            "Correlation",
+            "Final",
+        ],
+        "Status": [
+            "Loaded" if "strategy_report" in st.session_state else "Not Loaded",
+            "Loaded" if "stock_report" in st.session_state else "Not Loaded",
+            "Loaded" if "leaderboard_report" in st.session_state else "Not Loaded",
+            "Loaded" if "portfolio_report" in st.session_state else "Not Loaded",
+            "Loaded" if "robustness_report" in st.session_state else "Not Loaded",
+            "Loaded" if "correlation_report" in st.session_state else "Not Loaded",
+            "Loaded" if "final_report" in st.session_state else "Not Loaded",
+        ],
+    }
 )
-
-layout = st.selectbox(
-    "Layout",
-    [
-        "Wide",
-        "Centered",
-    ],
-)
-
-st.info("Theme changes are applied from Streamlit configuration.")
-
-# ==========================================================
-# Statistics
-# ==========================================================
-
-st.divider()
-
-st.header("Session Statistics")
-
-stats = {
-    "Strategy Report": "Loaded" if "strategy_report" in st.session_state else "No",
-    "Stock Report": "Loaded" if "stock_report" in st.session_state else "No",
-    "Leaderboard Report": (
-        "Loaded" if "leaderboard_report" in st.session_state else "No"
-    ),
-    "Portfolio Report": "Loaded" if "portfolio_report" in st.session_state else "No",
-    "Robustness Report": "Loaded" if "robustness_report" in st.session_state else "No",
-    "Correlation Report": (
-        "Loaded" if "correlation_report" in st.session_state else "No"
-    ),
-    "Final Report": "Loaded" if "final_report" in st.session_state else "No",
-}
 
 st.dataframe(
-    stats,
+    reports,
+    hide_index=True,
     use_container_width=True,
 )
 
@@ -179,28 +191,31 @@ st.dataframe(
 
 st.divider()
 
-st.header("About")
-
-st.markdown("""
+with st.expander(
+    "About Institutional Strategy Platform",
+    expanded=False,
+):
+    st.markdown("""
 ### Institutional Strategy Comparison Platform
 
-Version **4.0**
+**Version:** 4.0
 
-Features:
+#### Modules
 
 - Strategy Comparison
 - Stock Comparison
-- Institutional Rankings
+- Institutional Leaderboards
 - Portfolio Construction
 - Correlation Analysis
 - Robustness Analysis
-- Interactive Dashboards
+- Executive Dashboard
 - Excel Report Generation
 
-Developed using:
+#### Technology Stack
 
+- Python
 - Streamlit
 - Pandas
-- Plotly
 - NumPy
+- Plotly
 """)

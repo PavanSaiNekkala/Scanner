@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
 from strategy_compare_v4.comparison.correlation import (
     analyze_correlations,
 )

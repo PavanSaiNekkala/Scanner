@@ -30,6 +30,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+
 from strategy_compare_v4.config.constants import (
     COMPOSITE_SCORE,
     EDGE_SCORE,

@@ -12,6 +12,26 @@ import pandas as pd
 import streamlit as st
 
 # ==========================================================
+# Helpers
+# ==========================================================
+
+
+def first_existing(
+    df: pd.DataFrame,
+    *columns: str,
+) -> str | None:
+    """
+    Return the first column that exists.
+    """
+
+    for column in columns:
+        if column in df.columns:
+            return column
+
+    return None
+
+
+# ==========================================================
 # Generic KPI
 # ==========================================================
 
@@ -46,22 +66,15 @@ def dataset_summary(df: pd.DataFrame):
 
     if df is None or df.empty:
         st.warning("Dataset is empty.")
-
         return
 
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        kpi(
-            "Rows",
-            len(df),
-        )
+        kpi("Rows", len(df))
 
     with c2:
-        kpi(
-            "Columns",
-            len(df.columns),
-        )
+        kpi("Columns", len(df.columns))
 
     with c3:
         kpi(
@@ -94,37 +107,54 @@ def strategy_metrics(df: pd.DataFrame):
 
     c1, c2, c3, c4 = st.columns(4)
 
+    strategy_col = first_existing(
+        df,
+        "Strategy",
+        "Strategy Rank",
+    )
+
+    composite_col = first_existing(
+        df,
+        "Composite Score",
+        "AverageComposite",
+    )
+
+    edge_col = first_existing(
+        df,
+        "Edge Score",
+    )
+
+    expectancy_col = first_existing(
+        df,
+        "Expectancy",
+        "Expectancy%",
+        "AverageExpectancy",
+    )
+
     with c1:
-        kpi(
-            "Strategies",
-            df["Strategy"].nunique(),
-        )
+        value = df[strategy_col].nunique() if strategy_col == "Strategy" else len(df)
+
+        kpi("Strategies", value)
 
     with c2:
-        if "Composite Score" in df.columns:
+        if composite_col:
             kpi(
                 "Avg Composite",
-                round(
-                    df["Composite Score"].mean(),
-                    2,
-                ),
+                round(df[composite_col].mean(), 2),
             )
 
     with c3:
-        if "Edge Score" in df.columns:
+        if edge_col:
             kpi(
                 "Avg Edge",
-                round(
-                    df["Edge Score"].mean(),
-                    2,
-                ),
+                round(df[edge_col].mean(), 2),
             )
 
     with c4:
-        if "Expectancy%" in df.columns:
+        if expectancy_col:
             kpi(
                 "Avg Expectancy",
-                f"{df['Expectancy%'].mean():.2f}%",
+                f"{df[expectancy_col].mean():.2f}",
             )
 
 
@@ -143,6 +173,16 @@ def stock_metrics(df: pd.DataFrame):
 
     c1, c2, c3, c4 = st.columns(4)
 
+    score_col = first_existing(
+        df,
+        "Institutional Score",
+    )
+
+    edge_col = first_existing(
+        df,
+        "Edge Score",
+    )
+
     with c1:
         kpi(
             "Stocks",
@@ -150,23 +190,17 @@ def stock_metrics(df: pd.DataFrame):
         )
 
     with c2:
-        if "Institutional Score" in df.columns:
+        if score_col:
             kpi(
                 "Avg Score",
-                round(
-                    df["Institutional Score"].mean(),
-                    2,
-                ),
+                round(df[score_col].mean(), 2),
             )
 
     with c3:
-        if "Edge Score" in df.columns:
+        if edge_col:
             kpi(
                 "Avg Edge",
-                round(
-                    df["Edge Score"].mean(),
-                    2,
-                ),
+                round(df[edge_col].mean(), 2),
             )
 
     with c4:
@@ -193,10 +227,7 @@ def portfolio_metrics(df: pd.DataFrame):
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        kpi(
-            "Holdings",
-            len(df),
-        )
+        kpi("Holdings", len(df))
 
     with c2:
         if "Weight %" in df.columns:
@@ -274,31 +305,29 @@ def performance_metrics(df: pd.DataFrame):
 
     cols = st.columns(4)
 
-    metrics = [
-        "Expectancy%",
-        "Profit Factor",
-        "Reward Risk",
-        "Trades / Year",
+    metric_groups = [
+        ("Expectancy", "Expectancy%", "AverageExpectancy"),
+        ("Profit Factor", "AverageProfitFactor"),
+        ("Reward Risk", "AverageRewardRisk"),
+        ("Trades", "Trades / Year"),
     ]
 
-    for metric, col in zip(
-        metrics,
+    for group, col in zip(
+        metric_groups,
         cols,
         strict=False,
     ):
         with col:
-            if metric in df.columns:
-                value = round(
-                    df[metric].mean(),
-                    2,
-                )
+            metric = first_existing(df, *group)
 
-                display_value = f"{value:.2f}%" if "%" in metric else f"{value:.2f}"
+            if metric is None:
+                continue
 
-                kpi(
-                    metric,
-                    display_value,
-                )
+            value = round(df[metric].mean(), 2)
+
+            display = f"{value:.2f}%" if "%" in metric else f"{value:.2f}"
+
+            kpi(metric, display)
 
 
 # ==========================================================
@@ -308,7 +337,7 @@ def performance_metrics(df: pd.DataFrame):
 
 def risk_metrics(df: pd.DataFrame):
     """
-    Risk statistics.
+    Risk KPIs.
     """
 
     if df.empty:
@@ -329,18 +358,17 @@ def risk_metrics(df: pd.DataFrame):
         strict=False,
     ):
         with col:
-            if metric in df.columns:
-                value = round(
-                    df[metric].mean(),
-                    2,
-                )
+            if metric not in df.columns:
+                continue
 
-                display_value = f"{value:.2f}%" if "%" in metric else f"{value:.2f}"
+            value = round(
+                df[metric].mean(),
+                2,
+            )
 
-                kpi(
-                    metric,
-                    display_value,
-                )
+            display = f"{value:.2f}%" if "%" in metric else f"{value:.2f}"
+
+            kpi(metric, display)
 
 
 # ==========================================================
@@ -349,33 +377,55 @@ def risk_metrics(df: pd.DataFrame):
 
 
 def executive_dashboard(
-    strategy_df,
-    stock_df,
-    portfolio_df,
+    strategy_df: pd.DataFrame,
+    stock_df: pd.DataFrame,
+    portfolio_df: pd.DataFrame,
 ):
     """
-    Executive summary.
+    Executive summary KPIs.
     """
 
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        if strategy_df is not None:
-            kpi(
-                "Strategies",
-                strategy_df["Strategy"].nunique(),
-            )
+        strategy_col = first_existing(
+            strategy_df,
+            "Strategy",
+            "Strategy Rank",
+        )
+
+        if strategy_col == "Strategy":
+            strategies = strategy_df[strategy_col].nunique()
+        elif strategy_df is not None and not strategy_df.empty:
+            strategies = len(strategy_df)
+        else:
+            strategies = 0
+
+        kpi(
+            "Strategies",
+            strategies,
+        )
 
     with c2:
-        if stock_df is not None:
-            kpi(
-                "Stocks",
-                stock_df["Stock"].nunique(),
+        stocks = (
+            stock_df["Stock"].nunique()
+            if (
+                stock_df is not None
+                and not stock_df.empty
+                and "Stock" in stock_df.columns
             )
+            else 0
+        )
+
+        kpi(
+            "Stocks",
+            stocks,
+        )
 
     with c3:
-        if portfolio_df is not None:
-            kpi(
-                "Portfolio Holdings",
-                len(portfolio_df),
-            )
+        holdings = len(portfolio_df) if portfolio_df is not None else 0
+
+        kpi(
+            "Portfolio Holdings",
+            holdings,
+        )

@@ -12,6 +12,14 @@ from pathlib import Path
 import streamlit as st
 from components.charts import dataframe
 from services.loader import get_sheet
+from themes import apply_theme
+
+st.set_page_config(
+    page_title="Strategies",
+    page_icon="📈",
+    layout="wide",
+)
+apply_theme()
 
 st.set_page_config(
     page_title="Reports",

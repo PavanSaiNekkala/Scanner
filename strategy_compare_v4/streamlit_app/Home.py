@@ -3,9 +3,6 @@ Institutional Strategy Comparison Platform
 ==========================================
 
 Home Dashboard
-
-Author : Pavan Sai Nekkala
-Version: 4.0
 """
 
 from pathlib import Path
@@ -14,6 +11,15 @@ import pandas as pd
 import streamlit as st
 from components.cards import metric_card
 from components.sidebar import render_sidebar
+from services.loader import get_sheet
+from themes import apply_theme
+
+st.set_page_config(
+    page_title="Strategies",
+    page_icon="📈",
+    layout="wide",
+)
+apply_theme()
 
 # -------------------------------------------------------
 # Page Configuration
@@ -25,24 +31,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-# -------------------------------------------------------
-# Initialize Session State
-# -------------------------------------------------------
-
-DEFAULT_STATE = {
-    "strategy_df": None,
-    "stock_df": None,
-    "leaderboard_df": None,
-    "portfolio_df": None,
-    "correlation_df": None,
-    "robustness_df": None,
-    "reports_loaded": False,
-    "output_folder": None,
-}
-
-for key, value in DEFAULT_STATE.items():
-    st.session_state.setdefault(key, value)
 
 # -------------------------------------------------------
 # Sidebar
@@ -64,51 +52,85 @@ st.caption(
 st.divider()
 
 # -------------------------------------------------------
+# Read Loaded Reports
+# -------------------------------------------------------
+
+strategy_df = (
+    get_sheet(
+        st.session_state.strategy_report,
+        "Strategy Ranking",
+    )
+    if st.session_state.get("reports_loaded", False)
+    else pd.DataFrame()
+)
+
+stock_df = (
+    get_sheet(
+        st.session_state.stock_report,
+        "Stock Rankings",
+    )
+    if st.session_state.get("reports_loaded", False)
+    else pd.DataFrame()
+)
+
+portfolio_df = (
+    get_sheet(
+        st.session_state.portfolio_report,
+        "Portfolio",
+    )
+    if st.session_state.get("reports_loaded", False)
+    else pd.DataFrame()
+)
+
+# -------------------------------------------------------
 # Dashboard Metrics
 # -------------------------------------------------------
 
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
+    strategies = (
+        strategy_df["Strategy"].nunique()
+        if "Strategy" in strategy_df.columns
+        else len(strategy_df)
+    )
+
     metric_card(
         "Strategies",
-        (
-            st.session_state.strategy_df["Strategy"].nunique()
-            if st.session_state.strategy_df is not None
-            else 0
-        ),
+        strategies,
     )
 
 with c2:
+    stocks = stock_df["Stock"].nunique() if "Stock" in stock_df.columns else 0
+
     metric_card(
         "Stocks",
-        (
-            st.session_state.stock_df["Stock"].nunique()
-            if st.session_state.stock_df is not None
-            else 0
-        ),
+        stocks,
     )
 
 with c3:
     metric_card(
         "Portfolio",
-        (
-            len(st.session_state.portfolio_df)
-            if st.session_state.portfolio_df is not None
-            else 0
-        ),
+        len(portfolio_df),
     )
 
 with c4:
     metric_card(
         "Reports",
-        ("Loaded" if st.session_state.reports_loaded else "Not Loaded"),
+        (
+            "Loaded"
+            if st.session_state.get(
+                "reports_loaded",
+                False,
+            )
+            else "Not Loaded"
+        ),
     )
 
 st.divider()
 
 # -------------------------------------------------------
-# Quick Summary
+# Platform Overview
 # -------------------------------------------------------
 
 left, right = st.columns([2, 1])
@@ -133,30 +155,38 @@ Use the sidebar to navigate through the analytics modules.
 with right:
     st.subheader("Output Folder")
 
-    if st.session_state.output_folder is None:
-        st.info("No output folder selected.")
+    output_folder = st.session_state.get("output_folder")
+
+    if output_folder:
+        st.success(output_folder)
 
     else:
-        st.success(str(st.session_state.output_folder))
+        st.info("No output folder selected.")
 
 st.divider()
 
 # -------------------------------------------------------
-# Recent Reports
+# Generated Reports
 # -------------------------------------------------------
 
 st.subheader("Generated Reports")
 
-output = st.session_state.output_folder
+output = st.session_state.get("output_folder")
 
-if output is not None:
+if output:
     files = sorted(Path(output).glob("*.xlsx"))
 
     if files:
         report_df = pd.DataFrame(
             {
                 "Report": [f.name for f in files],
-                "Size (KB)": [round(f.stat().st_size / 1024, 2) for f in files],
+                "Size (KB)": [
+                    round(
+                        f.stat().st_size / 1024,
+                        2,
+                    )
+                    for f in files
+                ],
             }
         )
 
@@ -170,4 +200,4 @@ if output is not None:
         st.warning("No reports found.")
 
 else:
-    st.info("Load an output directory first.")
+    st.info("Load reports from the Data Load page.")

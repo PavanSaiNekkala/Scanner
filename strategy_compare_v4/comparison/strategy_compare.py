@@ -21,6 +21,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
 from strategy_compare_v4.config.constants import (
     COMPOSITE_SCORE,
     INSTITUTION_RANK,
@@ -442,25 +443,32 @@ class StrategyComparisonEngine:
         for each strategy.
         """
 
-        self.strategy_ranking_df = (
+        summary = self.comparison_df.groupby(
+            "Strategy",
+            as_index=False,
+        ).agg(
+            {
+                COMPOSITE_SCORE: "mean",
+                "Expectancy": "mean",
+                "Profit Factor": "mean",
+                "Reward Risk": "mean",
+            }
+        )
+
+        trades = (
             self.comparison_df.groupby(
                 "Strategy",
-                as_index=False,
             )
-            .agg(
-                {
-                    COMPOSITE_SCORE: "mean",
-                    "Expectancy": "mean",
-                    "Profit Factor": "mean",
-                    "Reward Risk": "mean",
-                    "Strategy": "count",
-                }
+            .size()
+            .reset_index(
+                name="Trades",
             )
-            .rename(
-                columns={
-                    "Strategy": "Trades",
-                }
-            )
+        )
+
+        self.strategy_ranking_df = summary.merge(
+            trades,
+            on="Strategy",
+            how="left",
         )
 
         logger.info("Generated strategy summary.")

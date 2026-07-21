@@ -5,6 +5,8 @@ Data Load
 Load generated reports from the Strategy Comparison Engine.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import streamlit as st
@@ -15,6 +17,14 @@ from services.loader import (
     report_summary,
     validate_output_folder,
 )
+from themes import apply_theme
+
+st.set_page_config(
+    page_title="Strategies",
+    page_icon="📈",
+    layout="wide",
+)
+apply_theme()
 
 st.set_page_config(
     page_title="Data Load",

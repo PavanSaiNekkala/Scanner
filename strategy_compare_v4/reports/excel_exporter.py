@@ -44,6 +44,7 @@ from openpyxl.styles import (
 from openpyxl.utils import (
     get_column_letter,
 )
+
 from strategy_compare_v4.config.constants import (
     RECOMMENDATION,
 )

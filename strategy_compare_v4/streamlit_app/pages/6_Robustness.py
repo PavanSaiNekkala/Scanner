@@ -16,6 +16,14 @@ from components.charts import (
     histogram,
 )
 from services.loader import get_sheet
+from themes import apply_theme
+
+st.set_page_config(
+    page_title="Strategies",
+    page_icon="📈",
+    layout="wide",
+)
+apply_theme()
 
 st.set_page_config(
     page_title="Robustness",

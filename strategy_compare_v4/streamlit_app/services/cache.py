@@ -19,7 +19,6 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-
 # ==========================================================
 # Cached CSV Loader
 # ==========================================================
@@ -80,16 +79,12 @@ def read_excel(
     sheets = {}
 
     for sheet in excel.sheet_names:
-
         sheets[sheet] = pd.read_excel(
             excel,
             sheet_name=sheet,
         )
 
-    return {
-        str(key): value
-        for key, value in sheets.items()
-    }
+    return {str(key): value for key, value in sheets.items()}
 
 
 # ==========================================================
@@ -136,10 +131,8 @@ def dataframe_memory(
             df.memory_usage(
                 deep=True,
             ).sum()
-            /
-            1024
-            /
-            1024
+            / 1024
+            / 1024
         ),
         2,
     )
@@ -298,9 +291,7 @@ def filter_dataframe(
     Filter dataframe.
     """
 
-    return df[
-        df[column] == value
-    ]
+    return df[df[column] == value]
 
 
 # ==========================================================
@@ -339,13 +330,10 @@ def top_n(
     Return top N rows.
     """
 
-    return (
-        df.sort_values(
-            column,
-            ascending=False,
-        )
-        .head(n)
-    )
+    return df.sort_values(
+        column,
+        ascending=False,
+    ).head(n)
 
 
 # ==========================================================
@@ -363,13 +351,10 @@ def bottom_n(
     Return bottom N rows.
     """
 
-    return (
-        df.sort_values(
-            column,
-            ascending=True,
-        )
-        .head(n)
-    )
+    return df.sort_values(
+        column,
+        ascending=True,
+    ).head(n)
 
 
 # ==========================================================

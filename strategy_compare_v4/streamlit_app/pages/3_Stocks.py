@@ -11,8 +11,9 @@ import pandas as pd
 import streamlit as st
 from components.cards import (
     recommendation_badge,
-    strategy_summary_card,
+    stock_summary_card,
 )
+
 from components.charts import (
     bar_chart,
     dataframe,
@@ -126,7 +127,7 @@ def render_summary(
     Render stock summary metrics.
     """
 
-    strategy_summary_card(df)
+    stock_summary_card(df)
 
     st.divider()
 
@@ -156,7 +157,7 @@ def render_filters(
 
         if "Recommendation" in df.columns:
             recommendations.extend(
-                sorted(df["Recommendation"].dropna().astype(str).unique())
+                sorted(df["Recommendation"].dropna().astype(str).unique().tolist())
             )
 
         recommendation = st.selectbox(
@@ -185,9 +186,18 @@ def render_filters(
     # --------------------------------------------------------
 
     with right:
-        search = st.text_input(
-            "Search Stock",
-            placeholder="Enter stock name...",
+        available_stocks = sorted(
+            df["Stock"]
+            .dropna()
+            .astype(str)
+            .unique()
+            .tolist()
+        )
+
+        selected_stocks = st.multiselect(
+            "Select Stocks",
+            options=available_stocks,
+            default=available_stocks[:50],
         )
 
     # --------------------------------------------------------
@@ -199,14 +209,11 @@ def render_filters(
     if recommendation != "All" and "Recommendation" in filtered.columns:
         filtered = filtered[filtered["Recommendation"] == recommendation]
 
-    if search and "Stock" in filtered.columns:
+    if selected_stocks:
+
         filtered = filtered[
-            filtered["Stock"]
-            .astype(str)
-            .str.contains(
-                search,
-                case=False,
-                na=False,
+            filtered["Stock"].isin(
+                selected_stocks,
             )
         ]
 
@@ -233,10 +240,61 @@ def render_filters(
     return filtered
 
 
+def render_top_stock(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Display highest ranked stock.
+    """
+
+    if df.empty:
+        return
+
+    if "Institutional Score" not in df.columns:
+        return
+
+
+    best = (
+        df.sort_values(
+            "Institutional Score",
+            ascending=False,
+        )
+        .iloc[0]
+    )
+
+
+    c1, c2, c3 = st.columns(3)
+
+
+    with c1:
+        st.metric(
+            "Top Stock",
+            best["Stock"],
+        )
+
+
+    with c2:
+        st.metric(
+            "Institutional Score",
+            round(
+                best["Institutional Score"],
+                2,
+            ),
+        )
+
+
+    with c3:
+        st.metric(
+            "Recommendation",
+            best.get(
+                "Recommendation",
+                "N/A",
+            ),
+        )
+
 # ============================================================
 # Stock Ranking Table
 # ============================================================
-
 
 def render_stock_table(
     df: pd.DataFrame,
@@ -258,7 +316,6 @@ def render_stock_table(
 # Charts
 # ============================================================
 
-
 def render_charts(
     df: pd.DataFrame,
 ) -> None:
@@ -270,6 +327,8 @@ def render_charts(
         return
 
     st.subheader("Stock Analytics")
+    
+    chart_df = df.head(25)
 
     # --------------------------------------------------------
     # Score Charts
@@ -280,7 +339,7 @@ def render_charts(
     with left:
         if "Stock" in df.columns and "Institutional Score" in df.columns:
             bar_chart(
-                df,
+                chart_df,
                 x="Stock",
                 y="Institutional Score",
                 color="Recommendation" if "Recommendation" in df.columns else None,
@@ -290,7 +349,7 @@ def render_charts(
     with right:
         if "Stock" in df.columns and "Edge Score" in df.columns:
             bar_chart(
-                df,
+                chart_df,
                 x="Stock",
                 y="Edge Score",
                 color="Recommendation" if "Recommendation" in df.columns else None,
@@ -368,8 +427,12 @@ def select_stock(
 
     selected_stock = st.selectbox(
         "Select Stock",
-        options=df["Stock"].tolist(),
-    )
+        options=sorted(
+            df["Stock"]
+            .astype(str)
+            .unique()
+        ),
+    )    
 
     row = df.loc[df["Stock"] == selected_stock]
 
@@ -652,6 +715,10 @@ def main() -> None:
         stock_df,
     )
 
+    render_top_stock(
+        stock_df,
+    )
+
     # --------------------------------------------------------
     # Filtering
     # --------------------------------------------------------
@@ -728,6 +795,4 @@ def main() -> None:
 # ============================================================
 
 if __name__ == "__main__":
-    main()
-else:
     main()

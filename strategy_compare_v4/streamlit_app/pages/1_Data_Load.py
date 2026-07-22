@@ -9,11 +9,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 from services.loader import (
+    DEFAULT_OUTPUT_FOLDER,
     clear_session,
     get_sheet,
     load_reports,
+    refresh_reports,
     report_summary,
     validate_output_folder,
 )
@@ -34,8 +37,6 @@ apply_theme()
 # ============================================================
 # Constants
 # ============================================================
-
-DEFAULT_OUTPUT_FOLDER = "strategy_compare_v4/output"
 
 PAGE_TITLE = "📂 Load Generated Reports"
 
@@ -81,7 +82,7 @@ def current_output_folder() -> str:
 
     return st.session_state.get(
         "output_folder",
-        DEFAULT_OUTPUT_FOLDER,
+        str(DEFAULT_OUTPUT_FOLDER),
     )
 
 
@@ -103,7 +104,7 @@ def render_load_section() -> None:
         help="Folder containing the generated Excel reports.",
     )
 
-    left, right = st.columns(2)
+    left, middle, right = st.columns(3)
 
     # --------------------------------------------------------
     # Load Reports
@@ -139,6 +140,18 @@ def render_load_section() -> None:
 
             except Exception as exc:
                 st.exception(exc)
+
+    with middle:
+        if st.button(
+            "🔄 Refresh Reports",
+            use_container_width=True,
+        ):
+            with st.spinner("Refreshing latest reports..."):
+                refresh_reports()
+
+            st.success("Latest reports loaded.")
+
+            st.rerun()
 
     # --------------------------------------------------------
     # Clear Session
@@ -187,6 +200,39 @@ def render_status() -> None:
         )
 
     st.divider()
+
+
+def render_report_inventory():
+
+    folder = Path(current_output_folder())
+
+    if not folder.exists():
+        return
+
+    files = sorted(folder.glob("*.xlsx"))
+
+    data = []
+
+    for file in files:
+        data.append(
+            {
+                "Report": file.name,
+                "Modified": pd.to_datetime(
+                    file.stat().st_mtime,
+                    unit="s",
+                ).strftime("%Y-%m-%d %H:%M"),
+                "Size MB": round(
+                    file.stat().st_size / (1024 * 1024),
+                    2,
+                ),
+            }
+        )
+
+    st.dataframe(
+        pd.DataFrame(data),
+        hide_index=True,
+        use_container_width=True,
+    )
 
 
 # ============================================================
@@ -265,6 +311,8 @@ def render_workbook_preview() -> None:
         )
 
     st.caption(f"Workbook: **{workbook_name}**")
+
+    st.caption(f"Loaded Sheets: {len(workbook)}")
 
     st.caption(f"Worksheet: **{sheet_name}**")
 
@@ -346,6 +394,8 @@ def main() -> None:
 
     render_status()
 
+    render_report_inventory()
+
     if reports_loaded():
         render_workbook_preview()
 
@@ -360,6 +410,4 @@ def main() -> None:
 # ============================================================
 
 if __name__ == "__main__":
-    main()
-else:
     main()

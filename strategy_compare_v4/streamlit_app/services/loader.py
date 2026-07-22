@@ -23,9 +23,7 @@ logger = get_logger(__name__)
 # Report Configuration
 # ============================================================
 
-DEFAULT_OUTPUT_FOLDER = Path(
-    "strategy_compare_v4/output"
-)
+DEFAULT_OUTPUT_FOLDER = Path("strategy_compare_v4/output")
 
 REPORT_FILES: dict[str, str] = {
     "strategy_report": "Strategy_Comparison.xlsx",
@@ -40,6 +38,7 @@ REPORT_FILES: dict[str, str] = {
 # ============================================================
 # Cache Excel Reads
 # ============================================================
+
 
 @st.cache_data(
     show_spinner=False,
@@ -79,6 +78,7 @@ def load_excel(
 # ============================================================
 # Cache CSV Reads
 # ============================================================
+
 
 @st.cache_data(show_spinner=False)
 def load_csv(
@@ -123,6 +123,7 @@ def validate_output_folder(
 # ============================================================
 # Load All Reports
 # ============================================================
+
 
 def load_reports(
     output_folder: str | Path = DEFAULT_OUTPUT_FOLDER,
@@ -200,6 +201,7 @@ def workbook_sheets(
 # Session Management
 # ============================================================
 
+
 def clear_session() -> None:
     """
     Reset loaded reports.
@@ -218,10 +220,10 @@ def clear_session() -> None:
     logger.info("Session cleared.")
 
 
-
 # ============================================================
 # Refresh Reports
 # ============================================================
+
 
 def refresh_reports(
     output_folder: str | Path = DEFAULT_OUTPUT_FOLDER,
@@ -230,9 +232,7 @@ def refresh_reports(
     Reload latest generated reports.
     """
 
-    logger.info(
-        "Refreshing reports..."
-    )
+    logger.info("Refreshing reports...")
 
     st.cache_data.clear()
 
@@ -241,6 +241,7 @@ def refresh_reports(
     load_reports(
         output_folder,
     )
+
 
 # ============================================================
 # Report Summary

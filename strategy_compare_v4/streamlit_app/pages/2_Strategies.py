@@ -126,6 +126,51 @@ def render_summary(
     st.divider()
 
 
+def render_top_strategy(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Display best performing strategy.
+    """
+
+    if df.empty:
+        return
+
+    if "Composite Score" not in df.columns:
+        return
+
+    best = df.sort_values(
+        "Composite Score",
+        ascending=False,
+    ).iloc[0]
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.metric(
+            "Best Strategy",
+            best["Strategy"],
+        )
+
+    with c2:
+        st.metric(
+            "Composite Score",
+            round(
+                best["Composite Score"],
+                2,
+            ),
+        )
+
+    with c3:
+        st.metric(
+            "Expectancy",
+            round(
+                best["Expectancy"],
+                4,
+            ),
+        )
+
+
 # ============================================================
 # Filters
 # ============================================================
@@ -163,9 +208,12 @@ def render_filters(
     # --------------------------------------------------------
 
     with right:
-        search = st.text_input(
-            "Search Strategy",
-            placeholder="Enter strategy name...",
+        available_strategies = sorted(df["Strategy"].dropna().unique().tolist())
+
+        selected_strategies = st.multiselect(
+            "Select Strategies",
+            options=available_strategies,
+            default=available_strategies,
         )
 
     # --------------------------------------------------------
@@ -174,16 +222,8 @@ def render_filters(
 
     filtered = df.copy()
 
-    if search and "Strategy" in filtered.columns:
-        filtered = filtered[
-            filtered["Strategy"]
-            .astype(str)
-            .str.contains(
-                search,
-                case=False,
-                na=False,
-            )
-        ]
+    if selected_strategies:
+        filtered = filtered[filtered["Strategy"].isin(selected_strategies)]
 
     # --------------------------------------------------------
     # Ranking
@@ -323,11 +363,12 @@ def render_strategy_radar(
     st.subheader("Strategy Radar")
 
     selected_strategy = st.selectbox(
-        "Strategy Rank",
+        "Select Strategy Rank",
         options=df["Strategy Rank"].tolist(),
+        key="radar_strategy",
     )
 
-    strategy = df.loc[df["Strategy Rank"] == selected_strategy].iloc[0]
+    strategy = df.loc[df["Strategy"] == selected_strategy].iloc[0]
 
     radar_chart(
         {
@@ -365,7 +406,7 @@ def render_strategy_details(
 
     selected_strategy = st.selectbox(
         "Select Strategy",
-        options=df["Strategy Rank"].tolist(),
+        options=df["Strategy"].tolist(),
         key="strategy_details",
     )
 
@@ -492,6 +533,10 @@ def main() -> None:
         strategy_df,
     )
 
+    render_top_strategy(
+        strategy_df,
+    )
+
     filtered_df = render_filters(
         strategy_df,
     )
@@ -524,6 +569,4 @@ def main() -> None:
 # ============================================================
 
 if __name__ == "__main__":
-    main()
-else:
     main()

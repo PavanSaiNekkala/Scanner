@@ -16,6 +16,7 @@ from components.charts import (
 from services.loader import get_sheet
 from themes import apply_theme
 
+
 # ============================================================
 # Page Configuration
 # ============================================================
@@ -35,14 +36,24 @@ apply_theme()
 
 PAGE_TITLE = "🏆 Institutional Leaderboards"
 
-PAGE_CAPTION = "Overall institutional rankings across strategies and stocks."
+PAGE_CAPTION = (
+    "Overall institutional rankings across strategies and stocks."
+)
+
 
 LEADERBOARD_SHEETS = {
     "overall": "Overall",
-    "strategies": "Strategies",
     "stocks": "Stocks",
+    "strategies": "Strategies",
+    "expectancy": "Expectancy",
+    "profit_factor": "Profit Factor",
     "edge": "Edge",
+    "reliability": "Reliability",
+    "efficiency": "Efficiency",
+    "opportunity": "Opportunity",
+    "risk": "Risk",
 }
+
 
 TOP_ROWS = 20
 
@@ -57,9 +68,13 @@ def render_header() -> None:
     Render dashboard header.
     """
 
-    st.title(PAGE_TITLE)
+    st.title(
+        PAGE_TITLE,
+    )
 
-    st.caption(PAGE_CAPTION)
+    st.caption(
+        PAGE_CAPTION,
+    )
 
     st.divider()
 
@@ -78,7 +93,10 @@ def validate_session() -> None:
         "reports_loaded",
         False,
     ):
-        st.warning("Please load reports from the Data Load page.")
+
+        st.warning(
+            "Please load reports from the Data Load page.",
+        )
 
         st.stop()
 
@@ -88,10 +106,12 @@ def validate_session() -> None:
 # ============================================================
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(
+    show_spinner=False,
+)
 def load_leaderboard_data() -> dict[str, pd.DataFrame]:
     """
-    Load all leaderboard worksheets.
+    Load leaderboard worksheets.
     """
 
     workbook = st.session_state.leaderboard_report
@@ -105,6 +125,11 @@ def load_leaderboard_data() -> dict[str, pd.DataFrame]:
     }
 
 
+# ============================================================
+# Validation
+# ============================================================
+
+
 def validate_leaderboard_data(
     data: dict[str, pd.DataFrame],
 ) -> None:
@@ -113,14 +138,22 @@ def validate_leaderboard_data(
     """
 
     if not data:
-        st.error("Leaderboard report is unavailable.")
+
+        st.error(
+            "Leaderboard report unavailable.",
+        )
 
         st.stop()
 
-    available = any(not df.empty for df in data.values())
 
-    if not available:
-        st.error("No leaderboard data found.")
+    if not any(
+        not df.empty
+        for df in data.values()
+    ):
+
+        st.error(
+            "No leaderboard data found.",
+        )
 
         st.stop()
 
@@ -133,41 +166,52 @@ def validate_leaderboard_data(
 def resolve_column(
     df: pd.DataFrame,
     candidates: list[str],
-    fallback: str | None = None,
 ) -> str | None:
     """
-    Return first available column from candidates.
+    Resolve available dataframe column.
     """
 
     for column in candidates:
+
         if column in df.columns:
+
             return column
 
-    return fallback
+
+    return None
 
 
 # ============================================================
-# Overall Leaderboard
+# Generic Leaderboard Renderer
 # ============================================================
 
 
-def render_overall_tab(
+def render_leaderboard(
+    title: str,
     df: pd.DataFrame,
 ) -> None:
     """
-    Render overall leaderboard.
+    Render leaderboard table and chart.
     """
 
-    st.subheader("Overall Leaderboard")
+    st.subheader(
+        title,
+    )
+
 
     if df.empty:
-        st.info("No overall leaderboard data available.")
+
+        st.info(
+            f"No {title} data available.",
+        )
 
         return
+
 
     dataframe(
         df,
     )
+
 
     x_col = resolve_column(
         df,
@@ -175,176 +219,94 @@ def render_overall_tab(
             "Strategy",
             "Stock",
         ],
-        df.columns[0],
     )
 
-    y_col = resolve_column(
-        df,
-        [
-            "Composite Score",
-            "Composite",
-        ],
-        df.columns[-1],
-    )
-
-    if x_col and y_col:
-        bar_chart(
-            df.head(TOP_ROWS),
-            x=x_col,
-            y=y_col,
-            color=y_col,
-            title="Top Overall Rankings",
-        )
-
-
-# ============================================================
-# Strategy Leaderboard
-# ============================================================
-
-
-def render_strategy_tab(
-    df: pd.DataFrame,
-) -> None:
-    """
-    Render strategy leaderboard.
-    """
-
-    st.subheader("Strategy Leaderboard")
-
-    if df.empty:
-        st.info("No strategy leaderboard data available.")
-
-        return
-
-    dataframe(
-        df,
-    )
-
-    x_col = resolve_column(
-        df,
-        [
-            "Strategy",
-        ],
-        df.columns[0],
-    )
-
-    y_col = resolve_column(
-        df,
-        [
-            "Composite",
-            "Composite Score",
-        ],
-        df.columns[-1],
-    )
-
-    if x_col and y_col:
-        bar_chart(
-            df.head(TOP_ROWS),
-            x=x_col,
-            y=y_col,
-            color=y_col,
-            title="Top Strategies",
-        )
-
-
-# ============================================================
-# Stock Leaderboard
-# ============================================================
-
-
-def render_stock_tab(
-    df: pd.DataFrame,
-) -> None:
-    """
-    Render stock leaderboard.
-    """
-
-    st.subheader("Stock Leaderboard")
-
-    if df.empty:
-        st.info("No stock leaderboard data available.")
-
-        return
-
-    dataframe(
-        df,
-    )
-
-    x_col = resolve_column(
-        df,
-        [
-            "Stock",
-        ],
-        df.columns[0],
-    )
 
     y_col = resolve_column(
         df,
         [
             "Composite Score",
             "Institutional Score",
+            "Composite",
+            "Edge Score",
+            "Expectancy",
+            "Profit Factor",
+            "Reliability",
+            "Efficiency",
+            "Opportunity",
+            "Risk",
         ],
-        df.columns[-1],
     )
 
+
     if x_col and y_col:
-        bar_chart(
-            df.head(TOP_ROWS),
-            x=x_col,
-            y=y_col,
-            color=y_col,
-            title="Top Stocks",
+
+        chart_df = df.head(
+            TOP_ROWS,
         )
 
 
+        bar_chart(
+            chart_df,
+            x=x_col,
+            y=y_col,
+            color=y_col,
+            title=f"Top {title}",
+        )
+
 # ============================================================
-# Edge Leaderboard
+# KPI Summary
 # ============================================================
 
 
-def render_edge_tab(
-    df: pd.DataFrame,
+def render_summary(
+    data: dict[str, pd.DataFrame],
 ) -> None:
     """
-    Render edge leaderboard.
+    Render leaderboard summary cards.
     """
 
-    st.subheader("Edge Leaderboard")
+    total = len(data)
 
-    if df.empty:
-        st.info("No edge leaderboard data available.")
-
-        return
-
-    dataframe(
-        df,
+    available = sum(
+        not df.empty
+        for df in data.values()
     )
 
-    x_col = resolve_column(
-        df,
-        [
-            "Strategy",
-            "Stock",
-        ],
-        df.columns[0],
+    rows = sum(
+        len(df)
+        for df in data.values()
     )
 
-    y_col = resolve_column(
-        df,
-        [
-            "Edge Score",
-        ],
-        None,
-    )
 
-    if x_col and y_col:
-        bar_chart(
-            df.head(TOP_ROWS),
-            x=x_col,
-            y=y_col,
-            color=y_col,
-            title="Highest Edge Score",
+    c1, c2, c3 = st.columns(3)
+
+
+    with c1:
+
+        st.metric(
+            "Leaderboard Types",
+            total,
         )
+
+
+    with c2:
+
+        st.metric(
+            "Available Leaderboards",
+            available,
+        )
+
+
+    with c3:
+
+        st.metric(
+            "Total Ranked Records",
+            f"{rows:,}",
+        )
+
+
+    st.divider()
 
 
 # ============================================================
@@ -354,26 +316,33 @@ def render_edge_tab(
 
 def render_download(
     df: pd.DataFrame,
+    name: str,
 ) -> None:
     """
-    Render leaderboard download.
+    Render CSV download.
     """
 
     if df.empty:
+
         return
+
 
     st.divider()
 
-    st.subheader("Export")
+    st.subheader(
+        "Export",
+    )
+
 
     csv = df.to_csv(
         index=False,
     )
 
+
     st.download_button(
         label="📥 Download Leaderboard",
         data=csv,
-        file_name="institutional_leaderboard.csv",
+        file_name=f"{name.lower()}_leaderboard.csv",
         mime="text/csv",
         use_container_width=True,
     )
@@ -386,23 +355,29 @@ def render_download(
 
 def render_empty_state() -> None:
     """
-    Render empty state message.
+    Render empty state.
     """
 
-    st.info("""
+    st.info(
+        """
 ### 🏆 Institutional Leaderboards
 
-This dashboard provides institutional ranking analysis.
+Load generated reports from the Data Load page.
 
-Available views:
+Available analysis:
 
 - Overall Rankings
 - Strategy Rankings
 - Stock Rankings
-- Edge Rankings
-
-Load generated reports from the **Data Load** page to begin.
-""")
+- Expectancy
+- Profit Factor
+- Edge
+- Reliability
+- Efficiency
+- Opportunity
+- Risk
+"""
+    )
 
 
 # ============================================================
@@ -412,20 +387,29 @@ Load generated reports from the **Data Load** page to begin.
 
 def render_footer() -> None:
     """
-    Render application footer.
+    Render footer.
     """
 
     st.divider()
+
 
     left, right = st.columns(
         [3, 1],
     )
 
+
     with left:
-        st.caption("Institutional Strategy Comparison Platform")
+
+        st.caption(
+            "Institutional Strategy Comparison Platform",
+        )
+
 
     with right:
-        st.caption("Version 4.0")
+
+        st.caption(
+            "Version 4.0",
+        )
 
 
 # ============================================================
@@ -440,77 +424,72 @@ def main() -> None:
 
     render_header()
 
+
     validate_session()
 
+
     leaderboard_data = load_leaderboard_data()
+
 
     validate_leaderboard_data(
         leaderboard_data,
     )
 
-    if not any(not df.empty for df in leaderboard_data.values()):
+
+    if not any(
+        not df.empty
+        for df in leaderboard_data.values()
+    ):
+
         render_empty_state()
 
         render_footer()
 
         return
 
+
     # --------------------------------------------------------
-    # Tabs
+    # Summary
     # --------------------------------------------------------
 
-    tab1, tab2, tab3, tab4 = st.tabs(
-        [
-            "Overall",
-            "Strategies",
-            "Stocks",
-            "Edge",
-        ]
+    render_summary(
+        leaderboard_data,
     )
 
-    # --------------------------------------------------------
-    # Overall
-    # --------------------------------------------------------
-
-    with tab1:
-        render_overall_tab(
-            leaderboard_data["overall"],
-        )
 
     # --------------------------------------------------------
-    # Strategies
+    # Leaderboard Selector
     # --------------------------------------------------------
 
-    with tab2:
-        render_strategy_tab(
-            leaderboard_data["strategies"],
-        )
+    selected = st.selectbox(
+        "Select Leaderboard",
+        options=list(
+            LEADERBOARD_SHEETS.keys()
+        ),
+        format_func=lambda x: x.replace(
+            "_",
+            " ",
+        ).title(),
+    )
 
-    # --------------------------------------------------------
-    # Stocks
-    # --------------------------------------------------------
 
-    with tab3:
-        render_stock_tab(
-            leaderboard_data["stocks"],
-        )
+    selected_df = leaderboard_data[selected]
 
-    # --------------------------------------------------------
-    # Edge
-    # --------------------------------------------------------
 
-    with tab4:
-        render_edge_tab(
-            leaderboard_data["edge"],
-        )
+    render_leaderboard(
+        selected.replace(
+            "_",
+            " ",
+        ).title(),
+        selected_df,
+    )
 
-    # --------------------------------------------------------
-    # Download
-    # --------------------------------------------------------
 
     render_download(
-        leaderboard_data["overall"],
+        selected_df,
+        selected,
     )
+
 
     render_footer()
 
@@ -520,6 +499,5 @@ def main() -> None:
 # ============================================================
 
 if __name__ == "__main__":
-    main()
-else:
+
     main()

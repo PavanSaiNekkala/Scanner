@@ -11,9 +11,11 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+
 from components.charts import dataframe
 from services.loader import get_sheet
 from themes import apply_theme
+
 
 # ============================================================
 # Page Configuration
@@ -34,7 +36,9 @@ apply_theme()
 
 PAGE_TITLE = "📄 Institutional Report Center"
 
-PAGE_CAPTION = "Browse, preview and download generated reports."
+PAGE_CAPTION = (
+    "Browse, analyze and download generated institutional reports."
+)
 
 
 WORKBOOK_FILES = {
@@ -58,9 +62,13 @@ def render_header() -> None:
     Render page header.
     """
 
-    st.title(PAGE_TITLE)
+    st.title(
+        PAGE_TITLE,
+    )
 
-    st.caption(PAGE_CAPTION)
+    st.caption(
+        PAGE_CAPTION,
+    )
 
     st.divider()
 
@@ -79,7 +87,10 @@ def validate_session() -> None:
         "reports_loaded",
         False,
     ):
-        st.warning("Please load reports from the Data Load page.")
+
+        st.warning(
+            "Please load reports from the Data Load page.",
+        )
 
         st.stop()
 
@@ -89,24 +100,97 @@ def validate_session() -> None:
 # ============================================================
 
 
-def get_workbooks() -> dict:
+@st.cache_data(
+    show_spinner=False,
+)
+def get_workbooks() -> dict[str, dict[str, pd.DataFrame]]:
     """
-    Return available workbooks.
+    Return loaded workbooks.
     """
 
     return {
-        "Strategy Comparison": st.session_state.strategy_report,
-        "Stock Comparison": st.session_state.stock_report,
-        "Leaderboards": st.session_state.leaderboard_report,
-        "Correlation": st.session_state.correlation_report,
-        "Robustness": st.session_state.robustness_report,
-        "Portfolio": st.session_state.portfolio_report,
-        "Institutional Final Report": st.session_state.final_report,
+        "Strategy Comparison":
+            st.session_state.strategy_report,
+
+        "Stock Comparison":
+            st.session_state.stock_report,
+
+        "Leaderboards":
+            st.session_state.leaderboard_report,
+
+        "Correlation":
+            st.session_state.correlation_report,
+
+        "Robustness":
+            st.session_state.robustness_report,
+
+        "Portfolio":
+            st.session_state.portfolio_report,
+
+        "Institutional Final Report":
+            st.session_state.final_report,
     }
 
 
 # ============================================================
-# Workbook Selector
+# Report KPI
+# ============================================================
+
+
+def render_summary(
+    workbooks: dict,
+) -> None:
+    """
+    Render report summary cards.
+    """
+
+    sheets = sum(
+        len(book)
+        for book in workbooks.values()
+    )
+
+
+    rows = sum(
+        sum(
+            len(df)
+            for df in book.values()
+        )
+        for book in workbooks.values()
+    )
+
+
+    c1, c2, c3 = st.columns(3)
+
+
+    with c1:
+
+        st.metric(
+            "Reports",
+            len(workbooks),
+        )
+
+
+    with c2:
+
+        st.metric(
+            "Worksheets",
+            sheets,
+        )
+
+
+    with c3:
+
+        st.metric(
+            "Total Records",
+            f"{rows:,}",
+        )
+
+
+    st.divider()
+
+
+# ============================================================
+# Selector
 # ============================================================
 
 
@@ -121,30 +205,47 @@ def render_selector(
         [1, 2],
     )
 
+
     with left:
-        workbook = st.selectbox(
+
+        workbook_name = st.selectbox(
             "Workbook",
-            list(workbooks.keys()),
+            options=list(
+                workbooks.keys()
+            ),
         )
+
+
+    workbook = workbooks[
+        workbook_name
+    ]
+
 
     with right:
-        sheets = list(workbooks[workbook].keys())
 
-        sheet = st.selectbox(
+        sheet_name = st.selectbox(
             "Worksheet",
-            sheets,
+            options=list(
+                workbook.keys()
+            ),
         )
 
+
     df = get_sheet(
-        workbooks[workbook],
-        sheet,
+        workbook,
+        sheet_name,
     )
 
-    return workbook, sheet, df
+
+    return (
+        workbook_name,
+        sheet_name,
+        df,
+    )
 
 
 # ============================================================
-# Dataset Information
+# Information
 # ============================================================
 
 
@@ -152,38 +253,50 @@ def render_information(
     df: pd.DataFrame,
 ) -> None:
     """
-    Render dataframe statistics.
+    Display dataframe information.
     """
-
-    st.divider()
 
     c1, c2, c3 = st.columns(3)
 
+
     with c1:
+
         st.metric(
             "Rows",
-            len(df),
+            f"{len(df):,}",
         )
 
+
     with c2:
+
         st.metric(
             "Columns",
             len(df.columns),
         )
 
+
     with c3:
-        memory = round(
+
+        memory = (
             df.memory_usage(
                 deep=True,
-            ).sum()
-            / 1024,
-            2,
+            )
+            .sum()
+            /
+            1024
         )
 
+
         st.metric(
-            "Memory (KB)",
-            memory,
+            "Memory KB",
+            round(
+                memory,
+                2,
+            ),
         )
+
+
+    st.divider()
 
 
 # ============================================================
@@ -198,9 +311,9 @@ def render_preview(
     Preview dataframe.
     """
 
-    st.divider()
-
-    st.subheader("Preview")
+    st.subheader(
+        "Preview",
+    )
 
     dataframe(
         df,
@@ -216,21 +329,23 @@ def render_columns(
     df: pd.DataFrame,
 ) -> None:
     """
-    Display column information.
+    Display column metadata.
     """
 
-    st.divider()
+    st.subheader(
+        "Column Information",
+    )
 
-    st.subheader("Column Information")
 
     info = pd.DataFrame(
         {
             "Column": df.columns,
             "Datatype": df.dtypes.astype(str),
-            "Missing Values": df.isna().sum().values,
-            "Unique Values": df.nunique().values,
+            "Missing": df.isna().sum().values,
+            "Unique": df.nunique().values,
         }
     )
+
 
     st.dataframe(
         info,
@@ -255,12 +370,16 @@ def render_statistics(
         include="number",
     )
 
+
     if numeric.empty:
+
         return
 
-    st.divider()
 
-    st.subheader("Descriptive Statistics")
+    st.subheader(
+        "Descriptive Statistics",
+    )
+
 
     st.dataframe(
         numeric.describe().T,
@@ -277,22 +396,24 @@ def render_search(
     df: pd.DataFrame,
 ) -> None:
     """
-    Search dataframe rows.
+    Search dataframe.
     """
 
-    st.divider()
-
     search = st.text_input(
-        "Search",
+        "Search Rows",
     )
 
+
     if not search:
+
         return
+
 
     mask = (
         df.astype(str)
         .apply(
-            lambda column: column.str.contains(
+            lambda x:
+            x.str.contains(
                 search,
                 case=False,
                 na=False,
@@ -301,12 +422,17 @@ def render_search(
         .any(axis=1)
     )
 
-    filtered = df[mask]
 
-    st.subheader("Search Results")
+    results = df[mask]
+
+
+    st.subheader(
+        "Search Results",
+    )
+
 
     dataframe(
-        filtered,
+        results,
     )
 
 
@@ -321,28 +447,44 @@ def render_downloads(
     df: pd.DataFrame,
 ) -> None:
     """
-    Render download buttons.
+    Download reports.
     """
 
-    st.divider()
+    st.subheader(
+        "Export",
+    )
+
 
     st.download_button(
-        label="📥 Download Current Sheet",
-        data=df.to_csv(index=False),
+        label="📥 Download Sheet CSV",
+        data=df.to_csv(
+            index=False,
+        ),
         file_name=f"{sheet}.csv",
         mime="text/csv",
         use_container_width=True,
     )
 
-    output_folder = Path(st.session_state.output_folder)
 
-    excel_file = output_folder / WORKBOOK_FILES[workbook]
+    output_folder = Path(
+        st.session_state.output_folder,
+    )
+
+
+    excel_file = (
+        output_folder
+        /
+        WORKBOOK_FILES[workbook]
+    )
+
 
     if excel_file.exists():
+
         with open(
             excel_file,
             "rb",
         ) as file:
+
             st.download_button(
                 label="📥 Download Excel Workbook",
                 data=file,
@@ -355,36 +497,57 @@ def render_downloads(
 
 
 # ============================================================
-# Report Summary
+# Report Inventory
 # ============================================================
 
 
-def render_report_summary(
+def render_inventory(
     workbooks: dict,
 ) -> None:
     """
-    Display report availability.
+    Display available reports.
     """
 
-    st.divider()
+    st.subheader(
+        "Available Reports",
+    )
 
-    st.subheader("Available Reports")
 
-    summary = []
+    data = []
+
 
     for name, workbook in workbooks.items():
-        summary.append(
+
+        data.append(
             {
-                "Workbook": name,
+                "Report": name,
                 "Sheets": len(workbook),
                 "Status": "Loaded",
             }
         )
 
+
     st.dataframe(
-        pd.DataFrame(summary),
+        pd.DataFrame(data),
         use_container_width=True,
         hide_index=True,
+    )
+
+
+# ============================================================
+# Footer
+# ============================================================
+
+
+def render_footer() -> None:
+    """
+    Render footer.
+    """
+
+    st.divider()
+
+    st.caption(
+        "Institutional Strategy Comparison Platform • Reports Center"
     )
 
 
@@ -395,7 +558,7 @@ def render_report_summary(
 
 def main() -> None:
     """
-    Render report center.
+    Render report dashboard.
     """
 
     render_header()
@@ -404,34 +567,50 @@ def main() -> None:
 
     workbooks = get_workbooks()
 
+    render_summary(
+        workbooks,
+    )
+
     workbook, sheet, df = render_selector(
         workbooks,
     )
 
+
     if df.empty:
-        st.warning("Selected worksheet contains no data.")
+
+        st.warning(
+            "Selected worksheet is empty.",
+        )
+
+        render_footer()
 
         return
+
 
     render_information(
         df,
     )
 
+
     render_preview(
         df,
     )
+
 
     render_columns(
         df,
     )
 
+
     render_statistics(
         df,
     )
 
+
     render_search(
         df,
     )
+
 
     render_downloads(
         workbook,
@@ -439,9 +618,13 @@ def main() -> None:
         df,
     )
 
-    render_report_summary(
+
+    render_inventory(
         workbooks,
     )
+
+
+    render_footer()
 
 
 # ============================================================
@@ -449,7 +632,5 @@ def main() -> None:
 # ============================================================
 
 if __name__ == "__main__":
-    main()
 
-else:
     main()

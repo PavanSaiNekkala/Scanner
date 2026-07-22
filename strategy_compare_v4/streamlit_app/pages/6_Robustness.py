@@ -9,15 +9,20 @@ from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
+
 from components.cards import robustness_card
+
 from components.charts import (
     bar_chart,
     box_plot,
     dataframe,
     histogram,
 )
+
 from services.loader import get_sheet
+
 from themes import apply_theme
+
 
 # ============================================================
 # Page Configuration
@@ -29,6 +34,7 @@ st.set_page_config(
     layout="wide",
 )
 
+
 apply_theme()
 
 
@@ -38,12 +44,16 @@ apply_theme()
 
 PAGE_TITLE = "🛡 Robustness Analysis"
 
-PAGE_CAPTION = "Evaluate the consistency and stability of strategy performance."
+PAGE_CAPTION = (
+    "Evaluate strategy stability, consistency and durability."
+)
 
 
 ROBUSTNESS_SHEETS = {
     "robustness": "Robustness",
     "consistency": "Consistency",
+    "volatility": "Volatility",
+    "outliers": "Outliers",
     "summary": "Summary",
 }
 
@@ -61,9 +71,13 @@ def render_header() -> None:
     Render dashboard header.
     """
 
-    st.title(PAGE_TITLE)
+    st.title(
+        PAGE_TITLE,
+    )
 
-    st.caption(PAGE_CAPTION)
+    st.caption(
+        PAGE_CAPTION,
+    )
 
     st.divider()
 
@@ -82,7 +96,10 @@ def validate_session() -> None:
         "reports_loaded",
         False,
     ):
-        st.warning("Please load reports from the Data Load page.")
+
+        st.warning(
+            "Please load reports from the Data Load page.",
+        )
 
         st.stop()
 
@@ -92,13 +109,18 @@ def validate_session() -> None:
 # ============================================================
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(
+    show_spinner=False,
+)
 def load_robustness_data() -> dict[str, pd.DataFrame]:
     """
     Load robustness worksheets.
     """
 
-    workbook = st.session_state.robustness_report
+    workbook = (
+        st.session_state.robustness_report
+    )
+
 
     return {
         key: get_sheet(
@@ -110,7 +132,7 @@ def load_robustness_data() -> dict[str, pd.DataFrame]:
 
 
 # ============================================================
-# Data Validation
+# Validation
 # ============================================================
 
 
@@ -122,23 +144,31 @@ def validate_robustness_data(
     """
 
     if not data:
-        st.error("Robustness report is unavailable.")
+
+        st.error(
+            "Robustness report unavailable.",
+        )
 
         st.stop()
+
 
     robustness_df = data.get(
         "robustness",
         pd.DataFrame(),
     )
 
+
     if robustness_df.empty:
-        st.error("Robustness worksheet not found or empty.")
+
+        st.error(
+            "Robustness worksheet missing or empty.",
+        )
 
         st.stop()
 
 
 # ============================================================
-# Summary
+# KPI Summary
 # ============================================================
 
 
@@ -153,42 +183,59 @@ def render_summary(
         df,
     )
 
+
     st.divider()
 
 
 # ============================================================
-# Tables
+# Metric Resolver
 # ============================================================
 
 
-def render_tables(
-    robustness_df: pd.DataFrame,
-    summary_df: pd.DataFrame,
-) -> None:
+def resolve_metric_column(
+    df: pd.DataFrame,
+) -> list[str]:
     """
-    Render robustness tables.
+    Return numeric metrics.
     """
 
-    if summary_df is not None and not summary_df.empty:
-        st.subheader("Summary")
-
-        dataframe(
-            summary_df,
+    return (
+        df.select_dtypes(
+            include="number",
         )
-
-        st.divider()
-
-    st.subheader("Robustness Metrics")
-
-    dataframe(
-        robustness_df,
+        .columns
+        .tolist()
     )
 
-    st.divider()
-
 
 # ============================================================
-# Charts
+# Dataset Selector
+# ============================================================
+
+
+def render_dataset_selector(
+    data: dict[str, pd.DataFrame],
+) -> tuple[str, pd.DataFrame]:
+    """
+    Select robustness dataset.
+    """
+
+    selected = st.selectbox(
+        "Select Analysis",
+        options=list(
+            data.keys()
+        ),
+        format_func=lambda x: x.title(),
+    )
+
+
+    return (
+        selected,
+        data[selected],
+    )
+
+# ============================================================
+# Robustness Analytics
 # ============================================================
 
 
@@ -196,39 +243,61 @@ def render_charts(
     df: pd.DataFrame,
 ) -> None:
     """
-    Render robustness analytics charts.
+    Render robustness charts.
     """
 
     if df.empty:
+
         return
 
-    numeric_columns = df.select_dtypes(
-        include="number",
-    ).columns.tolist()
 
-    if not numeric_columns:
+    metrics = resolve_metric_column(
+        df,
+    )
+
+
+    if not metrics:
+
         return
 
-    st.subheader("Robustness Analytics")
+
+    st.subheader(
+        "Robustness Analytics",
+    )
+
 
     metric = st.selectbox(
         "Select Metric",
-        numeric_columns,
+        options=metrics,
     )
+
 
     left, right = st.columns(2)
 
+
     # --------------------------------------------------------
-    # Ranking Chart
+    # Ranking
     # --------------------------------------------------------
 
     with left:
-        label_column = "Strategy" if "Strategy" in df.columns else df.columns[0]
 
-        ranked = df.sort_values(
-            metric,
-            ascending=False,
-        ).head(20)
+        label_column = (
+            "Strategy"
+            if "Strategy" in df.columns
+            else df.columns[0]
+        )
+
+
+        ranked = (
+            df.sort_values(
+                metric,
+                ascending=False,
+            )
+            .head(
+                20,
+            )
+        )
+
 
         bar_chart(
             ranked,
@@ -238,28 +307,29 @@ def render_charts(
             title=f"Top 20 by {metric}",
         )
 
+
     # --------------------------------------------------------
     # Distribution
     # --------------------------------------------------------
 
     with right:
+
         histogram(
             df,
             metric,
             f"{metric} Distribution",
         )
 
+
     st.divider()
 
-    # --------------------------------------------------------
-    # Box Plot
-    # --------------------------------------------------------
 
     box_plot(
         df,
         metric,
         f"{metric} Stability Analysis",
     )
+
 
     st.divider()
 
@@ -273,17 +343,23 @@ def render_consistency(
     df: pd.DataFrame,
 ) -> None:
     """
-    Render consistency analysis table.
+    Render consistency dataset.
     """
 
-    if df is None or df.empty:
+    if df.empty:
+
         return
 
-    st.subheader("Consistency Analysis")
+
+    st.subheader(
+        "Consistency Analysis",
+    )
+
 
     dataframe(
         df,
     )
+
 
     st.divider()
 
@@ -297,37 +373,120 @@ def render_top_strategies(
     df: pd.DataFrame,
 ) -> None:
     """
-    Display highest robustness performers.
+    Display strongest robustness performers.
     """
 
     if df.empty:
+
         return
+
 
     score_column = None
 
+
     for column in [
-        "Composite Score",
         "Robustness Score",
+        "Composite Score",
         "Composite",
     ]:
+
         if column in df.columns:
+
             score_column = column
 
             break
 
+
     if score_column is None:
+
         return
 
-    st.subheader("Top Robust Strategies")
 
-    top = df.sort_values(
-        score_column,
-        ascending=False,
-    ).head(TOP_STRATEGIES)
+    st.subheader(
+        "Top Robust Strategies",
+    )
+
+
+    top = (
+        df.sort_values(
+            score_column,
+            ascending=False,
+        )
+        .head(
+            TOP_STRATEGIES,
+        )
+    )
+
 
     dataframe(
         top,
     )
+
+
+    st.divider()
+
+
+# ============================================================
+# Stability Summary
+# ============================================================
+
+
+def render_stability_metrics(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Render stability statistics.
+    """
+
+    if df.empty:
+
+        return
+
+
+    st.subheader(
+        "Stability Metrics",
+    )
+
+
+    numeric = df.select_dtypes(
+        include="number",
+    )
+
+
+    if numeric.empty:
+
+        return
+
+
+    c1, c2, c3 = st.columns(3)
+
+
+    with c1:
+
+        st.metric(
+            "Metrics Available",
+            len(numeric.columns),
+        )
+
+
+    with c2:
+
+        st.metric(
+            "Strategies Analysed",
+            len(df),
+        )
+
+
+    with c3:
+
+        st.metric(
+            "Average Score",
+            round(
+                numeric.mean().mean(),
+                2,
+            ),
+        )
+
 
     st.divider()
 
@@ -339,24 +498,31 @@ def render_top_strategies(
 
 def render_download(
     df: pd.DataFrame,
+    name: str,
 ) -> None:
     """
-    Export robustness report.
+    Export robustness dataset.
     """
 
     if df.empty:
+
         return
 
-    st.subheader("Export")
+
+    st.subheader(
+        "Export",
+    )
+
 
     csv = df.to_csv(
         index=False,
     )
 
+
     st.download_button(
         label="📥 Download Robustness Analysis",
         data=csv,
-        file_name="robustness.csv",
+        file_name=f"{name}_robustness.csv",
         mime="text/csv",
         use_container_width=True,
     )
@@ -369,25 +535,28 @@ def render_download(
 
 def render_empty_state() -> None:
     """
-    Render empty dashboard state.
+    Render empty state.
     """
 
-    st.info("""
+    st.info(
+        """
 ### 🛡 Robustness Analysis
 
-This dashboard evaluates strategy stability and consistency.
+Evaluate strategy durability and stability.
 
 Features:
 
-- Robustness Score Analysis
-- Stability Ranking
-- Metric Distribution
-- Consistency Evaluation
-- Top Robust Strategies
+- Robustness Score Ranking
+- Consistency Analysis
+- Volatility Analysis
+- Outlier Detection
+- Stability Metrics
+- Strategy Comparison
 - CSV Export
 
-Load reports from the **Data Load** page to begin.
-""")
+Load reports from the Data Load page.
+"""
+    )
 
 
 # ============================================================
@@ -397,20 +566,29 @@ Load reports from the **Data Load** page to begin.
 
 def render_footer() -> None:
     """
-    Render application footer.
+    Render footer.
     """
 
     st.divider()
+
 
     left, right = st.columns(
         [3, 1],
     )
 
+
     with left:
-        st.caption("Institutional Strategy Comparison Platform")
+
+        st.caption(
+            "Institutional Strategy Comparison Platform",
+        )
+
 
     with right:
-        st.caption("Version 4.0")
+
+        st.caption(
+            "Version 4.0",
+        )
 
 
 # ============================================================
@@ -420,62 +598,124 @@ def render_footer() -> None:
 
 def main() -> None:
     """
-    Render Robustness dashboard.
+    Render robustness dashboard.
     """
 
     render_header()
 
+
     validate_session()
 
+
     robustness_data = load_robustness_data()
+
 
     validate_robustness_data(
         robustness_data,
     )
 
-    robustness_df = robustness_data["robustness"]
 
-    consistency_df = robustness_data.get(
-        "consistency",
-        pd.DataFrame(),
-    )
+    if not any(
+        not df.empty
+        for df in robustness_data.values()
+    ):
 
-    summary_df = robustness_data.get(
-        "summary",
-        pd.DataFrame(),
-    )
-
-    if robustness_df.empty:
         render_empty_state()
 
         render_footer()
 
         return
 
+
+    # --------------------------------------------------------
+    # Summary
+    # --------------------------------------------------------
+
+    robustness_df = robustness_data[
+        "robustness"
+    ]
+
+
     render_summary(
         robustness_df,
     )
 
-    render_tables(
-        robustness_df,
-        summary_df,
+
+    # --------------------------------------------------------
+    # Dataset Selector
+    # --------------------------------------------------------
+
+    selected_name, selected_df = (
+        render_dataset_selector(
+            robustness_data,
+        )
     )
+
+
+    if selected_df.empty:
+
+        st.warning(
+            "Selected dataset is empty.",
+        )
+
+        render_footer()
+
+        return
+
+
+    # --------------------------------------------------------
+    # Main Dataset
+    # --------------------------------------------------------
+
+    dataframe(
+        selected_df,
+    )
+
+
+    # --------------------------------------------------------
+    # Analytics
+    # --------------------------------------------------------
 
     render_charts(
-        robustness_df,
+        selected_df,
     )
 
-    render_consistency(
-        consistency_df,
+
+    render_stability_metrics(
+        selected_df,
     )
+
+
+    # --------------------------------------------------------
+    # Consistency
+    # --------------------------------------------------------
+
+    render_consistency(
+        robustness_data.get(
+            "consistency",
+            pd.DataFrame(),
+        )
+    )
+
+
+    # --------------------------------------------------------
+    # Top Strategies
+    # --------------------------------------------------------
 
     render_top_strategies(
         robustness_df,
     )
 
+
+    # --------------------------------------------------------
+    # Export
+    # --------------------------------------------------------
+
     render_download(
-        robustness_df,
+        selected_df,
+        selected_name,
     )
+
 
     render_footer()
 
@@ -485,6 +725,5 @@ def main() -> None:
 # ============================================================
 
 if __name__ == "__main__":
-    main()
-else:
+
     main()

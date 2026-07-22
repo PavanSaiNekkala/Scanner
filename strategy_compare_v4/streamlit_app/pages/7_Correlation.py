@@ -9,13 +9,17 @@ from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
+
 from components.charts import (
     correlation_heatmap,
     dataframe,
     histogram,
 )
+
 from services.loader import get_sheet
+
 from themes import apply_theme
+
 
 # ============================================================
 # Page Configuration
@@ -27,6 +31,7 @@ st.set_page_config(
     layout="wide",
 )
 
+
 apply_theme()
 
 
@@ -36,7 +41,10 @@ apply_theme()
 
 PAGE_TITLE = "🔗 Correlation & Diversification"
 
-PAGE_CAPTION = "Analyze strategy diversification and correlation."
+PAGE_CAPTION = (
+    "Analyze correlation, diversification and clustering."
+)
+
 
 CORRELATION_SHEETS = {
     "pearson": "Pearson",
@@ -60,9 +68,13 @@ def render_header() -> None:
     Render dashboard header.
     """
 
-    st.title(PAGE_TITLE)
+    st.title(
+        PAGE_TITLE,
+    )
 
-    st.caption(PAGE_CAPTION)
+    st.caption(
+        PAGE_CAPTION,
+    )
 
     st.divider()
 
@@ -81,7 +93,10 @@ def validate_session() -> None:
         "reports_loaded",
         False,
     ):
-        st.warning("Please load reports from the Data Load page.")
+
+        st.warning(
+            "Please load reports from the Data Load page.",
+        )
 
         st.stop()
 
@@ -91,13 +106,18 @@ def validate_session() -> None:
 # ============================================================
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(
+    show_spinner=False,
+)
 def load_correlation_data() -> dict[str, pd.DataFrame]:
     """
     Load correlation workbook sheets.
     """
 
-    workbook = st.session_state.correlation_report
+    workbook = (
+        st.session_state.correlation_report
+    )
+
 
     return {
         key: get_sheet(
@@ -108,48 +128,158 @@ def load_correlation_data() -> dict[str, pd.DataFrame]:
     }
 
 
+# ============================================================
+# Validation
+# ============================================================
+
+
 def validate_data(
     data: dict[str, pd.DataFrame],
 ) -> None:
     """
-    Validate correlation data.
+    Validate correlation datasets.
     """
 
     if not data:
-        st.error("Correlation report unavailable.")
+
+        st.error(
+            "Correlation report unavailable.",
+        )
+
+        st.stop()
+
+
+    if not any(
+        not df.empty
+        for df in data.values()
+    ):
+
+        st.error(
+            "No correlation data available.",
+        )
 
         st.stop()
 
 
 # ============================================================
-# Correlation Matrix Renderer
+# KPI Summary
 # ============================================================
 
 
-def render_matrix_tab(
+def render_summary(
+    data: dict[str, pd.DataFrame],
+) -> None:
+    """
+    Render correlation summary cards.
+    """
+
+    total_sheets = len(data)
+
+    available = sum(
+        not df.empty
+        for df in data.values()
+    )
+
+
+    records = sum(
+        len(df)
+        for df in data.values()
+    )
+
+
+    c1, c2, c3 = st.columns(3)
+
+
+    with c1:
+
+        st.metric(
+            "Analytics Modules",
+            total_sheets,
+        )
+
+
+    with c2:
+
+        st.metric(
+            "Available Sheets",
+            available,
+        )
+
+
+    with c3:
+
+        st.metric(
+            "Total Records",
+            f"{records:,}",
+        )
+
+
+    st.divider()
+
+
+# ============================================================
+# Matrix Renderer
+# ============================================================
+
+
+def render_matrix(
     title: str,
     df: pd.DataFrame,
 ) -> None:
     """
-    Render correlation matrix tab.
+    Render correlation matrix.
     """
 
-    st.subheader(title)
+    st.subheader(
+        title,
+    )
+
 
     if df.empty:
-        st.info(f"{title} data not available.")
+
+        st.info(
+            f"{title} unavailable.",
+        )
 
         return
+
 
     correlation_heatmap(
         df,
         title,
     )
 
+
     dataframe(
         df,
     )
 
+
+# ============================================================
+# Dataset Selector
+# ============================================================
+
+
+def render_dataset_selector(
+    data: dict[str, pd.DataFrame],
+) -> tuple[str, pd.DataFrame]:
+    """
+    Select correlation dataset.
+    """
+
+    selected = st.selectbox(
+        "Select Analysis",
+        options=list(
+            data.keys()
+        ),
+        format_func=lambda x: x.title(),
+    )
+
+
+    return (
+        selected,
+        data[selected],
+    )
 
 # ============================================================
 # Diversification Renderer
@@ -161,24 +291,34 @@ def render_diversification(
     pairs_df: pd.DataFrame,
 ) -> None:
     """
-    Render diversification analysis.
+    Render diversification analytics.
     """
 
-    st.subheader("Diversification")
-
     if not diversification_df.empty:
+
+        st.subheader(
+            "Diversification Analysis",
+        )
+
         dataframe(
             diversification_df,
         )
 
+
     if not pairs_df.empty:
+
         st.divider()
 
-        st.subheader("Correlation Pairs")
+        st.subheader(
+            "Correlation Pairs",
+        )
 
         dataframe(
             pairs_df,
         )
+
+
+    st.divider()
 
 
 # ============================================================
@@ -188,31 +328,61 @@ def render_diversification(
 
 def render_clusters(
     clusters_df: pd.DataFrame,
-    summary_df: pd.DataFrame,
 ) -> None:
     """
     Render cluster analysis.
     """
 
-    st.subheader("Correlation Clusters")
+    if clusters_df.empty:
 
-    if not clusters_df.empty:
-        dataframe(
-            clusters_df,
-        )
+        return
 
-    if not summary_df.empty:
-        st.divider()
 
-        st.subheader("Summary")
+    st.subheader(
+        "Correlation Clusters",
+    )
 
-        dataframe(
-            summary_df,
-        )
+
+    dataframe(
+        clusters_df,
+    )
+
+
+    st.divider()
 
 
 # ============================================================
-# Distribution
+# Summary Renderer
+# ============================================================
+
+
+def render_summary_sheet(
+    summary_df: pd.DataFrame,
+) -> None:
+    """
+    Render correlation summary.
+    """
+
+    if summary_df.empty:
+
+        return
+
+
+    st.subheader(
+        "Correlation Summary",
+    )
+
+
+    dataframe(
+        summary_df,
+    )
+
+
+    st.divider()
+
+
+# ============================================================
+# Distribution Analysis
 # ============================================================
 
 
@@ -224,29 +394,108 @@ def render_distribution(
     """
 
     if df.empty:
+
         return
 
-    numeric = df.select_dtypes(
-        include="number",
-    ).columns.tolist()
 
-    if not numeric:
+    numeric_columns = (
+        df.select_dtypes(
+            include="number",
+        )
+        .columns
+        .tolist()
+    )
+
+
+    if not numeric_columns:
+
         return
 
-    st.divider()
 
-    st.subheader("Correlation Distribution")
+    st.subheader(
+        "Correlation Distribution",
+    )
+
 
     metric = st.selectbox(
-        "Distribution Metric",
-        numeric,
+        "Select Correlation Metric",
+        options=numeric_columns,
     )
+
 
     histogram(
         df,
         metric,
         f"{metric} Distribution",
     )
+
+
+    st.divider()
+
+
+# ============================================================
+# Correlation Statistics
+# ============================================================
+
+
+def render_statistics(
+    df: pd.DataFrame,
+) -> None:
+    """
+    Render correlation statistics.
+    """
+
+    if df.empty:
+
+        return
+
+
+    numeric = df.select_dtypes(
+        include="number",
+    )
+
+
+    if numeric.empty:
+
+        return
+
+
+    c1, c2, c3 = st.columns(3)
+
+
+    with c1:
+
+        st.metric(
+            "Metrics",
+            len(numeric.columns),
+        )
+
+
+    with c2:
+
+        st.metric(
+            "Average Correlation",
+            round(
+                numeric.mean()
+                .mean(),
+                3,
+            ),
+        )
+
+
+    with c3:
+
+        st.metric(
+            "Maximum Correlation",
+            round(
+                numeric.max()
+                .max(),
+                3,
+            ),
+        )
+
+
+    st.divider()
 
 
 # ============================================================
@@ -256,23 +505,98 @@ def render_distribution(
 
 def render_download(
     df: pd.DataFrame,
+    name: str,
 ) -> None:
     """
-    Download correlation data.
+    Export correlation dataset.
     """
 
     if df.empty:
+
         return
 
-    st.divider()
+
+    st.subheader(
+        "Export",
+    )
+
+
+    csv = df.to_csv(
+        index=False,
+    )
+
 
     st.download_button(
-        label="📥 Download Pearson Correlation",
-        data=df.to_csv(index=False),
-        file_name="pearson_correlation.csv",
+        label="📥 Download Correlation Data",
+        data=csv,
+        file_name=f"{name}_correlation.csv",
         mime="text/csv",
         use_container_width=True,
     )
+
+
+# ============================================================
+# Empty State
+# ============================================================
+
+
+def render_empty_state() -> None:
+    """
+    Render empty dashboard.
+    """
+
+    st.info(
+        """
+### 🔗 Correlation & Diversification
+
+Analyze portfolio and strategy relationships.
+
+Features:
+
+- Pearson Correlation
+- Spearman Correlation
+- Kendall Correlation
+- Heatmaps
+- Diversification Analysis
+- Correlation Pairs
+- Cluster Analysis
+- Distribution Analysis
+
+Load reports from the Data Load page.
+"""
+    )
+
+
+# ============================================================
+# Footer
+# ============================================================
+
+
+def render_footer() -> None:
+    """
+    Render footer.
+    """
+
+    st.divider()
+
+
+    left, right = st.columns(
+        [3, 1],
+    )
+
+
+    with left:
+
+        st.caption(
+            "Institutional Strategy Comparison Platform",
+        )
+
+
+    with right:
+
+        st.caption(
+            "Version 4.0",
+        )
 
 
 # ============================================================
@@ -287,77 +611,113 @@ def main() -> None:
 
     render_header()
 
+
     validate_session()
 
+
     data = load_correlation_data()
+
 
     validate_data(
         data,
     )
 
-    pearson_df = data["pearson"]
 
-    spearman_df = data["spearman"]
-
-    kendall_df = data["kendall"]
-
-    diversification_df = data["diversification"]
-
-    pairs_df = data["pairs"]
-
-    clusters_df = data["clusters"]
-
-    summary_df = data["summary"]
-
-    tabs = st.tabs(
-        [
-            "Pearson",
-            "Spearman",
-            "Kendall",
-            "Diversification",
-            "Clusters",
-        ]
+    render_summary(
+        data,
     )
 
-    with tabs[0]:
-        render_matrix_tab(
-            "Pearson Correlation",
-            pearson_df,
+
+    selected_name, selected_df = (
+        render_dataset_selector(
+            data,
+        )
+    )
+
+
+    if selected_df.empty:
+
+        render_empty_state()
+
+        render_footer()
+
+        return
+
+
+    # --------------------------------------------------------
+    # Main Dataset
+    # --------------------------------------------------------
+
+    if selected_name in [
+        "pearson",
+        "spearman",
+        "kendall",
+        "heatmap",
+    ]:
+
+        render_matrix(
+            selected_name.title(),
+            selected_df,
         )
 
-    with tabs[1]:
-        render_matrix_tab(
-            "Spearman Correlation",
-            spearman_df,
-        )
 
-    with tabs[2]:
-        render_matrix_tab(
-            "Kendall Correlation",
-            kendall_df,
-        )
+    elif selected_name == "diversification":
 
-    with tabs[3]:
         render_diversification(
-            diversification_df,
-            pairs_df,
+            selected_df,
+            data.get(
+                "pairs",
+                pd.DataFrame(),
+            ),
         )
 
-    with tabs[4]:
+
+    elif selected_name == "clusters":
+
         render_clusters(
-            clusters_df,
-            summary_df,
+            selected_df,
         )
 
-    active = pearson_df if not pearson_df.empty else spearman_df
+
+    elif selected_name == "summary":
+
+        render_summary_sheet(
+            selected_df,
+        )
+
+
+    else:
+
+        dataframe(
+            selected_df,
+        )
+
+
+    # --------------------------------------------------------
+    # Analytics
+    # --------------------------------------------------------
+
+    render_statistics(
+        selected_df,
+    )
+
 
     render_distribution(
-        active,
+        selected_df,
     )
 
+
+    # --------------------------------------------------------
+    # Export
+    # --------------------------------------------------------
+
     render_download(
-        pearson_df,
+        selected_df,
+        selected_name,
     )
+
+
+    render_footer()
 
 
 # ============================================================
@@ -365,7 +725,5 @@ def main() -> None:
 # ============================================================
 
 if __name__ == "__main__":
-    main()
 
-else:
     main()

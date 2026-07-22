@@ -12,8 +12,15 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
-from services.loader import clear_session
+
+from services.loader import (
+    DEFAULT_OUTPUT_FOLDER,
+    clear_session,
+    refresh_reports,
+)
+
 from themes import apply_theme
+
 
 # ============================================================
 # Page Configuration
@@ -21,7 +28,7 @@ from themes import apply_theme
 
 st.set_page_config(
     page_title="Settings",
-    page_icon="⚙",
+    page_icon="⚙️",
     layout="wide",
 )
 
@@ -32,9 +39,11 @@ apply_theme()
 # Constants
 # ============================================================
 
-PAGE_TITLE = "⚙ Settings"
+PAGE_TITLE = "⚙️ Settings"
 
-PAGE_CAPTION = "Application configuration, diagnostics and maintenance."
+PAGE_CAPTION = (
+    "Application configuration, diagnostics and maintenance."
+)
 
 APP_VERSION = "4.0"
 
@@ -46,7 +55,7 @@ REPORT_KEYS = {
     "Portfolio": "portfolio_report",
     "Robustness": "robustness_report",
     "Correlation": "correlation_report",
-    "Final": "final_report",
+    "Final Report": "final_report",
 }
 
 
@@ -60,9 +69,13 @@ def render_header() -> None:
     Render settings header.
     """
 
-    st.title(PAGE_TITLE)
+    st.title(
+        PAGE_TITLE,
+    )
 
-    st.caption(PAGE_CAPTION)
+    st.caption(
+        PAGE_CAPTION,
+    )
 
     st.divider()
 
@@ -74,34 +87,58 @@ def render_header() -> None:
 
 def render_session_overview() -> None:
     """
-    Display current session status.
+    Display session information.
     """
 
-    reports_loaded = st.session_state.get(
+    loaded = st.session_state.get(
         "reports_loaded",
         False,
     )
 
-    output_folder = st.session_state.get(
-        "output_folder",
-        "output",
+
+    output_folder = Path(
+        st.session_state.get(
+            "output_folder",
+            DEFAULT_OUTPUT_FOLDER,
+        )
     )
 
-    c1, c2, c3 = st.columns(3)
+
+    loaded_reports = sum(
+        key in st.session_state
+        for key in REPORT_KEYS.values()
+    )
+
+
+    c1, c2, c3, c4 = st.columns(4)
+
 
     with c1:
+
         st.metric(
-            "Reports",
-            "Loaded" if reports_loaded else "Not Loaded",
+            "Reports Status",
+            "Loaded" if loaded else "Not Loaded",
         )
+
 
     with c2:
+
         st.metric(
-            "Output Folder",
-            Path(output_folder).name,
+            "Reports Available",
+            loaded_reports,
         )
 
+
     with c3:
+
+        st.metric(
+            "Output Folder",
+            output_folder.name,
+        )
+
+
+    with c4:
+
         st.metric(
             "Version",
             f"v{APP_VERSION}",
@@ -115,28 +152,54 @@ def render_session_overview() -> None:
 
 def render_output_directory() -> None:
     """
-    Render output folder settings.
+    Display output folder configuration.
     """
 
     st.divider()
 
-    st.subheader("Output Directory")
-
-    current = st.session_state.get(
-        "output_folder",
-        "output",
+    st.subheader(
+        "Output Directory",
     )
+
 
     folder = st.text_input(
-        "Output Folder",
-        value=current,
+        "Current Output Folder",
+        value=str(
+            st.session_state.get(
+                "output_folder",
+                DEFAULT_OUTPUT_FOLDER,
+            )
+        ),
     )
 
-    if Path(folder).exists():
-        st.success("Directory exists.")
+
+    path = Path(
+        folder,
+    )
+
+
+    if path.exists():
+
+        st.success(
+            "Directory exists.",
+        )
+
+        files = list(
+            path.glob(
+                "*.xlsx"
+            )
+        )
+
+        st.info(
+            f"{len(files)} Excel reports found.",
+        )
+
 
     else:
-        st.warning("Directory not found.")
+
+        st.warning(
+            "Directory does not exist.",
+        )
 
 
 # ============================================================
@@ -151,27 +214,63 @@ def render_maintenance() -> None:
 
     st.divider()
 
-    st.subheader("Maintenance")
+    st.subheader(
+        "Maintenance",
+    )
 
-    left, right = st.columns(2)
 
-    with left:
+    c1, c2, c3 = st.columns(3)
+
+
+    with c1:
+
         if st.button(
             "🧹 Clear Cache",
             use_container_width=True,
         ):
+
             st.cache_data.clear()
 
-            st.success("Cache cleared.")
+            st.success(
+                "Cache cleared.",
+            )
 
-    with right:
+
+    with c2:
+
         if st.button(
-            "🔄 Reset Session",
+            "🔄 Refresh Reports",
             use_container_width=True,
         ):
+
+            with st.spinner(
+                "Reloading latest reports...",
+            ):
+
+                refresh_reports()
+
+
+            st.success(
+                "Reports refreshed.",
+            )
+
+            st.rerun()
+
+
+    with c3:
+
+        if st.button(
+            "🗑 Reset Session",
+            use_container_width=True,
+        ):
+
             clear_session()
 
-            st.success("Session reset.")
+            st.success(
+                "Session reset.",
+            )
+
+            st.rerun()
 
 
 # ============================================================
@@ -181,12 +280,15 @@ def render_maintenance() -> None:
 
 def render_environment() -> None:
     """
-    Display system environment.
+    Display environment details.
     """
 
     st.divider()
 
-    st.subheader("Environment")
+    st.subheader(
+        "Environment",
+    )
+
 
     env = pd.DataFrame(
         {
@@ -198,16 +300,18 @@ def render_environment() -> None:
                 "Python",
                 "Platform",
             ],
+
             "Value": [
                 "Institutional Strategy Platform",
                 APP_VERSION,
                 "Streamlit",
                 st.__version__,
                 platform.python_version(),
-                platform.system(),
+                platform.platform(),
             ],
         }
     )
+
 
     st.dataframe(
         env,
@@ -223,22 +327,37 @@ def render_environment() -> None:
 
 def render_report_status() -> None:
     """
-    Display loaded report status.
+    Display report loading status.
     """
 
     st.divider()
 
-    st.subheader("Loaded Reports")
+    st.subheader(
+        "Loaded Reports",
+    )
+
 
     rows = []
 
+
     for name, key in REPORT_KEYS.items():
+
+        loaded = key in st.session_state
+
+
         rows.append(
             {
                 "Report": name,
-                "Status": "Loaded" if key in st.session_state else "Not Loaded",
+                "Session Key": key,
+                "Status": (
+                    "Loaded"
+                    if loaded
+                    else
+                    "Not Loaded"
+                ),
             }
         )
+
 
     st.dataframe(
         pd.DataFrame(rows),
@@ -259,35 +378,58 @@ def render_about() -> None:
 
     st.divider()
 
+
     with st.expander(
         "About Institutional Strategy Platform",
         expanded=False,
     ):
-        st.markdown(f"""
-### Institutional Strategy Comparison Platform
+
+        st.markdown(
+            f"""
+## Institutional Strategy Comparison Platform
 
 **Version:** {APP_VERSION}
 
-#### Modules
+
+### Analytics Modules
 
 - Strategy Comparison
-- Stock Comparison
+- Stock Analytics
 - Institutional Leaderboards
 - Portfolio Construction
-- Correlation Analysis
-- Robustness Analysis
+- Correlation Analytics
+- Robustness Evaluation
 - Executive Dashboard
-- Excel Report Generation
+- Report Generation
 
 
-#### Technology Stack
+### Technology Stack
 
 - Python
 - Streamlit
 - Pandas
 - NumPy
 - Plotly
-""")
+- Excel Reporting Engine
+"""
+        )
+
+
+# ============================================================
+# Footer
+# ============================================================
+
+
+def render_footer() -> None:
+    """
+    Render footer.
+    """
+
+    st.divider()
+
+    st.caption(
+        "Institutional Strategy Comparison Platform • Settings"
+    )
 
 
 # ============================================================
@@ -314,13 +456,13 @@ def main() -> None:
 
     render_about()
 
+    render_footer()
+
 
 # ============================================================
 # Entry Point
 # ============================================================
 
 if __name__ == "__main__":
-    main()
 
-else:
     main()

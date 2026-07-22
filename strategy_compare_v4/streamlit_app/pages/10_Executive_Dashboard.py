@@ -9,14 +9,19 @@ from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
+
 from components.charts import (
     correlation_heatmap,
     pie_chart,
     recommendation_chart,
 )
+
 from components.metrics import executive_dashboard
+
 from services.loader import get_sheet
+
 from themes import apply_theme
+
 
 # ============================================================
 # Page Configuration
@@ -37,18 +42,39 @@ apply_theme()
 
 PAGE_TITLE = "📊 Executive Dashboard"
 
-PAGE_CAPTION = "Enterprise-level overview of the complete strategy ecosystem."
+PAGE_CAPTION = (
+    "Enterprise-level overview of the complete strategy ecosystem."
+)
 
 
 TOP_RECORDS = 10
 
 
 DASHBOARD_SHEETS = {
-    "strategy": "Strategy Ranking",
-    "recommendations": "Recommendations",
-    "stock": "Stock Rankings",
-    "portfolio": "Portfolio",
-    "correlation": "Heatmap",
+    "strategy": (
+        "strategy_report",
+        "Strategy Ranking",
+    ),
+
+    "recommendations": (
+        "strategy_report",
+        "Recommendations",
+    ),
+
+    "stock": (
+        "stock_report",
+        "Stock Rankings",
+    ),
+
+    "portfolio": (
+        "portfolio_report",
+        "Portfolio",
+    ),
+
+    "correlation": (
+        "correlation_report",
+        "Heatmap",
+    ),
 }
 
 
@@ -62,9 +88,13 @@ def render_header() -> None:
     Render dashboard header.
     """
 
-    st.title(PAGE_TITLE)
+    st.title(
+        PAGE_TITLE,
+    )
 
-    st.caption(PAGE_CAPTION)
+    st.caption(
+        PAGE_CAPTION,
+    )
 
     st.divider()
 
@@ -83,7 +113,10 @@ def validate_session() -> None:
         "reports_loaded",
         False,
     ):
-        st.warning("Please load reports from the Data Load page.")
+
+        st.warning(
+            "Please load reports from the Data Load page.",
+        )
 
         st.stop()
 
@@ -93,23 +126,41 @@ def validate_session() -> None:
 # ============================================================
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(
+    show_spinner=False,
+)
 def load_dashboard_data() -> dict[str, pd.DataFrame]:
     """
-    Load executive dashboard datasets.
+    Load executive datasets.
     """
 
-    return {
-        key: get_sheet(
-            (
-                st.session_state[f"{key}_report"]
-                if key != "recommendations"
-                else st.session_state.strategy_report
-            ),
-            sheet,
+    data = {}
+
+
+    for key, (
+        session_key,
+        sheet_name,
+    ) in DASHBOARD_SHEETS.items():
+
+        workbook = st.session_state.get(
+            session_key,
         )
-        for key, sheet in DASHBOARD_SHEETS.items()
-    }
+
+
+        if workbook is None:
+
+            data[key] = pd.DataFrame()
+
+            continue
+
+
+        data[key] = get_sheet(
+            workbook,
+            sheet_name,
+        )
+
+
+    return data
 
 
 # ============================================================
@@ -125,13 +176,28 @@ def validate_data(
     """
 
     if not data:
-        st.error("Executive dashboard data unavailable.")
+
+        st.error(
+            "Executive dashboard data unavailable.",
+        )
+
+        st.stop()
+
+
+    if not any(
+        not df.empty
+        for df in data.values()
+    ):
+
+        st.error(
+            "No executive dashboard data found.",
+        )
 
         st.stop()
 
 
 # ============================================================
-# KPI Section
+# Executive KPIs
 # ============================================================
 
 
@@ -139,20 +205,32 @@ def render_kpis(
     data: dict[str, pd.DataFrame],
 ) -> None:
     """
-    Render executive KPIs.
+    Render executive KPI cards.
     """
 
     executive_dashboard(
-        data["strategy"],
-        data["stock"],
-        data["portfolio"],
+        data.get(
+            "strategy",
+            pd.DataFrame(),
+        ),
+
+        data.get(
+            "stock",
+            pd.DataFrame(),
+        ),
+
+        data.get(
+            "portfolio",
+            pd.DataFrame(),
+        ),
     )
+
 
     st.divider()
 
 
 # ============================================================
-# Recommendation Overview
+# Recommendation Intelligence
 # ============================================================
 
 
@@ -166,38 +244,58 @@ def render_recommendations(
 
     left, right = st.columns(2)
 
+
     with left:
-        st.subheader("Recommendation Mix")
+
+        st.subheader(
+            "Strategy Recommendation Mix",
+        )
+
 
         if not recommendation_df.empty:
+
             recommendation_chart(
                 recommendation_df,
             )
 
-    with right:
-        st.subheader("Stock Recommendation Mix")
 
-        if "Recommendation" in stock_df.columns and "Stock" in stock_df.columns:
+    with right:
+
+        st.subheader(
+            "Stock Recommendation Mix",
+        )
+
+
+        if (
+            "Recommendation" in stock_df.columns
+            and not stock_df.empty
+        ):
+
             allocation = (
-                stock_df.groupby("Recommendation")
+                stock_df
+                .groupby(
+                    "Recommendation",
+                )
                 .size()
                 .reset_index(
                     name="Count",
                 )
             )
 
+
             pie_chart(
                 allocation,
                 names="Recommendation",
                 values="Count",
-                title="Stock Recommendation Mix",
+                title="Stock Recommendations",
             )
+
 
     st.divider()
 
 
 # ============================================================
-# Correlation
+# Diversification
 # ============================================================
 
 
@@ -209,14 +307,20 @@ def render_correlation(
     """
 
     if correlation_df.empty:
+
         return
 
-    st.subheader("Diversification Overview")
+
+    st.subheader(
+        "Diversification Overview",
+    )
+
 
     correlation_heatmap(
         correlation_df,
         "Correlation Matrix",
     )
+
 
     st.divider()
 
@@ -230,24 +334,38 @@ def render_top_strategies(
     df: pd.DataFrame,
 ) -> None:
     """
-    Display best strategies.
+    Display strongest strategies.
     """
 
-    st.subheader("Top 10 Strategies")
+    if df.empty:
+
+        return
+
+
+    st.subheader(
+        "Top Strategies",
+    )
+
 
     if "Composite Score" in df.columns:
-        top = df.sort_values(
-            "Composite Score",
-            ascending=False,
-        ).head(
-            TOP_RECORDS,
+
+        top = (
+            df.sort_values(
+                "Composite Score",
+                ascending=False,
+            )
+            .head(
+                TOP_RECORDS,
+            )
         )
+
 
         st.dataframe(
             top,
             use_container_width=True,
             hide_index=True,
         )
+
 
     st.divider()
 
@@ -261,24 +379,38 @@ def render_top_stocks(
     df: pd.DataFrame,
 ) -> None:
     """
-    Display best stocks.
+    Display strongest stocks.
     """
 
-    st.subheader("Top 10 Stocks")
+    if df.empty:
+
+        return
+
+
+    st.subheader(
+        "Top Stocks",
+    )
+
 
     if "Institutional Score" in df.columns:
-        top = df.sort_values(
-            "Institutional Score",
-            ascending=False,
-        ).head(
-            TOP_RECORDS,
+
+        top = (
+            df.sort_values(
+                "Institutional Score",
+                ascending=False,
+            )
+            .head(
+                TOP_RECORDS,
+            )
         )
+
 
         st.dataframe(
             top,
             use_container_width=True,
             hide_index=True,
         )
+
 
     st.divider()
 
@@ -292,20 +424,42 @@ def render_portfolio_snapshot(
     df: pd.DataFrame,
 ) -> None:
     """
-    Display portfolio overview.
+    Render portfolio overview.
     """
 
-    st.subheader("Portfolio Snapshot")
-
     if df.empty:
-        st.info("Portfolio data unavailable.")
 
         return
 
+
+    st.subheader(
+        "Portfolio Snapshot",
+    )
+
+
     st.dataframe(
-        df,
+        df.head(
+            TOP_RECORDS,
+        ),
         use_container_width=True,
         hide_index=True,
+    )
+
+
+# ============================================================
+# Footer
+# ============================================================
+
+
+def render_footer() -> None:
+    """
+    Render footer.
+    """
+
+    st.divider()
+
+    st.caption(
+        "Institutional Strategy Comparison Platform • Executive Dashboard"
     )
 
 
@@ -321,38 +475,69 @@ def main() -> None:
 
     render_header()
 
+
     validate_session()
 
+
     data = load_dashboard_data()
+
 
     validate_data(
         data,
     )
 
+
     render_kpis(
         data,
     )
 
+
     render_recommendations(
-        data["recommendations"],
-        data["stock"],
+        data.get(
+            "recommendations",
+            pd.DataFrame(),
+        ),
+
+        data.get(
+            "stock",
+            pd.DataFrame(),
+        ),
     )
+
 
     render_correlation(
-        data["correlation"],
+        data.get(
+            "correlation",
+            pd.DataFrame(),
+        ),
     )
+
 
     render_top_strategies(
-        data["strategy"],
+        data.get(
+            "strategy",
+            pd.DataFrame(),
+        ),
     )
+
 
     render_top_stocks(
-        data["stock"],
+        data.get(
+            "stock",
+            pd.DataFrame(),
+        ),
     )
 
+
     render_portfolio_snapshot(
-        data["portfolio"],
+        data.get(
+            "portfolio",
+            pd.DataFrame(),
+        ),
     )
+
+
+    render_footer()
 
 
 # ============================================================
@@ -360,7 +545,5 @@ def main() -> None:
 # ============================================================
 
 if __name__ == "__main__":
-    main()
 
-else:
     main()

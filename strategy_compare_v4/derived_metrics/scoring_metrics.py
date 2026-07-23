@@ -70,6 +70,12 @@ class ScoringMetrics:
         "Holding Efficiency",
         "Profit Velocity",
         "Winning Exit %",
+        "Validation Score",
+        "Consistency Score",
+        "Capital Preservation",
+        "Safety Margin",
+        "Time Efficiency",
+        "Trade Density",
         "Institutional Exit Score",
         "Institutional Opportunity Score",
         "Institutional Efficiency Score",
@@ -186,15 +192,28 @@ class ScoringMetrics:
 
     def reliability_score(self):
         """
-        Measures repeatability
-        and operational consistency.
+        Measures strategy reliability.
+
+        Components:
+
+        Exit Quality       30%
+        Opportunity        20%
+        Efficiency        20%
+        Validation        15%
+        Consistency       15%
 
         """
 
         self.df["Reliability Score"] = (
-            self.norm_col("Institutional Exit Score") * 0.40
-            + self.norm_col("Institutional Opportunity Score") * 0.35
-            + self.norm_col("Institutional Efficiency Score") * 0.25
+            self.norm_col("Institutional Exit Score") * 0.30
+            +
+            self.norm_col("Institutional Opportunity Score") * 0.20
+            +
+            self.norm_col("Institutional Efficiency Score") * 0.20
+            +
+            self.norm_col("Validation Score") * 0.15
+            +
+            self.norm_col("Consistency Score") * 0.15
         )
 
         return self
@@ -205,30 +224,26 @@ class ScoringMetrics:
 
     def opportunity_score(self):
         """
-        Measures opportunity.
-
-        Reduced return bias.
-
-        Previous:
-
-        Profit Velocity 60%
-        Annual Return 40%
-
-
-        New:
-
-        Profit Velocity 70%
-        Annual Return 30%
+        Measures opportunity availability.
 
         """
 
         self.df["Opportunity Score"] = (
-            self.norm_col("Profit Velocity") * 0.70
-            + self.norm_col("Annual Return %") * 0.30
+            self.norm_col(
+                "Institutional Opportunity Score"
+            ) * 0.60
+            +
+            self.norm_col(
+                "Profit Velocity"
+            ) * 0.25
+            +
+            self.norm_col(
+                "Trade Density"
+            ) * 0.15
         )
 
         return self
-
+    
     # --------------------------------------------------------
     # Efficiency Score
     # --------------------------------------------------------
@@ -237,16 +252,20 @@ class ScoringMetrics:
         """
         Measure capital and time efficiency.
 
-        Components:
-
-        Holding Efficiency              50%
-        Institutional Efficiency Score 50%
-
         """
 
         self.df["Efficiency Score"] = (
-            self.norm_col("Holding Efficiency") * 0.50
-            + self.norm_col("Institutional Efficiency Score") * 0.50
+            self.norm_col(
+                "Institutional Efficiency Score"
+            ) * 0.50
+            +
+            self.norm_col(
+                "Holding Efficiency"
+            ) * 0.25
+            +
+            self.norm_col(
+                "Time Efficiency"
+            ) * 0.25
         )
 
         return self
@@ -257,30 +276,26 @@ class ScoringMetrics:
 
     def risk_score(self):
         """
-        Institutional risk assessment.
-
-        Previous model:
-
-        Risk Adjusted Return 70%
-        Exit Score            30%
-
-
-        New model:
-
-        Risk Adjusted Return     40%
-        Exit Quality             20%
-        Efficiency               15%
-        Opportunity Stability    15%
-        Return Protection        10%
+        Institutional risk quality.
 
         """
 
         self.df["Risk Score"] = (
-            self.norm_col("Risk Adjusted Return") * 0.40
-            + self.norm_col("Institutional Exit Score") * 0.20
-            + self.norm_col("Institutional Efficiency Score") * 0.15
-            + self.norm_col("Institutional Opportunity Score") * 0.15
-            + self.norm_col("Holding Efficiency") * 0.10
+            self.norm_col(
+                "Risk Adjusted Return"
+            ) * 0.40
+            +
+            self.norm_col(
+                "Institutional Exit Score"
+            ) * 0.25
+            +
+            self.norm_col(
+                "Capital Preservation"
+            ) * 0.20
+            +
+            self.norm_col(
+                "Safety Margin"
+            ) * 0.15
         )
 
         return self
@@ -311,15 +326,26 @@ class ScoringMetrics:
 
     def consistency_score(self):
         """
-        Measures stability
-        of historical behaviour.
+        Measures stability.
 
         """
 
         self.df["Consistency Score"] = (
-            self.norm_col("Institutional Exit Score") * 0.35
-            + self.norm_col("Institutional Opportunity Score") * 0.35
-            + self.norm_col("Institutional Efficiency Score") * 0.30
+            self.norm_col(
+                "Validation Score"
+            ) * 0.30
+            +
+            self.norm_col(
+                "Institutional Exit Score"
+            ) * 0.25
+            +
+            self.norm_col(
+                "Institutional Efficiency Score"
+            ) * 0.25
+            +
+            self.norm_col(
+                "Institutional Opportunity Score"
+            ) * 0.20
         )
 
         return self
@@ -329,16 +355,17 @@ class ScoringMetrics:
     # --------------------------------------------------------
 
     def institutional_strength(self):
-        """
-        Overall strategic strength.
-
-        """
 
         self.df["Institutional Strength"] = (
-            self.df["Edge Score"] * 0.30
-            + self.df["Reliability Score"] * 0.30
-            + self.df["Opportunity Score"] * 0.20
-            + self.df["Efficiency Score"] * 0.20
+            self.df["Edge Score"] * 0.25
+            +
+            self.df["Reliability Score"] * 0.25
+            +
+            self.df["Risk Score"] * 0.25
+            +
+            self.df["Efficiency Score"] * 0.15
+            +
+            self.df["Opportunity Score"] * 0.10
         )
 
         return self
@@ -435,16 +462,19 @@ class ScoringMetrics:
     # --------------------------------------------------------
 
     def alpha_score(self):
-        """
-        Excess return edge after
-        risk adjustment.
 
-        """
-
-        self.df["Alpha Score"] = self.df["Edge Score"] - (self.df["Risk Score"] * 0.25)
+        self.df["Alpha Score"] = (
+            self.df["Edge Score"]
+            -
+            (
+                self.df["Risk Score"]
+                *
+                0.25
+            )
+        )
 
         return self
-
+    
     # --------------------------------------------------------
     # Institutional Grade
     # --------------------------------------------------------

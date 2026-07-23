@@ -22,6 +22,8 @@ import time
 import numpy as np
 import pandas as pd
 
+from strategy_compare_v4.utils.math_utils import safe_divide
+
 from strategy_compare_v4.config.constants import (
     COMPOSITE_SCORE,
     INSTITUTION_RANK,
@@ -152,10 +154,25 @@ class StockComparisonEngine:
         strategy for each stock.
         """
 
-        idx = self.df.groupby("Stock")[COMPOSITE_SCORE].idxmax()
+        filtered = self.df.copy()
+
+
+        if "Trades" in filtered.columns:
+
+            filtered = filtered.loc[
+                filtered["Trades"] >= 30
+            ]
+
+
+        idx = (
+            filtered
+            .groupby("Stock")[COMPOSITE_SCORE]
+            .idxmax()
+        )
+
 
         self.best_strategies = (
-            self.df.loc[idx]
+            filtered.loc[idx]
             .sort_values(
                 COMPOSITE_SCORE,
                 ascending=False,
@@ -164,6 +181,7 @@ class StockComparisonEngine:
                 drop=True,
             )
         )
+
 
         logger.info(
             "Best strategy identified for %d stocks.",
@@ -182,80 +200,97 @@ class StockComparisonEngine:
         statistics for every stock.
         """
 
-        self.stock_summary = self.df.groupby(
-            "Stock",
-            as_index=False,
-        ).agg(
-            Strategies=(
-                "Strategy",
-                "count",
-            ),
-            AverageComposite=(
-                COMPOSITE_SCORE,
-                "mean",
-            ),
-            MaximumComposite=(
-                COMPOSITE_SCORE,
-                "max",
-            ),
-            MinimumComposite=(
-                COMPOSITE_SCORE,
-                "min",
-            ),
-            AverageExpectancy=(
-                "Expectancy",
-                "mean",
-            ),
-            AverageProfitFactor=(
-                "Profit Factor",
-                "mean",
-            ),
-            AverageRewardRisk=(
-                "Reward Risk",
-                "mean",
-            ),
-            EdgeScore=(
-                "Edge Score",
-                "mean",
-            ),
-            ReliabilityScore=(
-                "Reliability Score",
-                "mean",
-            ),
-            EfficiencyScore=(
-                "Efficiency Score",
-                "mean",
-            ),
-            RiskScore=(
-                "Risk Score",
-                "mean",
-            ),
-            ReturnScore=(
-                "Return Score",
-                "mean",
-            ),
-            OpportunityScore=(
-                "Opportunity Score",
-                "mean",
-            ),
+        def weighted_average(group, column):
+
+            return np.average(
+                group[column],
+                weights=group["Trades"],
+            )
+
+
+        self.stock_summary = (
+            self.df
+            .groupby(
+                "Stock",
+                as_index=False,
+            )
+            .apply(
+                lambda x: pd.Series(
+                    {
+                        "Strategies":
+                            x["Strategy"].count(),
+
+                        "AverageComposite":
+                            weighted_average(
+                                x,
+                                COMPOSITE_SCORE,
+                            ),
+
+                        "AverageExpectancy":
+                            weighted_average(
+                                x,
+                                "Expectancy",
+                            ),
+
+                        "AverageProfitFactor":
+                            weighted_average(
+                                x,
+                                "Profit Factor",
+                            ),
+
+                        "AverageRewardRisk":
+                            weighted_average(
+                                x,
+                                "Reward Risk",
+                            ),
+
+                        "Edge Score":
+                            weighted_average(
+                                x,
+                                "Edge Score",
+                            ),
+
+                        "Reliability Score":
+                            weighted_average(
+                                x,
+                                "Reliability Score",
+                            ),
+
+                        "Efficiency Score":
+                            weighted_average(
+                                x,
+                                "Efficiency Score",
+                            ),
+
+                        "Risk Score":
+                            weighted_average(
+                                x,
+                                "Risk Score",
+                            ),
+
+                        "Return Score":
+                            weighted_average(
+                                x,
+                                "Return Score",
+                            ),
+
+                        "Opportunity Score":
+                            weighted_average(
+                                x,
+                                "Opportunity Score",
+                            ),
+                    }
+                )
+            )
+            .reset_index()
         )
+
 
         self.stock_summary = round_dataframe(
             self.stock_summary,
             decimals=2,
         )
 
-        self.stock_summary.rename(
-            columns={
-                "EdgeScore": "Edge Score",
-                "ReliabilityScore": "Reliability Score",
-                "EfficiencyScore": "Efficiency Score",
-                "RiskScore": "Risk Score",
-                "ReturnScore": "Return Score",
-                "OpportunityScore": "Opportunity Score",
-            },
-            inplace=True,
-        )
 
         logger.info(
             "Generated stock summary for %d stocks.",
@@ -311,25 +346,37 @@ class StockComparisonEngine:
 
     def consistency_score(self):
         """
-        Lower variation indicates
-        higher institutional consistency.
+        Measure strategy consistency.
+
+        Higher is better.
         """
 
         self.consistency = self.statistics.copy()
 
+
         self.consistency["Consistency Score"] = (
-            100 - self.consistency["StdComposite"].fillna(0)
+            1
+            -
+            safe_divide(
+                self.consistency["StdComposite"],
+                self.consistency["Mean"],
+            )
         ).clip(
-            lower=0,
-            upper=100,
-        )
+            0,
+            1,
+        ) * 100
+
 
         self.consistency = round_dataframe(
             self.consistency,
             decimals=2,
         )
 
-        logger.info("Consistency scores computed.")
+
+        logger.info(
+            "Consistency scores computed."
+        )
+
 
         return self
 
@@ -382,9 +429,21 @@ class StockComparisonEngine:
             ),
         )
 
-        agreement["Agreement Score"] = (100 - agreement["CompositeStd"].fillna(0)).clip(
-            lower=0,
-            upper=100,
+        agreement["Agreement Score"] = (
+            (
+                1
+                -
+                safe_divide(
+                    agreement["CompositeStd"],
+                    agreement["CompositeMean"],
+                )
+            )
+            .clip(
+                0,
+                1,
+            )
+            *
+            100
         )
 
         agreement = round_dataframe(
@@ -413,22 +472,47 @@ class StockComparisonEngine:
 
     def institutional_score(self):
         """
-        Calculate the final institutional
-        score for every stock.
+        Calculate final institutional
+        stock score.
         """
 
         self.stock_rankings["Institutional Score"] = (
-            self.stock_rankings["AverageComposite"] * 0.60
-            + self.stock_rankings["Consistency Score"] * 0.25
-            + self.stock_rankings["Agreement Score"] * 0.15
+
+            self.stock_rankings["AverageComposite"]
+            * 0.40
+
+            +
+
+            self.stock_rankings["Reliability Score"]
+            * 0.20
+
+            +
+
+            self.stock_rankings["Risk Score"]
+            * 0.20
+
+            +
+
+            self.stock_rankings["Consistency Score"]
+            * 0.10
+
+            +
+
+            self.stock_rankings["Agreement Score"]
+            * 0.10
         )
+
 
         self.stock_rankings = round_dataframe(
             self.stock_rankings,
             decimals=2,
         )
 
-        logger.info("Institutional scores calculated.")
+
+        logger.info(
+            "Institutional scores calculated."
+        )
+
 
         return self
 
@@ -478,6 +562,8 @@ class StockComparisonEngine:
                     "Risk Score",
                     "Return Score",
                     "Opportunity Score",
+                    "Consistency Score",
+                    "Agreement Score",
                 ]
             ]
             .rename(

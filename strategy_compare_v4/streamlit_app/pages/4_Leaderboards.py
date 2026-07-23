@@ -45,7 +45,7 @@ LEADERBOARD_SHEETS = {
     "overall": "Overall",
     "stocks": "Stocks",
     "strategies": "Strategies",
-    "expectancy": "Expectancy",
+    "expectancy": "Weighted Expectancy",
     "profit_factor": "Profit Factor",
     "edge": "Edge",
     "reliability": "Reliability",
@@ -54,8 +54,7 @@ LEADERBOARD_SHEETS = {
     "risk": "Risk",
 }
 
-
-TOP_ROWS = 20
+TOP_ROWS = 25
 
 
 # ============================================================
@@ -229,7 +228,7 @@ def render_leaderboard(
             "Institutional Score",
             "Composite",
             "Edge Score",
-            "Expectancy",
+            "Weighted Expectancy",
             "Profit Factor",
             "Reliability",
             "Efficiency",
@@ -241,8 +240,15 @@ def render_leaderboard(
 
     if x_col and y_col:
 
-        chart_df = df.head(
-            TOP_ROWS,
+        chart_df = (
+            df
+            .sort_values(
+                y_col,
+                ascending=False,
+            )
+            .head(
+                TOP_ROWS,
+            )
         )
 
 
@@ -250,7 +256,7 @@ def render_leaderboard(
             chart_df,
             x=x_col,
             y=y_col,
-            color=y_col,
+            color=x_col,
             title=f"Top {title}",
         )
 

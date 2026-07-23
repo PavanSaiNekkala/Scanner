@@ -529,7 +529,7 @@ def profit_factor(
         # all winning strategy
 
         if gross_profit > 0:
-            return 999.0
+            return 10.0
 
         return 0.0
 
@@ -871,9 +871,13 @@ def sharpe_ratio(
     if abs(volatility) < EPSILON:
         return 0.0
 
-    annual_factor = np.sqrt(len(returns) / years)
+    annual_factor = np.sqrt(252)
 
-    return float((excess.mean() / volatility) * annual_factor)
+    return float(
+        (excess.mean() / volatility)
+        *
+        annual_factor
+    )
 
 
 # ==========================================================
@@ -909,9 +913,14 @@ def sortino_ratio(
     if abs(downside_std) < EPSILON:
         return 0.0
 
-    annual_factor = np.sqrt(len(returns) / years)
+    annual_factor = np.sqrt(252)
 
-    return float(((returns.mean() - target_return) / downside_std) * annual_factor)
+    return float(
+        ((returns.mean() - target_return)
+        / downside_std)
+        *
+        annual_factor
+    )
 
 
 # ==========================================================
@@ -929,20 +938,20 @@ def recovery_factor(
     if equity.empty:
         return 0.0
 
-    net_profit = (equity.iloc[-1] / INITIAL_CAPITAL - 1) * 100
+    net_profit = (
+        equity.iloc[-1]
+        -
+        INITIAL_CAPITAL
+    )
 
     mdd = maximum_drawdown(
         equity,
     )
 
-    if mdd <= EPSILON:
-        return 0.0
-
     return safe_divide(
         net_profit,
         mdd,
     )
-
 
 # ==========================================================
 # Calmar Ratio
@@ -1221,26 +1230,17 @@ def exit_statistics(
 # Efficiency Metrics
 # ==========================================================
 
-
 def holding_efficiency(
-    returns: pd.Series,
+    annual_return: float,
     days: pd.Series,
-) -> float:
-    """
-    Return generated per holding day.
-    """
-
-    if returns.empty:
-        return 0.0
-
-    avg_return = returns.mean()
+):
 
     avg_days = days.mean()
 
-    if avg_days <= 0:
-        return 0.0
-
-    return float(avg_return / avg_days)
+    return safe_divide(
+        annual_return,
+        avg_days,
+    )
 
 
 def capital_efficiency(
@@ -1278,36 +1278,38 @@ def trade_velocity(
 # Opportunity Metrics
 # ==========================================================
 
-
 def opportunity_score(
     returns: pd.Series,
-) -> float:
-    """
-    Measures consistency of opportunity.
-
-    Based on:
-    - trade count
-    - expectancy
-    - win rate
-    """
+):
 
     if returns.empty:
         return 0.0
 
-    trades = len(returns)
 
-    expectancy_value = expectancy(
-        returns,
+    trade_score = min(
+        len(returns) / 500,
+        1,
     )
 
-    win = win_rate(
-        returns,
+
+    expectancy_score = max(
+        expectancy(returns),
+        0,
     )
 
-    score = min(trades / 100, 1) * max(expectancy_value, 0) * (win / 100)
 
-    return float(score)
+    win_score = win_rate(
+        returns
+    ) / 100
 
+
+    return float(
+        trade_score
+        *
+        expectancy_score
+        *
+        win_score
+    )
 
 # ==========================================================
 # Final Metrics Engine
@@ -1396,12 +1398,6 @@ def compute_trade_metrics(
             capital_efficiency(
                 cagr,
                 max_dd,
-            ),
-            3,
-        ),
-        "Opportunity Score": round(
-            opportunity_score(
-                returns,
             ),
             3,
         ),

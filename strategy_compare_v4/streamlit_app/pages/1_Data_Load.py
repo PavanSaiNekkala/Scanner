@@ -217,10 +217,18 @@ def render_report_inventory():
         data.append(
             {
                 "Report": file.name,
-                "Modified": pd.to_datetime(
-                    file.stat().st_mtime,
-                    unit="s",
-                ).strftime("%Y-%m-%d %H:%M"),
+                "Modified":
+                    pd.to_datetime(
+                        file.stat().st_mtime,
+                        unit="s",
+                        utc=True,
+                    )
+                    .tz_convert(
+                        "Asia/Kolkata"
+                    )
+                    .strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
                 "Size MB": round(
                     file.stat().st_size / (1024 * 1024),
                     2,

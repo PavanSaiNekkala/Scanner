@@ -109,11 +109,9 @@ def recommendation_badge(
 
     st.markdown(f"### {icon} {recommendation}")
 
-
 # ============================================================
 # Strategy Summary Card
 # ============================================================
-
 
 def strategy_summary_card(
     df: pd.DataFrame | None,
@@ -212,9 +210,63 @@ def strategy_summary_card(
 
 
 # ============================================================
-# Portfolio Summary Card
+# Stock Summary Card
 # ============================================================
 
+def stock_summary_card(
+    df,
+):
+    """
+    Display stock summary KPIs.
+    """
+
+    if df is None or df.empty:
+        return
+
+
+    c1, c2, c3, c4 = st.columns(4)
+
+
+    with c1:
+        st.metric(
+            "Stocks",
+            len(df),
+        )
+
+
+    with c2:
+        if "Institutional Score" in df.columns:
+            st.metric(
+                "Avg Institutional Score",
+                round(
+                    df["Institutional Score"].mean(),
+                    2,
+                ),
+            )
+
+
+    with c3:
+        if "Recommendation" in df.columns:
+            st.metric(
+                "Recommendations",
+                df["Recommendation"].nunique(),
+            )
+
+
+    with c4:
+        if "Edge Score" in df.columns:
+            st.metric(
+                "Avg Edge Score",
+                round(
+                    df["Edge Score"].mean(),
+                    2,
+                ),
+            )
+
+
+# ============================================================
+# Portfolio Summary Card
+# ============================================================
 
 def portfolio_summary_card(
     df: pd.DataFrame | None,

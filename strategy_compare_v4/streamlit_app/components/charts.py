@@ -105,14 +105,26 @@ def pie_chart(
         st.info("No data available.")
         return
 
+    recommendation_colors = {
+        "Strong Buy": "#00A86B",
+        "Buy": "#2ECC71",
+        "Watch": "#F1C40F",
+        "Improve": "#3498DB",
+        "Avoid": "#E67E22",
+        "Reject": "#E74C3C",
+    }
+
+
     fig = px.pie(
         df,
         names=names,
         values=values,
-        hole=0.45,
+        hole=0.4,
         title=title,
+        color=names,
+        color_discrete_map=recommendation_colors,
     )
-
+    
     st.plotly_chart(
         fig,
         use_container_width=True,
@@ -293,22 +305,57 @@ def radar_chart(
 # Recommendation Distribution
 # ---------------------------------------------------------
 
-
 def recommendation_chart(
     df: pd.DataFrame,
 ):
     """Recommendation distribution."""
 
-    if df is None or df.empty or "Recommendation" not in df.columns:
+    if df is None or df.empty:
         st.info("Recommendation data unavailable.")
         return
 
-    summary = df["Recommendation"].value_counts().reset_index()
 
-    summary.columns = [
-        "Recommendation",
-        "Count",
-    ]
+    if "Recommendation" in df.columns:
+
+        summary = (
+            df["Recommendation"]
+            .value_counts()
+            .reset_index()
+        )
+
+        summary.columns = [
+            "Recommendation",
+            "Count",
+        ]
+
+
+    elif "Institution Recommendation" in df.columns:
+
+        summary = df.copy()
+
+        summary = summary.rename(
+            columns={
+                "Institution Recommendation":
+                "Recommendation"
+            }
+        )
+
+
+    else:
+        st.info(
+            "Recommendation column unavailable."
+        )
+        return
+
+    recommendation_colors = {
+        "Strong Buy": "#00A86B",
+        "Buy": "#2ECC71",
+        "Watch": "#F1C40F",
+        "Improve": "#3498DB",
+        "Avoid": "#E67E22",
+        "Reject": "#E74C3C",
+    }
+
 
     fig = px.bar(
         summary,
@@ -317,13 +364,13 @@ def recommendation_chart(
         color="Recommendation",
         text="Count",
         title="Recommendation Distribution",
+        color_discrete_map=recommendation_colors,
     )
 
     st.plotly_chart(
         fig,
         use_container_width=True,
     )
-
 
 # ---------------------------------------------------------
 # Data Preview

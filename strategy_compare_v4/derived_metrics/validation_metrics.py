@@ -203,9 +203,15 @@ class ValidationMetrics:
     def invalid_profit_factor(self):
         """
         Detect invalid profit factor.
+
+        Profit Factor must be positive.
+
         """
 
-        self.df["Invalid Profit Factor"] = (self.df["Profit Factor"] < 0).astype(int)
+        self.df["Invalid Profit Factor"] = (
+            self.df["Profit Factor"] <= 0
+        ).astype(int)
+
 
         return self
 
@@ -373,25 +379,30 @@ class ValidationMetrics:
 
     def logical_errors(self):
         """
-        Detect impossible combinations.
+        Weighted logical error score.
 
-        Examples:
+        Higher value means
+        more severe validation issue.
 
-        - Winning percentage invalid
-        - No trades but returns exist
-        - Invalid risk metrics
         """
 
         errors = (
-            self.df["Zero Trades"]
-            + self.df["Invalid Win%"]
-            + self.df["Invalid Reward Risk"]
-            + self.df["Invalid Profit Factor"]
-            + self.df["Invalid Holding"]
-            + self.df["Invalid Years"]
+            self.df["Zero Trades"] * 3
+            +
+            self.df["Invalid Win%"] * 2
+            +
+            self.df["Invalid Reward Risk"] * 1
+            +
+            self.df["Invalid Profit Factor"] * 1
+            +
+            self.df["Invalid Holding"] * 2
+            +
+            self.df["Invalid Years"] * 2
         )
 
+
         self.df["Logical Errors"] = errors
+
 
         return self
 
@@ -422,58 +433,80 @@ class ValidationMetrics:
         """
         Institutional reliability score.
 
-        Trade quantity + historical duration.
+        Components:
 
-        Formula:
-
-        Trades     70%
-        Years      30%
+        Trade Sample Size 70%
+        Backtest Duration 30%
 
         """
 
-        trade_quality = np.minimum(
-            safe_divide(
-                self.df["Trades"],
-                100,
-            ),
+        trade_quality = (
+            np.log1p(
+                self.df["Trades"]
+            )
+            /
+            np.log1p(1000)
+        ).clip(
+            0,
             1,
         )
 
-        time_quality = np.minimum(
-            safe_divide(
-                self.df["Years"],
-                3,
-            ),
+
+        time_quality = (
+            self.df["Years"]
+            /
+            5
+        ).clip(
+            0,
             1,
         )
 
-        self.df["Statistical Reliability"] = trade_quality * 70 + time_quality * 30
+
+        self.df["Statistical Reliability"] = (
+            trade_quality * 70
+            +
+            time_quality * 30
+        )
+
 
         return self
-
+    
     # ---------------------------------------------------------
     # Validation Consistency
     # ---------------------------------------------------------
 
     def validation_consistency(self):
         """
-        Final validation quality score.
+        Validation quality score.
 
-        Logical errors have higher penalty.
+        Penalizes:
+        - logical errors
+        - statistical anomalies
+        - extreme values
+
         """
 
         penalty = (
-            self.df["Logical Errors"] * 15
-            + self.df["ZScore Outliers"] * 5
-            + self.df["IQR Outliers"] * 5
-            + self.df["Extreme Return"] * 10
-            + self.df["Extreme Expectancy"] * 10
+            self.df["Logical Errors"] * 10
+            +
+            self.df["ZScore Outliers"] * 3
+            +
+            self.df["IQR Outliers"] * 3
+            +
+            self.df["Extreme Return"] * 5
+            +
+            self.df["Extreme Expectancy"] * 5
         )
 
-        self.df["Validation Consistency"] = (100 - penalty).clip(
+
+        self.df["Validation Consistency"] = (
+            100 -
+            penalty
+        ).clip(
             0,
             100,
         )
+
 
         return self
 

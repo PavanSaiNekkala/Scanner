@@ -331,6 +331,9 @@ class StrategyComparisonEngine:
             "Opportunity Score",
             "Risk Score",
             "Return Score",
+            "Consistency Score",
+            "Validation Score",
+            "Confidence Score",
         ]
 
         for column in score_columns:
@@ -413,7 +416,15 @@ class StrategyComparisonEngine:
         for each stock.
         """
 
-        idx = self.comparison_df.groupby("Stock")[COMPOSITE_SCORE].idxmax()
+        filtered = self.comparison_df.loc[
+            self.comparison_df["Trades"] >= 30
+        ]
+
+        idx = (
+            filtered
+            .groupby("Stock")[COMPOSITE_SCORE]
+            .idxmax()
+        )
 
         self.stock_ranking_df = (
             self.comparison_df.loc[idx]
@@ -424,6 +435,13 @@ class StrategyComparisonEngine:
             .reset_index(
                 drop=True,
             )
+        )
+
+        self.stock_ranking_df[
+            INSTITUTION_RANK
+        ] = np.arange(
+            1,
+            len(self.stock_ranking_df)+1
         )
 
         logger.info(
@@ -443,38 +461,196 @@ class StrategyComparisonEngine:
         for each strategy.
         """
 
-        summary = self.comparison_df.groupby(
+        grouped = self.comparison_df.groupby(
             "Strategy",
-            as_index=False,
-        ).agg(
-            {
-                COMPOSITE_SCORE: "mean",
-                "Expectancy": "mean",
-                "Profit Factor": "mean",
-                "Reward Risk": "mean",
-            }
         )
+
+
+        summary = grouped.apply(
+            lambda x: pd.Series(
+                {
+                    "Composite Score": np.average(
+                        x[COMPOSITE_SCORE],
+                        weights=x["Trades"],
+                    ),
+
+                    "Expectancy": np.average(
+                        x["Expectancy"],
+                        weights=x["Trades"],
+                    ),
+
+                    "Profit Factor": np.average(
+                        x["Profit Factor"],
+                        weights=x["Trades"],
+                    ),
+
+                    "Reward Risk": np.average(
+                        x["Reward Risk"],
+                        weights=x["Trades"],
+                    ),
+                }
+            )
+        ).reset_index()
+
+
+        # ---------------------------------------------------------
+        # Trade Weighted Metrics
+        # ---------------------------------------------------------
+
+        weighted_expectancy = (
+            self.comparison_df.assign(
+                Expectancy_Weighted=lambda x:
+                x["Expectancy"] * x["Trades"]
+            )
+            .groupby("Strategy")
+            .agg(
+                {
+                    "Expectancy_Weighted": "sum",
+                    "Trades": "sum",
+                }
+            )
+            .assign(
+                **{
+                    "Weighted Expectancy":
+                    lambda x:
+                    x["Expectancy_Weighted"]
+                    /
+                    x["Trades"]
+                }
+            )
+            .reset_index()
+            [
+                [
+                    "Strategy",
+                    "Weighted Expectancy",
+                ]
+            ]
+        )
+
+        weighted_profit_factor = (
+            grouped.apply(
+                lambda x:
+                (
+                    x["Profit Factor"]
+                    *
+                    x["Trades"]
+                ).sum()
+                /
+                x["Trades"].sum()
+            )
+            .reset_index(
+                name="Weighted Profit Factor",
+            )
+        )
+
+
+        weighted_reward_risk = (
+            grouped.apply(
+                lambda x:
+                (
+                    x["Reward Risk"]
+                    *
+                    x["Trades"]
+                ).sum()
+                /
+                x["Trades"].sum()
+            )
+            .reset_index(
+                name="Weighted Reward Risk",
+            )
+        )
+
+        # ---------------------------------------------------------
+        # Positive Stock Coverage
+        # ---------------------------------------------------------
+
+        positive_stock_coverage = (
+            grouped["Expectancy"]
+            .apply(
+                lambda x:
+                (
+                    x > 0
+                ).sum()
+                /
+                len(x)
+                *
+                100
+            )
+            .reset_index(
+                name="Positive Stock Coverage %",
+            )
+        )
+
+
+        median_expectancy = (
+            grouped["Expectancy"]
+            .median()
+            .reset_index(
+                name="Median Expectancy",
+            )
+        )
+
 
         trades = (
-            self.comparison_df.groupby(
-                "Strategy",
-            )
-            .size()
+            grouped["Trades"]
+            .sum()
             .reset_index(
-                name="Trades",
+                name="Total Trades",
             )
         )
 
+        # ---------------------------------------------------------
+        # Merge All Metrics
+        # ---------------------------------------------------------
+
         self.strategy_ranking_df = summary.merge(
+            weighted_expectancy,
+            on="Strategy",
+            how="left",
+        )
+
+
+        self.strategy_ranking_df = self.strategy_ranking_df.merge(
+            weighted_profit_factor,
+            on="Strategy",
+            how="left",
+        )
+
+
+        self.strategy_ranking_df = self.strategy_ranking_df.merge(
+            positive_stock_coverage,
+            on="Strategy",
+            how="left",
+        )
+
+
+        self.strategy_ranking_df = self.strategy_ranking_df.merge(
+            weighted_reward_risk,
+            on="Strategy",
+            how="left",
+        )
+
+
+        self.strategy_ranking_df = self.strategy_ranking_df.merge(
+            median_expectancy,
+            on="Strategy",
+            how="left",
+        )
+
+
+        self.strategy_ranking_df = self.strategy_ranking_df.merge(
             trades,
             on="Strategy",
             how="left",
         )
 
-        logger.info("Generated strategy summary.")
+
+        logger.info(
+            "Generated institutional strategy summary."
+        )
+
 
         return self
-
     # ---------------------------------------------------------
     # Rank Strategies
     # ---------------------------------------------------------
@@ -485,8 +661,28 @@ class StrategyComparisonEngine:
         average composite score.
         """
 
+        self.strategy_ranking_df[
+            "Adjusted Strategy Score"
+        ] = (
+            self.strategy_ranking_df[COMPOSITE_SCORE]
+            *
+            (
+                1
+                +
+                (
+                    np.tanh(
+                        self.strategy_ranking_df[
+                            "Weighted Expectancy"
+                        ] / 10
+                    )
+                    *
+                    0.25
+                )
+            )
+        ) 
+
         self.strategy_ranking_df = self.strategy_ranking_df.sort_values(
-            COMPOSITE_SCORE,
+            "Adjusted Strategy Score",
             ascending=False,
         ).reset_index(
             drop=True,
@@ -524,6 +720,9 @@ class StrategyComparisonEngine:
                     "Risk Score",
                     "Opportunity Score",
                     "Return Score",
+                    "Consistency Score",
+                    "Validation Score",
+                    "Confidence Score",
                 ]
             ].copy()
         )
@@ -613,7 +812,6 @@ class StrategyComparisonEngine:
     # ---------------------------------------------------------
     # Top Opportunities
     # ---------------------------------------------------------
-
     def top_opportunities(
         self,
         top_n: int = 20,
@@ -623,21 +821,35 @@ class StrategyComparisonEngine:
         opportunities.
         """
 
+        ranking_column = (
+            "Institutional Score"
+            if "Institutional Score"
+            in self.comparison_df.columns
+            else COMPOSITE_SCORE
+        )
+
+
         self.top_opportunities_df = (
-            self.comparison_df.sort_values(
-                COMPOSITE_SCORE,
+            self.comparison_df
+            .sort_values(
+                ranking_column,
                 ascending=False,
             )
-            .head(top_n)
+            .head(
+                top_n,
+            )
             .reset_index(
                 drop=True,
             )
         )
 
+
         logger.info(
-            "Selected top %d opportunities.",
+            "Selected top %d opportunities using %s.",
             top_n,
+            ranking_column,
         )
+
 
         return self
 

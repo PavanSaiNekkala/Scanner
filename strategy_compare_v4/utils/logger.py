@@ -19,6 +19,22 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from datetime import datetime
+import pytz
+
+class ISTFormatter(logging.Formatter):
+
+    def converter(
+        self,
+        timestamp,
+    ):
+        return datetime.fromtimestamp(
+            timestamp,
+            tz=pytz.timezone(
+                "Asia/Kolkata"
+            ),
+        ).timetuple()
+
 # ============================================================
 # Logger Configuration
 # ============================================================
@@ -61,7 +77,7 @@ def get_logger(
 
     logger.propagate = False
 
-    formatter = logging.Formatter(
+    formatter = ISTFormatter(
         fmt=LOG_FORMAT,
         datefmt=DATE_FORMAT,
     )

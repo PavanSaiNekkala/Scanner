@@ -163,22 +163,17 @@ class OpportunityMetrics:
 
     def signals_per_year(self):
         """
-        Estimate annual signals.
+        Estimate annual opportunity count.
+
+        Uses executed trades as
+        opportunity proxy when
+        historical signals are unavailable.
+
         """
 
-        if "Signals today" in self.df.columns:
-            estimated = np.maximum(
-                self.df["Trades / Year"],
-                1,
-            )
-
-            self.df["Signals / Year"] = np.maximum(
-                estimated,
-                self.df["Trades / Year"],
-            )
-
-        else:
-            self.df["Signals / Year"] = self.df["Trades / Year"]
+        self.df["Signals / Year"] = (
+            self.df["Trades / Year"]
+        )
 
         return self
 
@@ -186,28 +181,15 @@ class OpportunityMetrics:
 
     def signal_conversion(self):
         """
-        Fraction of available
-        signals converted into
-        executed trades.
+        Execution conversion proxy.
+
+        Historical signal count is unavailable.
+
+        Uses executed trade consistency.
+
         """
 
-        if "Signals today" in self.df.columns:
-            if "Signals / Year" in self.df.columns:
-                conversion = safe_divide(
-                    self.df["Trades / Year"],
-                    self.df["Signals / Year"],
-                )
-
-            else:
-                conversion = 1.0
-
-            self.df["Signal Conversion"] = conversion.clip(
-                lower=0,
-                upper=1,
-            )
-
-        else:
-            self.df["Signal Conversion"] = 1.0
+        self.df["Signal Conversion"] = 1.0
 
         return self
 
@@ -215,11 +197,26 @@ class OpportunityMetrics:
 
     def opportunity_utilization(self):
         """
-        Opportunity utilization
-        percentage.
+        Opportunity utilization.
+
+        Formula:
+
+        Trade Frequency /
+        Maximum Observed Trade Frequency
+
         """
 
-        self.df["Opportunity Utilization"] = self.df["Signal Conversion"] * 100
+        max_frequency = (
+            self.df["Trades / Year"]
+            .max()
+        )
+
+
+        self.df["Opportunity Utilization"] = safe_divide(
+            self.df["Trades / Year"],
+            max_frequency,
+        ) * 100
+
 
         return self
 
@@ -242,8 +239,9 @@ class OpportunityMetrics:
 
     def holding_occupancy(self):
         """
-        Fraction of annual trading
-        time occupied by positions.
+        Fraction of annual time
+        occupied by positions.
+
         """
 
         occupancy = safe_divide(
@@ -251,12 +249,17 @@ class OpportunityMetrics:
             self.df["Years"] * 365.25,
         )
 
-        self.df["Holding Occupancy"] = occupancy
 
-        self.df["Capital Utilization"] = np.minimum(
-            occupancy,
-            1.0,
+        self.df["Holding Occupancy"] = occupancy.clip(
+            lower=0,
+            upper=1,
         )
+
+
+        self.df["Capital Utilization"] = (
+            self.df["Holding Occupancy"]
+        )
+
 
         return self
 
@@ -289,20 +292,38 @@ class OpportunityMetrics:
     def capacity_score(self):
         """
         Institutional capacity score.
+
+        Components:
+
+        Trade Density        50%
+        Trade Availability   30%
+        Capital Utilization  20%
+
         """
 
-        trade_density = normalize(self.df["Trade Density"])
+        trade_density = normalize(
+            self.df["Trade Density"]
+        )
 
-        signal_conversion = normalize(self.df["Signal Conversion"])
+        availability = normalize(
+            self.df["Trade Availability"]
+        )
+
+        utilization = normalize(
+            self.df["Capital Utilization"]
+        )
+
 
         self.df["Capacity Score"] = (
             trade_density * 0.50
-            + signal_conversion * 0.30
-            + self.df["Capital Utilization"].pipe(normalize) * 0.20
+            +
+            availability * 0.30
+            +
+            utilization * 0.20
         )
 
         return self
-
+    
     # ---------------------------------------------------------
 
     def opportunity_velocity(self):
@@ -364,14 +385,20 @@ class OpportunityMetrics:
 
     def execution_efficiency(self):
         """
-        Percentage of converted
-        opportunities that become
-        profitable executions.
+        Measures profitable execution quality.
+
+        Formula:
+
+        Win Rate × Reward Risk
+
         """
 
         self.df["Execution Efficiency"] = (
-            self.df["Signal Conversion"] * self.df["Win%"] / 100
-        )
+            self.df["Win%"]
+            /
+            100
+        ) * self.df["Reward Risk"]
+
 
         return self
 
@@ -437,23 +464,13 @@ class OpportunityMetrics:
 
     def trade_opportunity_ratio(self):
         """
-        Ratio of executed trades
-        to generated opportunities.
+        Executed trade opportunity ratio.
+
+        Historical signal generation unavailable.
+
         """
 
-        if "Signals today" in self.df.columns:
-            ratio = safe_divide(
-                self.df["Trades"],
-                self.df["Signals today"],
-            )
-
-            self.df["Trade Opportunity Ratio"] = ratio.clip(
-                lower=0,
-                upper=1,
-            )
-
-        else:
-            self.df["Trade Opportunity Ratio"] = 1.0
+        self.df["Trade Opportunity Ratio"] = 1.0
 
         return self
 
@@ -461,17 +478,23 @@ class OpportunityMetrics:
 
     def opportunity_persistence(self):
         """
-        Persistence of trading
-        opportunities.
+        Persistence of opportunities.
+
+        Formula:
+
+        Trade Density /
+        (1 + Idle Time Ratio)
+
         """
 
         self.df["Opportunity Persistence"] = safe_divide(
             self.df["Trade Density"],
-            self.df["Idle Time Ratio"].replace(
-                0,
-                np.nan,
+            (
+                1 +
+                self.df["Idle Time Ratio"]
             ),
         )
+
 
         return self
 
@@ -494,21 +517,37 @@ class OpportunityMetrics:
 
     def institutional_opportunity_score(self):
         """
-        Institutional composite
-        opportunity score.
+        Institutional opportunity score.
+
         """
 
-        quality = normalize(self.df["Opportunity Quality"])
+        quality = normalize(
+            self.df["Opportunity Quality"]
+        )
 
-        capacity = normalize(self.df["Capacity Score"])
+        capacity = normalize(
+            self.df["Capacity Score"]
+        )
 
-        execution = normalize(self.df["Execution Efficiency"])
+        execution = normalize(
+            self.df["Execution Efficiency"]
+        )
 
-        density = normalize(self.df["Trade Density"])
+        density = normalize(
+            self.df["Trade Density"]
+        )
+
 
         self.df["Institutional Opportunity Score"] = (
-            quality * 0.35 + capacity * 0.25 + execution * 0.20 + density * 0.20
+            quality * 0.35
+            +
+            capacity * 0.25
+            +
+            execution * 0.20
+            +
+            density * 0.20
         )
+
 
         return self
 

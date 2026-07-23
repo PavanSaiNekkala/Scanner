@@ -165,9 +165,18 @@ class LeaderboardEngine:
         leaderboard.
         """
 
+        ranking_column = (
+            "Institutional Score"
+            if "Institutional Score"
+            in self.df.columns
+            else COMPOSITE_SCORE
+        )
+
+
         self.overall = (
-            self.df.sort_values(
-                COMPOSITE_SCORE,
+            self.df
+            .sort_values(
+                ranking_column,
                 ascending=False,
             )
             .head(
@@ -178,24 +187,22 @@ class LeaderboardEngine:
             )
         )
 
+
         self.overall.insert(
             0,
             "Leaderboard Rank",
             np.arange(
                 1,
-                len(self.overall) + 1,
+                len(self.overall)+1,
             ),
         )
+
 
         self.overall = round_dataframe(
             self.overall,
             decimals=2,
         )
 
-        logger.info(
-            "Overall leaderboard generated (%d records).",
-            len(self.overall),
-        )
 
         return self
 
@@ -205,18 +212,41 @@ class LeaderboardEngine:
 
     def stock_leaderboard(self):
         """
-        Generate the best strategy
+        Generate best strategy
         for every stock.
         """
 
-        idx = self.df.groupby(
-            "Stock",
-        )[COMPOSITE_SCORE].idxmax()
+        filtered = self.df.copy()
+
+
+        if "Trades" in filtered.columns:
+
+            filtered = filtered.loc[
+                filtered["Trades"] >= 30
+            ]
+
+
+        ranking_column = (
+            "Institutional Score"
+            if "Institutional Score"
+            in filtered.columns
+            else COMPOSITE_SCORE
+        )
+
+
+        idx = (
+            filtered
+            .groupby(
+                "Stock",
+            )[ranking_column]
+            .idxmax()
+        )
+
 
         self.stock_board = (
-            self.df.loc[idx]
+            filtered.loc[idx]
             .sort_values(
-                COMPOSITE_SCORE,
+                ranking_column,
                 ascending=False,
             )
             .reset_index(
@@ -224,21 +254,15 @@ class LeaderboardEngine:
             )
         )
 
+
         self.stock_board.insert(
             0,
-            "Rank",
+            INSTITUTION_RANK,
             np.arange(
                 1,
-                len(self.stock_board) + 1,
+                len(self.stock_board)+1,
             ),
         )
-
-        self.stock_board = round_dataframe(
-            self.stock_board,
-            decimals=2,
-        )
-
-        logger.info("Stock leaderboard generated.")
 
         return self
 
@@ -253,32 +277,67 @@ class LeaderboardEngine:
         """
 
         self.strategy_board = (
-            self.df.groupby(
+            self.df
+            .groupby(
                 "Strategy",
-                as_index=False,
             )
-            .agg(
-                Stocks=(
-                    "Stock",
-                    "count",
-                ),
-                Composite=(
-                    COMPOSITE_SCORE,
-                    "mean",
-                ),
-                Expectancy=(
-                    "Expectancy",
-                    "mean",
-                ),
-                ProfitFactor=(
-                    "Profit Factor",
-                    "mean",
-                ),
-                RewardRisk=(
-                    "Reward Risk",
-                    "mean",
-                ),
+            .apply(
+                lambda x: pd.Series(
+                    {
+                        "Stocks":
+                            x["Stock"].count(),
+
+                        "Composite":
+                            np.average(
+                                x[COMPOSITE_SCORE],
+                                weights=(
+                                    x["Trades"]
+                                    if "Trades"
+                                    in x.columns
+                                    else None
+                                ),
+                            ),
+
+                        "Expectancy":
+                            np.average(
+                                x["Expectancy"],
+                                weights=(
+                                    x["Trades"]
+                                    if "Trades"
+                                    in x.columns
+                                    else None
+                                ),
+                            ),
+
+                        "ProfitFactor":
+                            np.average(
+                                x["Profit Factor"],
+                                weights=(
+                                    x["Trades"]
+                                    if "Trades"
+                                    in x.columns
+                                    else None
+                                ),
+                            ),
+
+                        "RewardRisk":
+                            np.average(
+                                x["Reward Risk"],
+                                weights=(
+                                    x["Trades"]
+                                    if "Trades"
+                                    in x.columns
+                                    else None
+                                ),
+                            ),
+                    }
+                )
             )
+            .reset_index()
+        )
+
+        self.strategy_board = (
+            self.strategy_board
             .sort_values(
                 "Composite",
                 ascending=False,
@@ -288,9 +347,10 @@ class LeaderboardEngine:
             )
         )
 
+
         self.strategy_board.insert(
             0,
-            "Rank",
+            INSTITUTION_RANK,
             np.arange(
                 1,
                 len(self.strategy_board) + 1,
@@ -584,28 +644,46 @@ class LeaderboardEngine:
 
         board = self.df.copy()
 
-        metrics = [
-            COMPOSITE_SCORE,
-            "Edge Score",
-            "Reliability Score",
-            "Efficiency Score",
-            "Opportunity Score",
-            "Risk Score",
-        ]
+        if "Institutional Score" in board.columns:
 
-        available = [column for column in metrics if column in board.columns]
+            board["Institutional Rating"] = (
+                board["Institutional Score"]
+            )
 
-        board["Institutional Rating"] = board[available].mean(
-            axis=1,
-        )
+        else:
 
-        board = round_dataframe(
-            board,
-            decimals=2,
-        )
+            score = pd.Series(
+                0,
+                index=board.index,
+                dtype=float,
+            )
+
+
+            weights = {
+                COMPOSITE_SCORE: 0.40,
+                "Reliability Score": 0.20,
+                "Risk Score": 0.20,
+                "Efficiency Score": 0.10,
+                "Opportunity Score": 0.10,
+            }
+
+
+            for column, weight in weights.items():
+
+                if column in board.columns:
+
+                    score += (
+                        board[column]
+                        *
+                        weight
+                    )
+
+
+            board["Institutional Rating"] = score
 
         board = (
-            board.sort_values(
+            board
+            .sort_values(
                 "Institutional Rating",
                 ascending=False,
             )
@@ -617,10 +695,12 @@ class LeaderboardEngine:
             )
         )
 
+
         ranks = np.arange(
             1,
             len(board) + 1,
         )
+
 
         if INSTITUTION_RANK in board.columns:
             board[INSTITUTION_RANK] = ranks
@@ -640,20 +720,40 @@ class LeaderboardEngine:
                 ranks,
             )
 
+        recommendation_columns = [
+            "Institutional Rating",
+            "Edge Score",
+            "Reliability Score",
+            "Efficiency Score",
+            "Risk Score",
+            "Opportunity Score",
+            "Consistency Score",
+            "Validation Score",
+        ]
+
+
+        available_columns = [
+            column
+            for column in recommendation_columns
+            if column in board.columns
+        ]
+
+        if not available_columns:
+
+            board[RECOMMENDATION] = "Watch"
+
+            self.overall = board
+
+            return self
+        
         recommendation_df = assign_recommendations(
             board[
-                [
-                    "Institutional Rating",
-                    "Edge Score",
-                    "Reliability Score",
-                    "Efficiency Score",
-                    "Risk Score",
-                    "Opportunity Score",
-                ]
+                available_columns
             ]
             .rename(
                 columns={
-                    "Institutional Rating": COMPOSITE_SCORE,
+                    "Institutional Rating":
+                    COMPOSITE_SCORE,
                 }
             )
             .copy()
@@ -670,11 +770,25 @@ class LeaderboardEngine:
     # ---------------------------------------------------------
     # Executive Summary
     # ---------------------------------------------------------
-
     def summary_report(self):
         """
         Generate executive summary.
         """
+
+        institutional_series = None
+
+        if "Institutional Score" in self.df.columns:
+
+            institutional_series = (
+                self.df["Institutional Score"]
+            )
+
+        elif "Institutional Rating" in self.df.columns:
+
+            institutional_series = (
+                self.df["Institutional Rating"]
+            )
+
 
         self.summary = pd.DataFrame(
             {
@@ -685,30 +799,54 @@ class LeaderboardEngine:
                     "Average Composite",
                     "Maximum Composite",
                     "Minimum Composite",
+                    "Average Institutional Score",
+                    "Highest Institutional Score",
                 ],
+
                 "Value": [
                     len(
                         self.df,
                     ),
+
                     self.df["Stock"].nunique(),
+
                     self.df["Strategy"].nunique(),
+
                     round(
                         self.df[COMPOSITE_SCORE].mean(),
                         2,
                     ),
+
                     round(
                         self.df[COMPOSITE_SCORE].max(),
                         2,
                     ),
+
                     round(
                         self.df[COMPOSITE_SCORE].min(),
                         2,
                     ),
+
+                    round(
+                        institutional_series.mean(),
+                        2,
+                    )
+                    if institutional_series is not None
+                    else None,
+
+                    round(
+                        institutional_series.max(),
+                        2,
+                    )
+                    if institutional_series is not None
+                    else None,
                 ],
             }
         )
 
-        logger.info("Executive summary generated.")
+        logger.info(
+            "Executive summary generated."
+        )
 
         return self
 

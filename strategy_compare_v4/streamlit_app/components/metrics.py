@@ -126,9 +126,9 @@ def strategy_metrics(df: pd.DataFrame):
 
     expectancy_col = first_existing(
         df,
-        "Expectancy",
-        "Expectancy%",
-        "AverageExpectancy",
+        "Weighted Expectancy",
+        "Weighted Expectancy%",
+        "AverageWeightedExpectancy",
     )
 
     with c1:
@@ -153,7 +153,7 @@ def strategy_metrics(df: pd.DataFrame):
     with c4:
         if expectancy_col:
             kpi(
-                "Avg Expectancy",
+                "Avg Weighted Expectancy",
                 f"{df[expectancy_col].mean():.2f}",
             )
 
@@ -306,7 +306,7 @@ def performance_metrics(df: pd.DataFrame):
     cols = st.columns(4)
 
     metric_groups = [
-        ("Expectancy", "Expectancy%", "AverageExpectancy"),
+        ("Weighted Expectancy", "Weighted Expectancy%", "AverageWeightedExpectancy"),
         ("Profit Factor", "AverageProfitFactor"),
         ("Reward Risk", "AverageRewardRisk"),
         ("Trades", "Trades / Year"),

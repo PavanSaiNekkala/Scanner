@@ -10,6 +10,23 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from datetime import datetime
+import pytz
+
+
+class ISTFormatter(logging.Formatter):
+
+    def converter(
+        self,
+        timestamp,
+    ):
+        return datetime.fromtimestamp(
+            timestamp,
+            tz=pytz.timezone(
+                "Asia/Kolkata"
+            ),
+        ).timetuple()
+    
 
 def get_logger(
     name: str,
@@ -24,7 +41,7 @@ def get_logger(
 
     logger.setLevel(logging.INFO)
 
-    formatter = logging.Formatter(
+    formatter = ISTFormatter(
         "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
     )
 

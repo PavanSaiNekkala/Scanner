@@ -73,13 +73,14 @@ class DerivedMetricsEngine:
           ↓
     Risk
           ↓
+    Efficiency
+          ↓
     Exit
           ↓
     Opportunity
           ↓
-    Efficiency
-          ↓
     Institutional Scoring
+
     """
 
     def __init__(self, df: pd.DataFrame):
@@ -176,11 +177,40 @@ class DerivedMetricsEngine:
                 "Institutional Exit Score",
                 "Institutional Opportunity Score",
                 "Institutional Efficiency Score",
+                "Validation Score",
+                "Consistency Score",
+                "Capital Preservation",
+                "Safety Margin",
+                "Risk Adjusted Return",
+                "Holding Efficiency",
+                "Time Efficiency",
+                "Trade Density",
             ],
         )
 
         return self
 
+    # ---------------------------------------------------------
+    # Scoring Validation
+    # ---------------------------------------------------------
+
+    def validate_scoring_ready(self):
+        """
+        Verify scoring stage dependencies.
+        """
+
+        require_columns(
+            self.df,
+            [
+                "Risk Score",
+                "Reliability Score",
+                "Efficiency Score",
+                "Opportunity Score",
+            ],
+        )
+
+        return self
+    
     # ---------------------------------------------------------
     # Institutional Scoring Stage
     # ---------------------------------------------------------
@@ -234,17 +264,47 @@ class DerivedMetricsEngine:
 
         diagnostics = {}
 
+        diagnostics["Rows Processed"] = len(self.df)
+
+        diagnostics["Columns Produced"] = len(
+            self.df.columns
+        )
+
+
         if COMPOSITE_SCORE in self.df.columns:
-            diagnostics["Average Composite"] = round(self.df[COMPOSITE_SCORE].mean(), 2)
 
-            diagnostics["Maximum Composite"] = round(self.df[COMPOSITE_SCORE].max(), 2)
+            diagnostics["Average Composite"] = round(
+                self.df[COMPOSITE_SCORE].mean(),
+                2,
+            )
 
-            diagnostics["Minimum Composite"] = round(self.df[COMPOSITE_SCORE].min(), 2)
+            diagnostics["Maximum Composite"] = round(
+                self.df[COMPOSITE_SCORE].max(),
+                2,
+            )
+
+            diagnostics["Minimum Composite"] = round(
+                self.df[COMPOSITE_SCORE].min(),
+                2,
+            )
+
+
+        if "Institutional Score" in self.df.columns:
+
+            diagnostics["Average Institutional Score"] = round(
+                self.df["Institutional Score"].mean(),
+                2,
+            )
+
 
         if RECOMMENDATION in self.df.columns:
+
             diagnostics["Recommendations"] = (
-                self.df[RECOMMENDATION].value_counts().to_dict()
+                self.df[RECOMMENDATION]
+                .value_counts()
+                .to_dict()
             )
+
 
         self.diagnostics_report = diagnostics
 
@@ -321,14 +381,16 @@ class DerivedMetricsEngine:
         start = time.perf_counter()
 
         try:
+
             (
                 self.validation_stage()
                 .performance_stage()
                 .risk_stage()
+                .efficiency_stage()
                 .exit_stage()
                 .opportunity_stage()
-                .efficiency_stage()
                 .validate_dependencies()
+                .validate_scoring_ready()
                 .scoring_stage()
                 .pipeline_summary()
                 .diagnostics()

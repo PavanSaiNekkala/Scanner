@@ -557,7 +557,12 @@ def render_generated_reports() -> None:
                 pd.to_datetime(
                     file.stat().st_mtime,
                     unit="s",
-                ).strftime(
+                    utc=True,
+                )
+                .tz_convert(
+                    "Asia/Kolkata"
+                )
+                .strftime(
                     "%Y-%m-%d %H:%M"
                 )
                 for file in files

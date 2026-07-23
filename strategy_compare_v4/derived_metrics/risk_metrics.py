@@ -179,30 +179,41 @@ class RiskMetrics:
     # --------------------------------------------------------
     # Annual Loss
     # --------------------------------------------------------
-
     def annual_loss(self):
         """
         Annualized loss exposure.
 
         Formula:
 
-        Average Loss × Loss Frequency
+        Loss Rate × Average Loss × Trades Per Year
+
+        Loss Rate:
+            1 - Win Probability
 
         """
 
-        if "Losses" in self.df.columns:
-            loss_frequency = safe_divide(
-                self.df["Losses"],
-                self.df["Years"],
+        loss_rate = (
+            1 -
+            safe_divide(
+                self.df["Win%"],
+                100,
             )
+        )
 
-        else:
-            loss_frequency = safe_divide(
-                self.df["Trades"],
-                self.df["Years"],
-            )
 
-        self.df["Annual Loss %"] = self.df["Avg loss%"].abs() * loss_frequency
+        trades_per_year = safe_divide(
+            self.df["Trades"],
+            self.df["Years"],
+        )
+
+
+        self.df["Annual Loss %"] = (
+            loss_rate
+            *
+            self.df["Avg loss%"].abs()
+            *
+            trades_per_year
+        )
 
         return self
 
@@ -225,20 +236,41 @@ class RiskMetrics:
     # --------------------------------------------------------
     # Downside Risk
     # --------------------------------------------------------
-
     def downside_risk(self):
         """
         Trade frequency adjusted downside risk.
 
+        Formula:
+
+        Loss Rate × Average Loss × √(Trades Per Year)
+
         """
+
+        loss_rate = (
+            1 -
+            safe_divide(
+                self.df["Win%"],
+                100,
+            )
+        )
+
 
         trade_frequency = safe_divide(
             self.df["Trades"],
             self.df["Years"],
         )
 
-        self.df["Downside Risk"] = self.df["Avg loss%"].abs() * np.sqrt(
-            trade_frequency.clip(lower=0)
+
+        self.df["Downside Risk"] = (
+            loss_rate
+            *
+            self.df["Avg loss%"].abs()
+            *
+            np.sqrt(
+                trade_frequency.clip(
+                    lower=0
+                )
+            )
         )
 
         return self
@@ -250,19 +282,42 @@ class RiskMetrics:
     def drawdown_proxy(self):
         """
         Estimate drawdown risk.
-
         Priority:
-
         1. Actual Max Drawdown %
-        2. Trade-loss based estimate
-
+        2. Loss sequence based proxy
+        Formula:
+        If actual drawdown exists:
+            Drawdown Proxy = |Max Drawdown %|
+        Else:
+            Drawdown Proxy =
+            Average Loss × √(Number of Losing Trades)
         """
 
         if "Max Drawdown %" in self.df.columns:
             drawdown = self.df["Max Drawdown %"].abs()
 
         else:
-            drawdown = self.df["Avg loss%"].abs() * np.log1p(self.df["Trades"])
+            losing_trades = (
+                self.df["Trades"]
+                *
+                (
+                    1 -
+                    safe_divide(
+                        self.df["Win%"],
+                        100,
+                    )
+                )
+            )
+
+            drawdown = (
+                self.df["Avg loss%"].abs()
+                *
+                np.sqrt(
+                    losing_trades.clip(
+                        lower=0
+                    )
+                )
+            )
 
         self.df["Drawdown Proxy"] = drawdown
 
@@ -304,21 +359,27 @@ class RiskMetrics:
     def stop_efficiency(self):
         """
         Measures exit efficiency.
-
         Formula:
-
-        Average Loss / Stop Loss
-
-        Higher is worse.
+        1 - (Average Loss / Stop Loss)
+        Interpretation:
+        Higher value = better stop utilization.
+        Lower value = poor stop efficiency.
         """
 
         if "Stop %" in self.df.columns:
-            self.df["Stop Efficiency"] = safe_divide(
+
+            stop_utilization = safe_divide(
                 self.df["Avg loss%"].abs(),
                 self.df["Stop %"].abs(),
             )
 
+            self.df["Stop Efficiency"] = (
+                1 -
+                stop_utilization
+            )
+
         else:
+
             self.df["Stop Efficiency"] = np.nan
 
         return self
@@ -329,19 +390,24 @@ class RiskMetrics:
 
     def downside_capture(self):
         """
-        Reward to loss relationship.
+        Downside protection proxy.
 
-        NOTE:
-        Column retained for backward compatibility.
+        True downside capture requires:
+            Strategy returns during market declines /
+            Benchmark returns during market declines.
+
+        Since benchmark data is unavailable,
+        using loss-adjusted edge proxy.
 
         Formula:
 
-        Average Win / Average Loss
+        Expectancy / Average Loss
 
+        Higher is better.
         """
 
         self.df["Downside Capture"] = safe_divide(
-            self.df["Avg win%"],
+            self.df["Expectancy"],
             self.df["Avg loss%"].abs(),
         )
 
@@ -398,17 +464,31 @@ class RiskMetrics:
 
         Formula:
 
-        Downside Risk × sqrt(trades/year)
+        Loss Rate × Average Loss × Trades Per Year
 
         """
+
+        loss_rate = (
+            1 -
+            safe_divide(
+                self.df["Win%"],
+                100,
+            )
+        )
+
 
         trade_frequency = safe_divide(
             self.df["Trades"],
             self.df["Years"],
         )
 
-        self.df["Annual Risk"] = self.df["Downside Risk"] * np.sqrt(
-            trade_frequency.clip(lower=0)
+
+        self.df["Annual Risk"] = (
+            loss_rate
+            *
+            self.df["Avg loss%"].abs()
+            *
+            trade_frequency
         )
 
         return self
@@ -421,14 +501,21 @@ class RiskMetrics:
         """
         Measures stability of losses.
 
+        Formula:
+
+        1 / (1 + Downside Risk)
+
         Higher means losses are
         more consistently controlled.
 
         """
 
         self.df["Loss Consistency"] = safe_divide(
-            self.df["Annual Loss %"],
-            self.df["Downside Risk"],
+            1,
+            (
+                1 +
+                self.df["Downside Risk"].abs()
+            ),
         )
 
         return self
@@ -477,18 +564,28 @@ class RiskMetrics:
     # --------------------------------------------------------
     # Safety Margin
     # --------------------------------------------------------
-
     def safety_margin(self):
         """
-        Risk buffer.
+        Measures risk buffer.
 
         Formula:
 
-        Reward Risk - Loss Velocity
+        Reward Risk /
+        (1 + Loss Velocity)
+
+        Higher value indicates
+        stronger reward protection
+        against downside pressure.
 
         """
 
-        self.df["Safety Margin"] = self.df["Reward Risk"] - self.df["Loss Velocity"]
+        self.df["Safety Margin"] = safe_divide(
+            self.df["Reward Risk"],
+            (
+                1 +
+                self.df["Loss Velocity"].abs()
+            ),
+        )
 
         return self
 
@@ -507,16 +604,58 @@ class RiskMetrics:
         - Capital Preservation
         - Loss Consistency
 
+        Metrics are normalized before aggregation.
+
         """
 
+        risk_adjusted = (
+            self.df["Risk Adjusted Return"]
+            /
+            (
+                1 +
+                self.df["Risk Adjusted Return"].abs()
+            )
+        )
+
+        recovery = (
+            self.df["Recovery Factor"]
+            /
+            (
+                1 +
+                self.df["Recovery Factor"].abs()
+            )
+        )
+
+        capital_preservation = (
+            self.df["Capital Preservation"]
+            /
+            (
+                1 +
+                self.df["Capital Preservation"].abs()
+            )
+        )
+
+        loss_consistency = (
+            self.df["Loss Consistency"]
+            /
+            (
+                1 +
+                self.df["Loss Consistency"].abs()
+            )
+        )
+
         self.df["Risk Quality"] = (
-            self.df["Risk Adjusted Return"] * 0.30
-            + self.df["Recovery Factor"] * 0.25
-            + self.df["Capital Preservation"] * 0.25
-            + self.df["Loss Consistency"] * 0.20
+            risk_adjusted * 0.30
+            +
+            recovery * 0.25
+            +
+            capital_preservation * 0.25
+            +
+            loss_consistency * 0.20
         )
 
         return self
+
 
     # --------------------------------------------------------
     # Risk Efficiency
@@ -527,6 +666,10 @@ class RiskMetrics:
         Measures return generated
         against risk taken.
 
+        Formula:
+
+        Risk Quality / Annual Risk
+
         """
 
         self.df["Risk Efficiency"] = safe_divide(
@@ -535,6 +678,7 @@ class RiskMetrics:
         )
 
         return self
+
 
     # --------------------------------------------------------
     # Risk Score
@@ -546,13 +690,59 @@ class RiskMetrics:
 
         Higher is better.
 
+        Components:
+
+        - Risk Adjusted Return
+        - Recovery Factor
+        - Capital Preservation
+        - Safety Margin
+
         """
 
+        risk_adjusted = (
+            self.df["Risk Adjusted Return"]
+            /
+            (
+                1 +
+                self.df["Risk Adjusted Return"].abs()
+            )
+        )
+
+        recovery = (
+            self.df["Recovery Factor"]
+            /
+            (
+                1 +
+                self.df["Recovery Factor"].abs()
+            )
+        )
+
+        capital_preservation = (
+            self.df["Capital Preservation"]
+            /
+            (
+                1 +
+                self.df["Capital Preservation"].abs()
+            )
+        )
+
+        safety_margin = (
+            self.df["Safety Margin"]
+            /
+            (
+                1 +
+                self.df["Safety Margin"].abs()
+            )
+        )
+
         self.df["Risk Score"] = (
-            self.df["Risk Adjusted Return"] * 0.30
-            + self.df["Recovery Factor"] * 0.25
-            + self.df["Capital Preservation"] * 0.25
-            + self.df["Safety Margin"] * 0.20
+            risk_adjusted * 0.30
+            +
+            recovery * 0.25
+            +
+            capital_preservation * 0.25
+            +
+            safety_margin * 0.20
         )
 
         return self

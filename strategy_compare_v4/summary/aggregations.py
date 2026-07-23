@@ -35,7 +35,9 @@ from strategy_compare_v4.utils.helpers import (
 from strategy_compare_v4.utils.io_utils import write_csv
 
 from .io import load_strategy_directory
-from .metrics import compute_trade_metrics
+from strategy_compare_v4.derived_metrics.derived_engine import (
+    DerivedMetricsEngine,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,14 @@ PREFERRED_COLUMNS = [
     "Sharpe",
     "Sortino",
     "Recovery Factor",
+    "Risk Score",
+    "Efficiency Score",
+    "Opportunity Score",
+    "Reliability Score",
+    "Composite Score",
+    "Institutional Score",
+    "Recommendation",
+    "Strategy Rank",
 ]
 
 
@@ -104,10 +114,19 @@ def build_strategy_summary(
 
             continue
 
-        metrics = compute_trade_metrics(
-            stock,
-            df,
+        engine = DerivedMetricsEngine(
+            df=df,
         )
+
+        metrics_df = engine.run()
+
+        metrics = (
+            metrics_df
+            .iloc[0]
+            .to_dict()
+        )
+
+        metrics[STOCK] = stock
 
         if strategy_name is not None:
             metrics[STRATEGY] = strategy_name
@@ -119,6 +138,14 @@ def build_strategy_summary(
     summary = pd.DataFrame(
         rows,
     )
+
+    if "Trades" in summary.columns:
+
+        summary = summary.loc[
+            summary["Trades"] >= 30
+        ].reset_index(
+            drop=True
+        )
 
     if summary.empty:
         logger.warning("No summary rows generated.")
@@ -139,7 +166,16 @@ def build_strategy_summary(
     # Sorting
     # ------------------------------------------------------
 
-    if EXPECTANCY in summary.columns:
+    if "Institutional Score" in summary.columns:
+
+        summary = sort_dataframe(
+            summary,
+            column="Institutional Score",
+            ascending=False,
+        )
+
+    elif EXPECTANCY in summary.columns:
+
         summary = sort_dataframe(
             summary,
             column=EXPECTANCY,

@@ -252,8 +252,16 @@ class EfficiencyMetrics:
 
     def capital_turnover(self):
         """
-        Average number of completed
-        trades per year.
+        Capital rotation frequency proxy.
+
+        Formula:
+
+        Trades / Years
+
+        Represents:
+        Average number of completed trades
+        executed annually.
+
         """
 
         self.df["Capital Turnover"] = safe_divide(
@@ -302,13 +310,20 @@ class EfficiencyMetrics:
 
     def capital_efficiency(self):
         """
-        Annual return generated
-        per capital turnover.
+        Return generated per unit
+        of capital exposure.
+
+        Formula:
+
+        Annual Return %
+        ----------------
+        Capital Exposure Ratio
+
         """
 
         self.df["Capital Efficiency"] = safe_divide(
             self.df["Annual Return %"],
-            self.df["Capital Turnover"],
+            self.df["Capital Exposure Ratio"],
         )
 
         return self
@@ -317,18 +332,18 @@ class EfficiencyMetrics:
 
     def return_efficiency(self):
         """
-        CAGR generated per executed trade.
+        Measures edge generation rate.
+
+        Formula:
+
+        Expectancy × Annual Trade Frequency
+
         """
 
-        if "Annual Return %" in self.df.columns:
-            value = self.df["Annual Return %"]
-
-        else:
-            value = np.nan
-
-        self.df["Return Efficiency"] = safe_divide(
-            value,
-            self.df["Capital Turnover"],
+        self.df["Return Efficiency"] = (
+            self.df["Expectancy"]
+            *
+            self.df["Capital Turnover"]
         )
 
         return self
@@ -365,13 +380,20 @@ class EfficiencyMetrics:
 
     def efficiency_velocity(self):
         """
-        Speed at which
-        efficient trades
-        compound annually.
+        Speed of edge generation.
+
+        Formula:
+
+        Trade Efficiency × log(1 + Capital Turnover)
+
         """
 
         self.df["Efficiency Velocity"] = (
-            self.df["Trade Efficiency"] * self.df["Capital Turnover"]
+            self.df["Trade Efficiency"]
+            *
+            np.log1p(
+                self.df["Capital Turnover"]
+            )
         )
 
         return self
@@ -381,12 +403,19 @@ class EfficiencyMetrics:
     def capital_productivity(self):
         """
         Return generated per unit
-        of capital turnover.
+        capital exposure.
+
+        Formula:
+
+        Annual Return %
+        ----------------
+        Holding Utilization
+
         """
 
         self.df["Capital Productivity"] = safe_divide(
             self.df["Annual Return %"],
-            self.df["Capital Turnover"],
+            self.df["Holding Utilization"],
         )
 
         return self
@@ -395,17 +424,23 @@ class EfficiencyMetrics:
 
     def holding_productivity(self):
         """
-        Return generated
-        per holding day.
+        Return generated per occupied
+        holding period.
+
+        Formula:
+
+        Annual Return %
+        ----------------
+        Annual Holding Days
+
         """
 
         self.df["Holding Productivity"] = safe_divide(
             self.df["Annual Return %"],
-            self.df["Avg days"],
+            self.df["Annual Holding Days"],
         )
 
         return self
-
     # ---------------------------------------------------------
 
     def normalize_base_metrics(self):
@@ -419,6 +454,11 @@ class EfficiencyMetrics:
             "Capital Productivity",
             "Trade Productivity",
             "Efficiency Velocity",
+            "Return Density",
+            "Capital Recovery",
+            "Holding Productivity",
+            "Institutional Efficiency",
+            "Efficiency Quality",
         ]
 
         for metric in metrics:
@@ -473,32 +513,22 @@ class EfficiencyMetrics:
 
     def return_density(self):
         """
-        Return generated
-        per executed trade.
+        Edge generated per trade.
+
+        Formula:
+
+        Expectancy × Profit Factor
+
         """
 
-        if "Net Profit %" in self.df.columns:
-            value = self.df["Net Profit %"]
-
-        elif "Total Return %" in self.df.columns:
-            value = self.df["Total Return %"]
-
-        elif "Net %" in self.df.columns:
-            value = self.df["Net %"]
-
-        elif "Annual Return %" in self.df.columns:
-            value = self.df["Annual Return %"] * self.df["Years"]
-
-        else:
-            value = np.nan
-
-        self.df["Return Density"] = safe_divide(
-            value,
-            self.df["Trades"],
+        self.df["Return Density"] = (
+            self.df["Expectancy"]
+            *
+            self.df["Profit Factor"]
         )
 
         return self
-
+    
     # ---------------------------------------------------------
 
     def trade_productivity(self):
@@ -519,14 +549,31 @@ class EfficiencyMetrics:
 
     def institutional_efficiency(self):
         """
-        Composite institutional
-        efficiency metric.
+        Composite institutional efficiency.
+
+        Components:
+
+        - Capital Efficiency
+        - Trade Efficiency
+        - Holding Utilization
+
+        All components normalized to 0-100.
+
         """
+
+        holding_score = (
+            self.df["Holding Utilization"]
+            *
+            100
+        )
+
 
         self.df["Institutional Efficiency"] = (
             self.df["Capital Efficiency Norm"] * 0.40
-            + self.df["Trade Efficiency Norm"] * 0.30
-            + self.df["Holding Utilization"] * 0.30
+            +
+            self.df["Trade Efficiency Norm"] * 0.30
+            +
+            holding_score * 0.30
         )
 
         return self
@@ -535,12 +582,18 @@ class EfficiencyMetrics:
 
     def capital_recovery(self):
         """
-        Measures capital
-        recovery speed.
+        Measures return recovery speed.
+
+        Formula:
+
+        Annual Return %
+        ----------------
+        Average Holding Days
+
         """
 
         self.df["Capital Recovery"] = safe_divide(
-            self.df["Capital Turnover"],
+            self.df["Annual Return %"],
             self.df["Avg days"],
         )
 
@@ -565,14 +618,16 @@ class EfficiencyMetrics:
 
     def efficiency_quality(self):
         """
-        Overall quality of
-        institutional efficiency.
+        Overall efficiency quality.
+
         """
 
         self.df["Efficiency Quality"] = (
             self.df["Institutional Efficiency"] * 0.45
-            + self.df["Efficiency Velocity Norm"] * 0.25
-            + self.df["Trade Productivity Norm"] * 0.30
+            +
+            self.df["Efficiency Velocity Norm"] * 0.25
+            +
+            self.df["Trade Productivity Norm"] * 0.30
         )
 
         return self
@@ -581,14 +636,21 @@ class EfficiencyMetrics:
 
     def efficiency_consistency(self):
         """
-        Measures consistency
-        between productivity
-        and utilization.
+        Measures sustainability of efficiency.
+
+        Formula:
+
+        Efficiency Quality × Holding Utilization
+
+        Higher means efficiency is
+        consistently achieved over exposure.
+
         """
 
-        self.df["Efficiency Consistency"] = safe_divide(
-            self.df["Efficiency Quality"],
-            self.df["Holding Utilization"],
+        self.df["Efficiency Consistency"] = (
+            self.df["Efficiency Quality"]
+            *
+            self.df["Holding Utilization"]
         )
 
         return self
@@ -597,16 +659,31 @@ class EfficiencyMetrics:
 
     def institutional_efficiency_score(self):
         """
-        Final institutional
-        efficiency score.
+        Final institutional efficiency score.
+
+        Scale:
+
+        0 - 100
+
         """
+
+        holding_score = (
+            self.df["Holding Stability"]
+            *
+            100
+        )
+
 
         self.df["Institutional Efficiency Score"] = (
             self.df["Efficiency Quality"] * 0.40
-            + self.df["Capital Productivity Norm"] * 0.20
-            + self.df["Trade Productivity Norm"] * 0.20
-            + self.df["Holding Stability"] * 0.20
+            +
+            self.df["Capital Productivity Norm"] * 0.20
+            +
+            self.df["Trade Productivity Norm"] * 0.20
+            +
+            holding_score * 0.20
         )
+
 
         return self
 
@@ -614,16 +691,20 @@ class EfficiencyMetrics:
 
     def efficiency_rank(self):
         """
-        Percentile ranking of
-        institutional efficiency.
+        Percentile ranking.
+
+        Higher score = better rank.
+
         """
 
         self.df["Efficiency Rank"] = (
-            self.df["Institutional Efficiency Score"].rank(
+            self.df["Institutional Efficiency Score"]
+            .rank(
                 pct=True,
                 ascending=True,
             )
-            * 100
+            *
+            100
         )
 
         return self

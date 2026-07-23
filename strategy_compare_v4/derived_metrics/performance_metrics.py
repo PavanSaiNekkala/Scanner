@@ -188,11 +188,16 @@ class PerformanceMetrics:
 
             years = numeric(self.df["Years"])
 
-            self.df["Annual Return %"] = np.where(
-                (years <= 0),
-                np.nan,
-                total_return / years,
-            )
+            self.df["Annual Return %"] = (
+                (
+                    1 + total_return / 100
+                )
+                **
+                (
+                    1 / years
+                )
+                - 1
+            ) * 100
 
         return self
 
@@ -274,16 +279,22 @@ class PerformanceMetrics:
 
     def return_per_day(self):
 
-        holding_days = self.df["Trades"] * self.df["Avg days"]
+        if (
+            "Annual Return %" not in self.df.columns
+            or "Avg days" not in self.df.columns
+        ):
+            self.df["Return / Day"] = np.nan
+            return self
 
-        value = self.df["Net %"]
 
         self.df["Return / Day"] = safe_divide(
-            value,
-            holding_days,
+            self.df["Annual Return %"],
+            self.df["Avg days"],
         )
 
+
         return self
+
 
     # --------------------------------------------------------
     # Holding Efficiency
@@ -291,13 +302,22 @@ class PerformanceMetrics:
 
     def holding_efficiency(self):
 
+        if (
+            "Annual Return %" not in self.df.columns
+            or "Avg days" not in self.df.columns
+        ):
+            self.df["Holding Efficiency"] = np.nan
+            return self
+
+
         self.df["Holding Efficiency"] = safe_divide(
             self.df["Annual Return %"],
             self.df["Avg days"],
         )
 
-        return self
 
+        return self
+    
     # --------------------------------------------------------
     # Profit Velocity
     # --------------------------------------------------------
@@ -347,22 +367,37 @@ class PerformanceMetrics:
 
     def capital_turnover(self):
 
-        self.df["Capital Turnover"] = safe_divide(
-            self.df["Trades"],
-            self.df["Years"],
+        if (
+            "Trades / Year" not in self.df.columns
+            or "Avg days" not in self.df.columns
+        ):
+            self.df["Capital Turnover Proxy"] = np.nan
+            return self
+
+
+        self.df["Capital Turnover Proxy"] = (
+            safe_divide(
+                self.df["Trades / Year"] * 365,
+                self.df["Avg days"],
+            )
         )
 
-        return self
 
+        return self
+    
     # --------------------------------------------------------
     # Edge Per Trade
     # --------------------------------------------------------
 
     def edge_per_trade(self):
 
-        self.df["Edge / Trade"] = safe_divide(
-            self.df["Expectancy"],
-            self.df["Trades"],
+        if "Expectancy" not in self.df.columns:
+            self.df["Edge / Trade"] = np.nan
+            return self
+
+
+        self.df["Edge / Trade"] = (
+            self.df["Expectancy"]
         )
 
         return self
@@ -381,15 +416,15 @@ class PerformanceMetrics:
     # Return Consistency
     # --------------------------------------------------------
 
-    def return_consistency(self):
+    def edge_consistency(self):
 
-        self.df["Return Consistency"] = safe_divide(
-            self.df["Annual Return %"],
-            self.df["Profit Velocity"].abs(),
+        self.df["Edge Consistency"] = safe_divide(
+            self.df["Expectancy"],
+            self.df["Avg loss%"].abs(),
         )
 
         return self
-
+    
     # --------------------------------------------------------
     # Trade Efficiency
     # --------------------------------------------------------
@@ -456,7 +491,7 @@ class PerformanceMetrics:
             .capital_turnover()
             .edge_per_trade()
             .annual_edge()
-            .return_consistency()
+            .edge_consistency()
             .trade_efficiency()
             .score_inputs()
             .df

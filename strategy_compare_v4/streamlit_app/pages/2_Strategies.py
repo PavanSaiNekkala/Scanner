@@ -7,6 +7,8 @@ Institutional Strategy Analytics Dashboard
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 from components.cards import strategy_summary_card
@@ -85,7 +87,9 @@ def validate_session() -> None:
 
 
 @st.cache_data(show_spinner=False)
-def load_strategy_data() -> pd.DataFrame:
+def load_strategy_data(
+    refresh_token=None,
+) -> pd.DataFrame:
     """
     Load the Strategy Ranking worksheet.
     """
@@ -136,11 +140,11 @@ def render_top_strategy(
     if df.empty:
         return
 
-    if "Composite Score" not in df.columns:
+    if "Adjusted Strategy Score" not in df.columns:
         return
 
     best = df.sort_values(
-        "Composite Score",
+        "Adjusted Strategy Score",
         ascending=False,
     ).iloc[0]
 
@@ -154,18 +158,18 @@ def render_top_strategy(
 
     with c2:
         st.metric(
-            "Composite Score",
+            "Adjusted Strategy Score",
             round(
-                best["Composite Score"],
+                best["Adjusted Strategy Score"],
                 2,
             ),
         )
 
     with c3:
         st.metric(
-            "Expectancy",
+            "Weighted Expectancy",
             round(
-                best["Expectancy"],
+                best["Weighted Expectancy"],
                 4,
             ),
         )
@@ -229,10 +233,10 @@ def render_filters(
     # Ranking
     # --------------------------------------------------------
 
-    if "Composite Score" in filtered.columns:
+    if "Adjusted Strategy Score" in filtered.columns:
         filtered = (
             filtered.sort_values(
-                "Composite Score",
+                "Adjusted Strategy Score",
                 ascending=False,
             )
             .head(top_n)
@@ -260,9 +264,33 @@ def render_strategy_table(
     Render the filtered strategy ranking table.
     """
 
-    st.subheader("Strategy Ranking")
+    st.subheader(
+        "Institutional Strategy Ranking"
+    )
 
-    dataframe(df)
+
+    display_columns = [
+        "Strategy",
+        "Adjusted Strategy Score",
+        "Weighted Expectancy",
+        "Weighted Profit Factor",
+        "Weighted Reward Risk",
+        "Total Trades",
+        "Positive Weighted Expectancy %",
+        "Strategy Rank",
+    ]
+
+
+    available_columns = [
+        column
+        for column in display_columns
+        if column in df.columns
+    ]
+
+
+    dataframe(
+        df[available_columns],
+    )
 
     st.divider()
 
@@ -291,21 +319,21 @@ def render_charts(
     left, right = st.columns(2)
 
     with left:
-        if "Strategy Rank" in df.columns and "Composite Score" in df.columns:
+        if "Strategy Rank" in df.columns and "Weighted Expectancy" in df.columns:
             bar_chart(
                 df,
                 x="Strategy Rank",
-                y="Composite Score",
-                title="Composite Score",
+                y="Weighted Expectancy",
+                title="Adjusted Strategy Score",
             )
 
     with right:
-        if "Strategy Rank" in df.columns and "Expectancy" in df.columns:
+        if "Strategy Rank" in df.columns and "Weighted Expectancy" in df.columns:
             bar_chart(
                 df,
                 x="Strategy Rank",
-                y="Expectancy",
-                title="Expectancy",
+                y="Weighted Expectancy",
+                title="Weighted Expectancy",
             )
 
     # --------------------------------------------------------
@@ -315,19 +343,19 @@ def render_charts(
     left, right = st.columns(2)
 
     with left:
-        if "Composite Score" in df.columns:
+        if "Adjusted Strategy Score" in df.columns:
             histogram(
                 df,
-                "Composite Score",
-                "Composite Score Distribution",
+                "Adjusted Strategy Score",
+                "Adjusted Strategy Score Distribution",
             )
 
     with right:
-        if "Profit Factor" in df.columns:
+        if "Weighted Profit Factor" in df.columns:
             histogram(
                 df,
-                "Profit Factor",
-                "Profit Factor Distribution",
+                "Weighted Profit Factor",
+                "Weighted Profit Factor Distribution",
             )
 
     st.divider()
@@ -350,11 +378,11 @@ def render_strategy_radar(
 
     required_columns = [
         "Strategy Rank",
-        "Composite Score",
-        "Expectancy",
-        "Profit Factor",
-        "Reward Risk",
-        "Trades",
+        "Adjusted Strategy Score",
+        "Weighted Expectancy",
+        "Weighted Profit Factor",
+        "Weighted Reward Risk",
+        "Total Trades",
     ]
 
     if not all(column in df.columns for column in required_columns):
@@ -362,22 +390,78 @@ def render_strategy_radar(
 
     st.subheader("Strategy Radar")
 
-    selected_strategy = st.selectbox(
+    strategy_options = (
+        df[
+            [
+                "Strategy Rank",
+                "Strategy",
+            ]
+        ]
+        .sort_values(
+            "Strategy Rank"
+        )
+    )
+
+
+    selected_rank = st.selectbox(
         "Select Strategy Rank",
-        options=df["Strategy Rank"].tolist(),
+        options=strategy_options["Strategy Rank"].tolist(),
         key="radar_strategy",
     )
 
-    strategy = df.loc[df["Strategy"] == selected_strategy].iloc[0]
+
+    selected_strategy = (
+        strategy_options
+        .loc[
+            strategy_options["Strategy Rank"]
+            ==
+            selected_rank,
+            "Strategy",
+        ]
+        .iloc[0]
+    )
+
+
+    strategy_df = df.loc[
+        df["Strategy"].astype(str).str.strip()
+        ==
+        str(selected_strategy).strip()
+    ]
+
+    if strategy_df.empty:
+        st.warning(
+            f"No strategy data found for {selected_strategy}"
+        )
+        return
+
+
+    strategy = strategy_df.iloc[0]
+
+
+    radar_values = {
+        "Adjusted Strategy": strategy["Adjusted Strategy Score"],
+
+        "Weighted Expectancy": (
+            strategy["Weighted Expectancy"] * 100
+        ),
+
+        "Profit Factor": (
+            strategy["Weighted Profit Factor"] * 50
+        ),
+
+        "Reward Risk": (
+            strategy["Weighted Reward Risk"] * 50
+        ),
+
+        "Trade Reliability": min(
+            strategy["Total Trades"] / 100,
+            100,
+        ),
+    }
+
 
     radar_chart(
-        {
-            "Composite": strategy["Composite Score"],
-            "Expectancy": strategy["Expectancy"],
-            "Profit Factor": strategy["Profit Factor"],
-            "Reward Risk": strategy["Reward Risk"],
-            "Trades": strategy["Trades"],
-        },
+        radar_values,
         str(selected_strategy),
     )
 
@@ -404,13 +488,19 @@ def render_strategy_details(
 
     st.subheader("Strategy Details")
 
+    df["Strategy"] = (
+        df["Strategy"]
+        .astype(str)
+        .str.strip()
+    )
+
     selected_strategy = st.selectbox(
         "Select Strategy",
         options=df["Strategy"].tolist(),
         key="strategy_details",
     )
 
-    strategy = df.loc[df["Strategy Rank"] == selected_strategy]
+    strategy = df.loc[df["Strategy"] == selected_strategy]
 
     st.dataframe(
         strategy,
@@ -472,8 +562,8 @@ Features included:
 
 - Strategy Rankings
 - KPI Summary
-- Composite Score Analysis
-- Expectancy Analysis
+- Adjusted Strategy Score Analysis
+- Weighted Expectancy Analysis
 - Profit Factor Distribution
 - Radar Comparison
 - Strategy Details
@@ -518,7 +608,14 @@ def main() -> None:
 
     validate_session()
 
-    strategy_df = load_strategy_data()
+    refresh_token = Path(
+        st.session_state.output_folder
+    ).stat().st_mtime
+
+
+    strategy_df = load_strategy_data(
+        refresh_token,
+    )
 
     validate_strategy_data(
         strategy_df,

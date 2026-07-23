@@ -52,31 +52,30 @@ TOP_RECORDS = 10
 
 DASHBOARD_SHEETS = {
     "strategy": (
-        "strategy_report",
-        "Strategy Ranking",
+        "final_report",
+        "Strategy Rankings",
     ),
 
     "recommendations": (
-        "strategy_report",
-        "Recommendations",
+        "final_report",
+        "Strategy Recommendations",
     ),
 
     "stock": (
-        "stock_report",
+        "final_report",
         "Stock Rankings",
     ),
 
     "portfolio": (
-        "portfolio_report",
+        "final_report",
         "Portfolio",
     ),
 
     "correlation": (
-        "correlation_report",
-        "Heatmap",
+        "final_report",
+        "Correlation",
     ),
 }
-
 
 # ============================================================
 # Header
@@ -125,10 +124,6 @@ def validate_session() -> None:
 # Data Loading
 # ============================================================
 
-
-@st.cache_data(
-    show_spinner=False,
-)
 def load_dashboard_data() -> dict[str, pd.DataFrame]:
     """
     Load executive datasets.
@@ -248,7 +243,7 @@ def render_recommendations(
     with left:
 
         st.subheader(
-            "Strategy Recommendation Mix",
+            "Institutional Recommendation Mix",
         )
 
 

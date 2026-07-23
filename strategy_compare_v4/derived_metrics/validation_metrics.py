@@ -372,6 +372,18 @@ class ValidationMetrics:
         ).astype(int)
 
         return self
+    
+    # ---------------------------------------------------------
+
+    def insufficient_sample(self):
+
+        self.df["Insufficient Sample"] = (
+            self.df["Trades"]
+            <
+            50
+        ).astype(int)
+
+        return self
 
     # ---------------------------------------------------------
     # Logical Error Detection
@@ -435,8 +447,9 @@ class ValidationMetrics:
 
         Components:
 
-        Trade Sample Size 70%
-        Backtest Duration 30%
+        Trade Sample Quality      50%
+        Backtest Duration         30%
+        Trade Frequency Stability 20%
 
         """
 
@@ -445,7 +458,9 @@ class ValidationMetrics:
                 self.df["Trades"]
             )
             /
-            np.log1p(1000)
+            np.log1p(
+                500
+            )
         ).clip(
             0,
             1,
@@ -462,10 +477,26 @@ class ValidationMetrics:
         )
 
 
+        frequency_quality = (
+            self.df["Trades"]
+            /
+            (
+                self.df["Years"]
+                *
+                100
+            )
+        ).clip(
+            0,
+            1,
+        )
+
+
         self.df["Statistical Reliability"] = (
-            trade_quality * 70
+            trade_quality * 50
             +
             time_quality * 30
+            +
+            frequency_quality * 20
         )
 
 
@@ -482,22 +513,31 @@ class ValidationMetrics:
         Penalizes:
         - logical errors
         - statistical anomalies
-        - extreme values
+        - unrealistic metrics
 
         """
 
         penalty = (
-            self.df["Logical Errors"] * 10
-            +
-            self.df["ZScore Outliers"] * 3
-            +
-            self.df["IQR Outliers"] * 3
-            +
-            self.df["Extreme Return"] * 5
-            +
-            self.df["Extreme Expectancy"] * 5
-        )
 
+            self.df["Logical Errors"] * 15
+
+            +
+
+            self.df["ZScore Outliers"] * 2
+
+            +
+
+            self.df["IQR Outliers"] * 2
+
+            +
+
+            self.df["Extreme Return"] * 5
+
+            +
+
+            self.df["Extreme Expectancy"] * 5
+
+        )
 
         self.df["Validation Consistency"] = (
             100 -
@@ -506,7 +546,6 @@ class ValidationMetrics:
             0,
             100,
         )
-
 
         return self
 
@@ -520,17 +559,25 @@ class ValidationMetrics:
 
         Weighting:
 
-        Completeness          30%
-        Statistical Reliability 40%
-        Validation Consistency  30%
+        Completeness              30%
+        Statistical Reliability   40%
+        Validation Consistency    30%
 
         """
 
         self.df["Validation Score"] = (
             self.df["Completeness Score"] * 0.30
-            + self.df["Statistical Reliability"] * 0.40
-            + self.df["Validation Consistency"] * 0.30
+            +
+            self.df["Statistical Reliability"] * 0.40
+            +
+            self.df["Validation Consistency"] * 0.30
         )
+
+
+        self.df["Validation Quality"] = (
+            self.df["Validation Score"]
+        )
+
 
         return self
 
@@ -586,6 +633,7 @@ class ValidationMetrics:
             self.df[f"{metric} Norm"] = normalize(self.df[metric])
 
         return self
+      
 
     # ---------------------------------------------------------
     # Cleanup
@@ -657,6 +705,7 @@ class ValidationMetrics:
             .iqr_outliers()
             .extreme_return()
             .extreme_expectancy()
+            .insufficient_sample()
             .logical_errors()
             .completeness_score()
             .statistical_reliability()

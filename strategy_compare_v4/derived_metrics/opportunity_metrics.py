@@ -79,6 +79,8 @@ class OpportunityMetrics:
         "Years",
         "Avg days",
         "Win%",
+        "Reward Risk",
+        "Expectancy",
     }
 
     def __init__(
@@ -223,13 +225,9 @@ class OpportunityMetrics:
     # ---------------------------------------------------------
 
     def trade_density(self):
-        """
-        Trades generated per
-        average holding day.
-        """
 
         self.df["Trade Density"] = safe_divide(
-            self.df["Trades"],
+            self.df["Trades / Year"],
             self.df["Avg days"],
         )
 
@@ -384,21 +382,21 @@ class OpportunityMetrics:
     # ---------------------------------------------------------
 
     def execution_efficiency(self):
-        """
-        Measures profitable execution quality.
-
-        Formula:
-
-        Win Rate × Reward Risk
-
-        """
 
         self.df["Execution Efficiency"] = (
+
             self.df["Win%"]
             /
             100
-        ) * self.df["Reward Risk"]
 
+            *
+
+            self.df["Reward Risk"]
+
+            *
+
+            self.df["Expectancy"]
+        )
 
         return self
 
@@ -539,13 +537,21 @@ class OpportunityMetrics:
 
 
         self.df["Institutional Opportunity Score"] = (
-            quality * 0.35
+
+            quality * 0.40
             +
             capacity * 0.25
             +
             execution * 0.20
             +
-            density * 0.20
+            density * 0.15
+
+        )
+
+        self.df["Opportunity Score"] = (
+            self.df[
+                "Institutional Opportunity Score"
+            ]
         )
 
 
@@ -554,22 +560,22 @@ class OpportunityMetrics:
     # ---------------------------------------------------------
 
     def opportunity_rank(self):
-        """
-        Institutional percentile
-        ranking.
-        """
 
         self.df["Opportunity Rank"] = (
-            self.df["Institutional Opportunity Score"].rank(
+            self.df[
+                "Institutional Opportunity Score"
+            ]
+            .rank(
                 pct=True,
-                ascending=True,
+                ascending=False,
                 method="average",
             )
-            * 100
+            *
+            100
         )
 
         return self
-
+    
     # ---------------------------------------------------------
 
     def normalize_scores(self):
@@ -656,9 +662,9 @@ class OpportunityMetrics:
             .holding_occupancy()
             .idle_time_ratio()
             .opportunity_coverage()
+            .trade_availability()
             .capacity_score()
             .opportunity_velocity()
-            .trade_availability()
             .signal_saturation()
             .execution_efficiency()
             .market_coverage()

@@ -300,7 +300,7 @@ class EfficiencyMetrics:
         """
 
         self.df["Time Efficiency"] = safe_divide(
-            self.df["Annual Return %"],
+            self.df["Return / Trade"],
             self.df["Avg days"],
         )
 
@@ -309,21 +309,13 @@ class EfficiencyMetrics:
     # ---------------------------------------------------------
 
     def capital_efficiency(self):
-        """
-        Return generated per unit
-        of capital exposure.
-
-        Formula:
-
-        Annual Return %
-        ----------------
-        Capital Exposure Ratio
-
-        """
 
         self.df["Capital Efficiency"] = safe_divide(
             self.df["Annual Return %"],
-            self.df["Capital Exposure Ratio"],
+            (
+                1 +
+                self.df["Capital Exposure Ratio"].abs()
+            ),
         )
 
         return self
@@ -351,27 +343,32 @@ class EfficiencyMetrics:
     # ---------------------------------------------------------
 
     def trade_efficiency(self):
-        """
-        Combined trade quality
-        using expectancy and
-        reward-risk ratio.
-        """
 
-        self.df["Trade Efficiency"] = self.df["Expectancy"] * self.df["Profit Factor"]
+        self.df["Trade Efficiency"] = safe_divide(
+            (
+                self.df["Expectancy"]
+                *
+                self.df["Profit Factor"]
+            ),
+            (
+                1 +
+                self.df["Avg loss%"].abs()
+            ),
+        )
 
         return self
 
     # ---------------------------------------------------------
 
     def edge_persistence(self):
-        """
-        Sustainable trading edge
-        after considering holding
-        utilization.
-        """
 
         self.df["Edge Persistence"] = (
-            self.df["Trade Efficiency"] * self.df["Holding Utilization"]
+            self.df["Trade Efficiency"]
+            *
+            (
+                1 -
+                self.df["Holding Utilization"]
+            )
         )
 
         return self
@@ -658,14 +655,6 @@ class EfficiencyMetrics:
     # ---------------------------------------------------------
 
     def institutional_efficiency_score(self):
-        """
-        Final institutional efficiency score.
-
-        Scale:
-
-        0 - 100
-
-        """
 
         holding_score = (
             self.df["Holding Stability"]
@@ -675,33 +664,34 @@ class EfficiencyMetrics:
 
 
         self.df["Institutional Efficiency Score"] = (
-            self.df["Efficiency Quality"] * 0.40
-            +
-            self.df["Capital Productivity Norm"] * 0.20
-            +
-            self.df["Trade Productivity Norm"] * 0.20
-            +
-            holding_score * 0.20
-        )
 
+            self.df["Efficiency Quality"] * 0.40
+
+            +
+
+            self.df["Capital Productivity Norm"] * 0.20
+
+            +
+
+            self.df["Trade Productivity Norm"] * 0.25
+
+            +
+
+            holding_score * 0.15
+
+        )
 
         return self
 
     # ---------------------------------------------------------
 
     def efficiency_rank(self):
-        """
-        Percentile ranking.
-
-        Higher score = better rank.
-
-        """
 
         self.df["Efficiency Rank"] = (
             self.df["Institutional Efficiency Score"]
             .rank(
                 pct=True,
-                ascending=True,
+                ascending=False,
             )
             *
             100
@@ -777,6 +767,9 @@ class EfficiencyMetrics:
             "Efficiency Consistency",
             "Institutional Efficiency Score",
             "Efficiency Rank",
+            "Efficiency Score",
+            "Return / Trade",
+            "Return / Day",
         ]
 
         for col in derived_cols:

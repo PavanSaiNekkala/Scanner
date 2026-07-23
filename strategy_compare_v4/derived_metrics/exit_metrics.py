@@ -339,19 +339,20 @@ class ExitMetrics:
     def winning_exit_percentage(self):
         """
         Measures profitable exit behaviour.
-
-        Formula:
-
-        Target Exit % + Trailing Exit %
-
         """
 
         self.df["Winning Exit %"] = (
             self.df["Target Exit %"]
             +
             self.df["Trailing Exit %"]
+        ).clip(
+            0,
+            100,
         )
 
+        self.df["Winning Exit"] = (
+            self.df["Winning Exit %"]
+        )
 
         return self
 
@@ -362,22 +363,23 @@ class ExitMetrics:
     def losing_exit_percentage(self):
         """
         Losing exit behaviour.
-
-        Formula:
-
-        Stop Dependency + Time Dependency
-
         """
 
         self.df["Losing Exit %"] = (
             self.df["Stop Dependency"]
             +
             self.df["Time Dependency"]
+        ).clip(
+            0,
+            100,
         )
 
-
+        self.df["Losing Exit"] = (
+            self.df["Losing Exit %"]
+        )
+        
         return self
-
+    
     # ---------------------------------------------------------
     # Exit Diversity
     # ---------------------------------------------------------
@@ -505,24 +507,24 @@ class ExitMetrics:
         Measures exit quality.
 
         Higher is better.
-
         """
 
-        win_quality = normalize(
+        win_quality = (
             self.df["Winning Exit %"]
         )
 
 
-        diversity = normalize(
+        diversity = (
             self.df["Exit Diversity Score"]
+            *
+            100
         )
 
 
         stop_quality = (
-            1 -
-            normalize(
-                self.df["Stop Dependency"]
-            )
+            100
+            -
+            self.df["Stop Dependency"]
         )
 
 
@@ -532,6 +534,9 @@ class ExitMetrics:
             diversity * 0.30
             +
             stop_quality * 0.20
+        ).clip(
+            0,
+            100,
         )
 
 
@@ -542,25 +547,26 @@ class ExitMetrics:
     # ---------------------------------------------------------
 
     def exit_robustness(self):
-        """
-        Measures exit stability.
-
-        """
 
         self.df["Exit Robustness"] = (
+
             normalize(
                 self.df["Exit Diversity Score"]
             )
             *
             0.40
+
             +
+
             safe_divide(
                 self.df["Winning Exit %"],
                 100,
             )
             *
             0.40
+
             +
+
             (
                 1 -
                 safe_divide(
@@ -570,7 +576,8 @@ class ExitMetrics:
             )
             *
             0.20
-        )
+
+        ) * 100
 
 
         return self
@@ -582,7 +589,6 @@ class ExitMetrics:
     def institutional_exit_score(self):
         """
         Final institutional exit score.
-
         """
 
         concentration_penalty = (
@@ -596,28 +602,37 @@ class ExitMetrics:
 
 
         self.df["Institutional Exit Score"] = (
-            normalize(
-                self.df["Exit Efficiency"]
-            )
-            *
-            0.45
+
+            self.df["Exit Efficiency"] * 0.45
+
             +
-            normalize(
-                self.df["Exit Robustness"]
-            )
-            *
-            0.35
+
+            self.df["Exit Robustness"] * 0.35
+
             +
-            normalize(
+
+            (
                 self.df["Exit Diversity Score"]
+                *
+                100
             )
             *
             0.20
+
         )
 
 
         self.df["Institutional Exit Score"] *= (
             concentration_penalty
+        )
+
+
+        self.df["Institutional Exit Score"] = (
+            self.df["Institutional Exit Score"]
+            .clip(
+                0,
+                100,
+            )
         )
 
 

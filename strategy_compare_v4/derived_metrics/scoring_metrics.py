@@ -71,7 +71,7 @@ class ScoringMetrics:
         "Profit Velocity",
         "Winning Exit %",
         "Validation Score",
-        "Consistency Score",
+        "Validation Consistency",
         "Capital Preservation",
         "Safety Margin",
         "Time Efficiency",
@@ -196,24 +196,21 @@ class ScoringMetrics:
 
         Components:
 
-        Exit Quality       30%
-        Opportunity        20%
-        Efficiency        20%
-        Validation        15%
-        Consistency       15%
+        Exit Quality        30%
+        Validation          25%
+        Consistency         25%
+        Efficiency          20%
 
         """
 
         self.df["Reliability Score"] = (
             self.norm_col("Institutional Exit Score") * 0.30
             +
-            self.norm_col("Institutional Opportunity Score") * 0.20
+            self.norm_col("Validation Score") * 0.25
+            +
+            self.norm_col("Consistency Score") * 0.25
             +
             self.norm_col("Institutional Efficiency Score") * 0.20
-            +
-            self.norm_col("Validation Score") * 0.15
-            +
-            self.norm_col("Consistency Score") * 0.15
         )
 
         return self
@@ -306,16 +303,15 @@ class ScoringMetrics:
 
     def return_score(self):
         """
-        Measure return generation.
-
-        Return is important,
-        but controlled.
-
+        Controlled return capability.
         """
 
         self.df["Return Score"] = (
-            self.norm_col("Annual Return %") * 0.50
-            + self.norm_col("Profit Velocity") * 0.50
+            self.norm_col("Annual Return %") * 0.40
+            +
+            self.norm_col("Profit Velocity") * 0.30
+            +
+            self.norm_col("Expectancy") * 0.30
         )
 
         return self
@@ -326,26 +322,49 @@ class ScoringMetrics:
 
     def consistency_score(self):
         """
-        Measures stability.
+        Measures stability and repeatability.
+
+        Components:
+
+        Validation Quality     40%
+        Exit Stability         30%
+        Efficiency Stability  20%
+        Opportunity Stability 10%
 
         """
 
         self.df["Consistency Score"] = (
+
             self.norm_col(
                 "Validation Score"
-            ) * 0.30
+            )
+            *
+            0.40
+
             +
+
             self.norm_col(
                 "Institutional Exit Score"
-            ) * 0.25
+            )
+            *
+            0.30
+
             +
+
             self.norm_col(
                 "Institutional Efficiency Score"
-            ) * 0.25
+            )
+            *
+            0.20
+
             +
+
             self.norm_col(
                 "Institutional Opportunity Score"
-            ) * 0.20
+            )
+            *
+            0.10
+
         )
 
         return self
@@ -378,26 +397,46 @@ class ScoringMetrics:
         """
         Master institutional score.
 
-        Uses centralized weights.
+        Formula:
 
-        Recommended institutional weighting:
-
-        Edge          20%
-        Reliability   20%
-        Risk          25%
-        Opportunity   10%
-        Efficiency    15%
-        Return        10%
+        Edge              20%
+        Reliability       20%
+        Risk              20%
+        Efficiency        10%
+        Opportunity       10%
+        Consistency       10%
+        Validation        10%
 
         """
 
         self.df[COMPOSITE_SCORE] = (
+
             self.df["Edge Score"] * 0.20
-            + self.df["Reliability Score"] * 0.20
-            + self.df["Risk Score"] * 0.25
-            + self.df["Opportunity Score"] * 0.10
-            + self.df["Efficiency Score"] * 0.15
-            + self.df["Return Score"] * 0.10
+
+            +
+
+            self.df["Reliability Score"] * 0.20
+
+            +
+
+            self.df["Risk Score"] * 0.20
+
+            +
+
+            self.df["Efficiency Score"] * 0.10
+
+            +
+
+            self.df["Opportunity Score"] * 0.10
+
+            +
+
+            self.df["Consistency Score"] * 0.10
+
+            +
+
+            self.df["Validation Score"] * 0.10
+
         )
 
         return self
@@ -485,7 +524,9 @@ class ScoringMetrics:
 
         """
 
-        score = self.df[COMPOSITE_SCORE]
+        score = self.df[
+            "Final Institutional Score"
+        ]
 
         self.df["Institutional Grade"] = np.select(
             [
@@ -545,19 +586,18 @@ class ScoringMetrics:
     # --------------------------------------------------------
 
     def percentile_rank(self):
-        """
-        Calculate institutional percentile.
-
-        Highest score = highest percentile.
-        """
 
         self.df["Percentile Rank"] = (
-            self.df[COMPOSITE_SCORE].rank(
+            self.df[
+                "Final Institutional Score"
+            ]
+            .rank(
                 pct=True,
                 ascending=True,
                 method="average",
             )
-            * 100
+            *
+            100
         )
 
         return self
@@ -568,11 +608,19 @@ class ScoringMetrics:
 
     def overall_rank(self):
         """
-        Calculate final ranking.
+        Calculate final institutional ranking.
         """
 
+        ranking_column = (
+            "Final Institutional Score"
+            if "Final Institutional Score"
+            in self.df.columns
+            else COMPOSITE_SCORE
+        )
+
+
         self.df[INSTITUTION_RANK] = (
-            self.df[COMPOSITE_SCORE]
+            self.df[ranking_column]
             .rank(
                 ascending=False,
                 method="dense",
@@ -581,25 +629,24 @@ class ScoringMetrics:
         )
 
         return self
-
+    
     # --------------------------------------------------------
     # Final Institutional Score
     # --------------------------------------------------------
 
     def final_institutional_score(self):
         """
-        Final decision score.
-
-        Composite Score:
-        70%
-
-        Confidence:
-        30%
-
+        Final institutional decision score.
         """
 
         self.df["Final Institutional Score"] = (
-            self.df[COMPOSITE_SCORE] * 0.70 + self.df["Confidence Score"] * 0.30
+
+            self.df[COMPOSITE_SCORE] * 0.80
+
+            +
+
+            self.df["Confidence Score"] * 0.20
+
         )
 
         return self
@@ -640,7 +687,7 @@ class ScoringMetrics:
             "Opportunity Score",
             "Efficiency Score",
             "Return Score",
-            "Consistency Score",
+            "Validation Consistency",
             "Institutional Strength",
             COMPOSITE_SCORE,
             "Confidence Score",
@@ -714,7 +761,7 @@ class ScoringMetrics:
         self.df = self.df.sort_values(
             by=[
                 INSTITUTION_RANK,
-                COMPOSITE_SCORE,
+                "Final Institutional Score",
             ],
             ascending=[
                 True,
@@ -753,11 +800,11 @@ class ScoringMetrics:
             .stability_score()
             .performance_score()
             .alpha_score()
+            .final_institutional_score()
             .institutional_grade()
             .risk_grade()
             .percentile_rank()
             .overall_rank()
-            .final_institutional_score()
             .recommendation()
             .normalize_scores()
             .cleanup()

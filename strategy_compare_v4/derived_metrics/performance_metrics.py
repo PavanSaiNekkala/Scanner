@@ -226,13 +226,33 @@ class PerformanceMetrics:
         if "Expectancy" in self.df.columns:
             return self
 
-        win_rate = self.df["Win%"] / 100
 
-        loss_rate = 1 - win_rate
+        win_rate = (
+            self.df["Win%"]
+            /
+            100
+        )
+
+
+        loss_rate = (
+            1
+            -
+            win_rate
+        )
+
 
         self.df["Expectancy"] = (
-            win_rate * self.df["Avg win%"] - loss_rate * self.df["Avg loss%"].abs()
+            win_rate
+            *
+            self.df["Avg win%"]
+
+            -
+
+            loss_rate
+            *
+            self.df["Avg loss%"].abs()
         )
+
 
         return self
 
@@ -280,21 +300,21 @@ class PerformanceMetrics:
     def return_per_day(self):
 
         if (
-            "Annual Return %" not in self.df.columns
+            "Return / Trade" not in self.df.columns
             or "Avg days" not in self.df.columns
         ):
             self.df["Return / Day"] = np.nan
+
             return self
 
 
         self.df["Return / Day"] = safe_divide(
-            self.df["Annual Return %"],
+            self.df["Return / Trade"],
             self.df["Avg days"],
         )
 
 
         return self
-
 
     # --------------------------------------------------------
     # Holding Efficiency
@@ -303,15 +323,16 @@ class PerformanceMetrics:
     def holding_efficiency(self):
 
         if (
-            "Annual Return %" not in self.df.columns
+            "Return / Trade" not in self.df.columns
             or "Avg days" not in self.df.columns
         ):
             self.df["Holding Efficiency"] = np.nan
+
             return self
 
 
         self.df["Holding Efficiency"] = safe_divide(
-            self.df["Annual Return %"],
+            self.df["Return / Trade"],
             self.df["Avg days"],
         )
 
@@ -391,14 +412,20 @@ class PerformanceMetrics:
 
     def edge_per_trade(self):
 
-        if "Expectancy" not in self.df.columns:
+        if (
+            "Expectancy" not in self.df.columns
+            or "Avg loss%" not in self.df.columns
+        ):
             self.df["Edge / Trade"] = np.nan
+
             return self
 
 
-        self.df["Edge / Trade"] = (
-            self.df["Expectancy"]
+        self.df["Edge / Trade"] = safe_divide(
+            self.df["Expectancy"],
+            self.df["Avg loss%"].abs(),
         )
+
 
         return self
 
@@ -431,7 +458,10 @@ class PerformanceMetrics:
 
     def trade_efficiency(self):
 
-        self.df["Trade Efficiency"] = self.df["Reward Risk"] * self.df["Win%"] / 100
+        self.df["Trade Efficiency"] = safe_divide(
+            self.df["Expectancy"],
+            self.df["Avg loss%"].abs(),
+        )
 
         return self
 

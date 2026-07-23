@@ -375,7 +375,10 @@ class RiskMetrics:
 
             self.df["Stop Efficiency"] = (
                 1 -
-                stop_utilization
+                stop_utilization.clip(
+                    lower=0,
+                    upper=1,
+                )
             )
 
         else:
@@ -385,14 +388,14 @@ class RiskMetrics:
         return self
 
     # --------------------------------------------------------
-    # Downside Capture
+    # Downside Protection
     # --------------------------------------------------------
 
-    def downside_capture(self):
+    def downside_protection(self):
         """
         Downside protection proxy.
 
-        True downside capture requires:
+        True downside protection requires:
             Strategy returns during market declines /
             Benchmark returns during market declines.
 
@@ -406,7 +409,7 @@ class RiskMetrics:
         Higher is better.
         """
 
-        self.df["Downside Capture"] = safe_divide(
+        self.df["Downside Protection"] = safe_divide(
             self.df["Expectancy"],
             self.df["Avg loss%"].abs(),
         )
@@ -556,7 +559,10 @@ class RiskMetrics:
 
         self.df["Capital Preservation"] = safe_divide(
             self.df["Annual Return %"],
-            self.df["Annual Risk"],
+            (
+                1 +
+                self.df["Annual Risk"].abs()
+            ),
         )
 
         return self
@@ -654,6 +660,18 @@ class RiskMetrics:
             loss_consistency * 0.20
         )
 
+        self.df["Risk Quality"] = (
+            (
+                self.df["Risk Quality"]
+                +
+                1
+            )
+            /
+            2
+            *
+            100
+        )
+
         return self
 
 
@@ -745,6 +763,18 @@ class RiskMetrics:
             safety_margin * 0.20
         )
 
+        self.df["Risk Score"] = (
+            (
+                self.df["Risk Score"]
+                +
+                1
+            )
+            /
+            2
+            *
+            100
+        )
+
         return self
 
     # --------------------------------------------------------
@@ -807,7 +837,7 @@ class RiskMetrics:
             "Drawdown Proxy",
             "Risk Adjusted Return",
             "Stop Efficiency",
-            "Downside Capture",
+            "Downside Protection",
             "Tail Risk",
             "Risk Reward Balance",
             "Annual Risk",
@@ -852,7 +882,7 @@ class RiskMetrics:
             "Drawdown Proxy",
             "Risk Adjusted Return",
             "Stop Efficiency",
-            "Downside Capture",
+            "Downside Protection",
             "Tail Risk",
             "Risk Reward Balance",
             "Annual Risk",

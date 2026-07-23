@@ -55,12 +55,14 @@ from strategy_compare_v4.utils.helpers import require_columns
 # Recommendation Engine
 # ============================================================
 
-
 def get_recommendation(
     composite_score: float,
     edge_score: float,
     reliability_score: float,
     efficiency_score: float,
+    risk_score: float = 0,
+    consistency_score: float = 0,
+    validation_score: float = 0,
 ) -> str:
     """
     Return institutional recommendation.
@@ -71,6 +73,9 @@ def get_recommendation(
         and edge_score >= STRONG_BUY_SCORE
         and reliability_score >= STRONG_BUY_SCORE
         and efficiency_score >= STRONG_BUY_SCORE
+        and risk_score >= STRONG_BUY_SCORE
+        and consistency_score >= STRONG_BUY_SCORE
+        and validation_score >= STRONG_BUY_SCORE
     ):
         return STRONG_BUY
 
@@ -79,6 +84,7 @@ def get_recommendation(
         and edge_score >= BUY_SCORE
         and reliability_score >= BUY_SCORE
         and efficiency_score >= BUY_SCORE
+        and risk_score >= BUY_SCORE
     ):
         return BUY
 
@@ -113,22 +119,33 @@ def assign_recommendations(
 
     df = df.copy()
 
+    required_columns = [
+        COMPOSITE_SCORE,
+        EDGE_SCORE,
+        RELIABILITY_SCORE,
+        EFFICIENCY_SCORE,
+    ]
+
+    available_required = [
+        column
+        for column in required_columns
+        if column in df.columns
+    ]
+
     require_columns(
         df,
-        [
-            COMPOSITE_SCORE,
-            EDGE_SCORE,
-            RELIABILITY_SCORE,
-            EFFICIENCY_SCORE,
-        ],
+        available_required,    
     )
 
     df[RECOMMENDATION] = df.apply(
         lambda row: get_recommendation(
-            row[COMPOSITE_SCORE],
-            row[EDGE_SCORE],
-            row[RELIABILITY_SCORE],
-            row[EFFICIENCY_SCORE],
+            row.get(COMPOSITE_SCORE, 0),
+            row.get(EDGE_SCORE, 0),
+            row.get(RELIABILITY_SCORE, 0),
+            row.get(EFFICIENCY_SCORE, 0),
+            row.get("Risk Score", 0),
+            row.get("Consistency Score", 0),
+            row.get("Validation Score", 0),
         ),
         axis=1,
     )
@@ -156,7 +173,7 @@ RECOMMENDATION_PRIORITY = {
 PORTFOLIO_ELIGIBILITY = {
     STRONG_BUY: True,
     BUY: True,
-    WATCH: True,
+    WATCH: False,
     IMPROVE: False,
     AVOID: False,
     REJECT: False,

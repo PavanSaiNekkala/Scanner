@@ -177,6 +177,8 @@ class DerivedMetricsEngine:
                 "Institutional Exit Score",
                 "Institutional Opportunity Score",
                 "Institutional Efficiency Score",
+                "Annual Return %",
+                "Profit Velocity",
                 "Validation Score",
                 "Consistency Score",
                 "Capital Preservation",
@@ -196,16 +198,23 @@ class DerivedMetricsEngine:
 
     def validate_scoring_ready(self):
         """
-        Verify scoring stage dependencies.
+        Verify raw metrics required
+        before institutional scoring.
         """
 
         require_columns(
             self.df,
             [
-                "Risk Score",
-                "Reliability Score",
-                "Efficiency Score",
-                "Opportunity Score",
+                "Expectancy",
+                "Profit Factor",
+                "Reward Risk",
+                "Annual Return %",
+                "Risk Adjusted Return",
+                "Validation Score",
+                "Consistency Score",
+                "Institutional Exit Score",
+                "Institutional Opportunity Score",
+                "Institutional Efficiency Score",
             ],
         )
 
@@ -216,9 +225,25 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def scoring_stage(self):
-        logger.info("Running Institutional Scoring...")
 
-        self.df = derive_scoring_metrics(self.df)
+        logger.info(
+            "Running Institutional Scoring..."
+        )
+
+        self.df = derive_scoring_metrics(
+            self.df
+        )
+
+
+        require_columns(
+            self.df,
+            [
+                COMPOSITE_SCORE,
+                "Final Institutional Score",
+                INSTITUTION_RANK,
+                RECOMMENDATION,
+            ],
+        )
 
         return self
 
@@ -289,10 +314,14 @@ class DerivedMetricsEngine:
             )
 
 
-        if "Institutional Score" in self.df.columns:
+        if "Final Institutional Score" in self.df.columns:
 
-            diagnostics["Average Institutional Score"] = round(
-                self.df["Institutional Score"].mean(),
+            diagnostics[
+                "Average Institutional Score"
+            ] = round(
+                self.df[
+                    "Final Institutional Score"
+                ].mean(),
                 2,
             )
 
@@ -341,19 +370,26 @@ class DerivedMetricsEngine:
     # ---------------------------------------------------------
 
     def sort_results(self):
-        """
-        Sort final institutional output.
-        """
 
-        if INSTITUTION_RANK in self.df.columns:
-            self.df = self.df.sort_values(INSTITUTION_RANK, ascending=True).reset_index(
-                drop=True
-            )
+        ranking_column = (
+            "Final Institutional Score"
+            if "Final Institutional Score"
+            in self.df.columns
+            else COMPOSITE_SCORE
+        )
 
-        elif COMPOSITE_SCORE in self.df.columns:
-            self.df = self.df.sort_values(COMPOSITE_SCORE, ascending=False).reset_index(
-                drop=True
+
+        self.df = (
+            self.df
+            .sort_values(
+                ranking_column,
+                ascending=False,
             )
+            .reset_index(
+                drop=True,
+            )
+        )
+
 
         return self
 
@@ -390,7 +426,6 @@ class DerivedMetricsEngine:
                 .exit_stage()
                 .opportunity_stage()
                 .validate_dependencies()
-                .validate_scoring_ready()
                 .scoring_stage()
                 .pipeline_summary()
                 .diagnostics()

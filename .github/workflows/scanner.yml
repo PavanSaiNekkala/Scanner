@@ -1,0 +1,83 @@
+name: Institutional Scanner Workflow
+
+on:
+
+  # Manual execution
+  workflow_dispatch:
+
+  # Daily execution
+  schedule:
+    - cron: "30 3 * * 1-5"
+
+
+jobs:
+
+  scanner:
+
+    name: Run Market Scanner
+
+    runs-on: ubuntu-latest
+
+
+    steps:
+
+      # --------------------------------------------------
+      # Checkout Repository
+      # --------------------------------------------------
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+
+      # --------------------------------------------------
+      # Python Setup
+      # --------------------------------------------------
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+
+        with:
+          python-version: "3.12"
+
+
+      # --------------------------------------------------
+      # Install Dependencies
+      # --------------------------------------------------
+
+      - name: Install dependencies
+
+        run: |
+
+          python -m pip install --upgrade pip
+
+          pip install -r requirements.txt
+
+
+      # --------------------------------------------------
+      # Run Scanner
+      # --------------------------------------------------
+
+      - name: Execute Scanner Workflow
+
+        run: |
+
+          python run_workflow.py
+
+
+      # --------------------------------------------------
+      # Upload Results
+      # --------------------------------------------------
+
+      - name: Upload Scanner Results
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: scanner-results
+
+          path: |
+
+            reports/
+
+          retention-days: 30

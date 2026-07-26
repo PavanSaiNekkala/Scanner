@@ -681,6 +681,10 @@ class EfficiencyMetrics:
 
         )
 
+        self.df["Efficiency Score"] = (
+            self.df["Institutional Efficiency Score"]
+        )
+
         return self
 
     # ---------------------------------------------------------

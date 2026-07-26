@@ -185,7 +185,49 @@ class ScoringMetrics:
         )
 
         return self
+    
+    # --------------------------------------------------------
+    # Consistency Score
+    # --------------------------------------------------------
 
+    def consistency_score(self):
+        """
+        Measures stability of strategy performance.
+
+        Formula:
+
+        50% Expectancy Stability
+        30% Win Rate Stability
+        20% Trade Frequency Stability
+
+        Output:
+        0 - 100
+        """
+
+        expectancy_score = normalize(
+            self.df["Expectancy"]
+        )
+
+        win_score = normalize(
+            self.df["Win%"]
+        )
+
+        trade_score = normalize(
+            self.df["Trades"]
+        )
+
+
+        self.df["Consistency Score"] = (
+            expectancy_score * 0.50
+            +
+            win_score * 0.30
+            +
+            trade_score * 0.20
+        )
+
+
+        return self
+    
     # --------------------------------------------------------
     # Reliability Score
     # --------------------------------------------------------
@@ -787,13 +829,13 @@ class ScoringMetrics:
         result = (
             self.prepare_columns()
             .validate()
+            .consistency_score()
             .edge_score()
             .reliability_score()
             .opportunity_score()
             .efficiency_score()
             .risk_score()
             .return_score()
-            .consistency_score()
             .institutional_strength()
             .composite_score()
             .confidence_score()

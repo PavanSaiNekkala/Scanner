@@ -180,7 +180,6 @@ class DerivedMetricsEngine:
                 "Annual Return %",
                 "Profit Velocity",
                 "Validation Score",
-                "Consistency Score",
                 "Capital Preservation",
                 "Safety Margin",
                 "Risk Adjusted Return",
@@ -211,7 +210,6 @@ class DerivedMetricsEngine:
                 "Annual Return %",
                 "Risk Adjusted Return",
                 "Validation Score",
-                "Consistency Score",
                 "Institutional Exit Score",
                 "Institutional Opportunity Score",
                 "Institutional Efficiency Score",
@@ -419,13 +417,14 @@ class DerivedMetricsEngine:
         try:
 
             (
-                self.validation_stage()
-                .performance_stage()
+                self.performance_stage()
+                .validation_stage()
                 .risk_stage()
                 .efficiency_stage()
                 .exit_stage()
                 .opportunity_stage()
                 .validate_dependencies()
+                .validate_scoring_ready()
                 .scoring_stage()
                 .pipeline_summary()
                 .diagnostics()
@@ -495,6 +494,29 @@ def process_file(
     else:
         raise ValueError(f"Unsupported file type: {extension}")
 
+    if (
+        "Trades" not in df.columns
+        and "Win%" not in df.columns
+    ):
+
+        from strategy_compare_v4.summary.metrics import (
+            compute_trade_metrics,
+        )
+
+        stock = Path(input_file).stem.split(
+            "_backtest"
+        )[0]
+
+        metrics = compute_trade_metrics(
+            stock,
+            df,
+        )
+
+        df = pd.DataFrame(
+            [metrics]
+        )
+
+
     result = derive_metrics(df)
 
     if output_file is None:
@@ -517,20 +539,37 @@ def process_file(
 # Directory Processing
 # ===========================================================
 
-
 def process_directory(
     directory: str | Path,
 ) -> None:
     """
-    Process every CSV and Excel file
+    Process every valid CSV and Excel file
     inside a directory.
     """
 
     path = Path(directory)
 
     files = sorted(
-        list(path.glob("*.csv")) + list(path.glob("*.xlsx")) + list(path.glob("*.xls"))
+        list(path.glob("*.csv"))
+        +
+        list(path.glob("*.xlsx"))
+        +
+        list(path.glob("*.xls"))
     )
+
+
+    # ------------------------------------------------------
+    # Remove generated/report files
+    # ------------------------------------------------------
+
+    files = [
+        file
+        for file in files
+        if "Statistics" not in file.name
+        and "Summary" not in file.name
+        and "Institutional" not in file.name
+    ]
+
 
     if not files:
         logger.warning(
@@ -540,16 +579,24 @@ def process_directory(
 
         return
 
+
     logger.info(
         "Found %d files.",
         len(files),
     )
 
+
     for file in files:
+
         try:
-            process_file(str(file))
+
+            process_file(
+                str(file),
+            )
+
 
         except Exception:
+
             logger.exception(
                 "Failed processing %s",
                 file.name,

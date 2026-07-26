@@ -626,6 +626,10 @@ class ExitMetrics:
             concentration_penalty
         )
 
+        self.df["Exit Score"] = (
+            self.df["Institutional Exit Score"]
+        )
+
 
         self.df["Institutional Exit Score"] = (
             self.df["Institutional Exit Score"]

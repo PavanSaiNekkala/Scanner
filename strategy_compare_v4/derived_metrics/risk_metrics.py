@@ -39,33 +39,72 @@ logger = logging.getLogger(__name__)
 # Utility Functions
 # ============================================================
 
-
-def numeric(value):
+def numeric(
+    value,
+):
     """
     Convert values safely to numeric.
-
-    Invalid values become NaN.
+    Handles:
+    - Series
+    - Scalars
+    - Strings
     """
 
-    return pd.to_numeric(
+    if isinstance(
         value,
+        pd.Series,
+    ):
+
+        return pd.to_numeric(
+            value.astype(str)
+            .str.replace(
+                "%",
+                "",
+                regex=False,
+            )
+            .str.replace(
+                ",",
+                "",
+                regex=False,
+            ),
+            errors="coerce",
+        )
+
+
+    if isinstance(
+        value,
+        (int, float),
+    ):
+
+        return float(value)
+
+
+    return pd.to_numeric(
+        str(value)
+        .replace(
+            "%",
+            "",
+        )
+        .replace(
+            ",",
+            "",
+        ),
         errors="coerce",
-    ).replace(
-        [
-            np.inf,
-            -np.inf,
-        ],
-        np.nan,
     )
 
 
-def safe_divide(a, b):
+def safe_divide(
+    a,
+    b,
+    default=0.0,
+):
     """
     Safe division.
 
     Handles:
-    - Series / Series
+    - pandas Series / Series
     - Series / scalar
+    - scalar / Series
     - invalid divisions
     """
 
@@ -73,25 +112,72 @@ def safe_divide(a, b):
 
     b = numeric(b)
 
-    result = np.divide(
-        a,
-        b,
-        out=np.full_like(
-            np.asarray(a, dtype=float),
-            np.nan,
-            dtype=float,
-        ),
-        where=(np.asarray(b) != 0),
-    )
 
-    return pd.Series(result).replace(
-        [
-            np.inf,
-            -np.inf,
-        ],
-        np.nan,
-    )
+    # -----------------------------------------
+    # Pandas Series handling
+    # -----------------------------------------
 
+    if isinstance(a, pd.Series) or isinstance(b, pd.Series):
+
+        if not isinstance(a, pd.Series):
+
+            a = pd.Series(
+                a,
+                index=b.index,
+            )
+
+
+        if not isinstance(b, pd.Series):
+
+            b = pd.Series(
+                b,
+                index=a.index,
+            )
+
+
+        result = (
+            a
+            /
+            b.replace(
+                0,
+                np.nan,
+            )
+        )
+
+
+        return (
+            result
+            .replace(
+                [
+                    np.inf,
+                    -np.inf,
+                ],
+                np.nan,
+            )
+            .fillna(
+                default,
+            )
+        )
+
+
+    # -----------------------------------------
+    # Scalar handling
+    # -----------------------------------------
+
+    if b == 0:
+
+        return default
+
+
+    result = a / b
+
+
+    if np.isinf(result) or np.isnan(result):
+
+        return default
+
+
+    return result
 
 # ============================================================
 # Risk Metrics Engine
@@ -106,6 +192,7 @@ class RiskMetrics:
     REQUIRED_COLUMNS = {
         "Trades",
         "Years",
+        "Win%",
         "Avg loss%",
         "Avg win%",
         "Reward Risk",
@@ -921,7 +1008,7 @@ class RiskMetrics:
             .drawdown_proxy()
             .risk_adjusted_return()
             .stop_efficiency()
-            .downside_capture()
+            .downside_protection()
             .tail_risk()
             .risk_reward_balance()
             .annual_risk()

@@ -33,36 +33,137 @@ logger = logging.getLogger(__name__)
 # Utility Functions
 # ============================================================
 
+def numeric(
+    value,
+):
+    """
+    Convert values safely to numeric.
 
-def numeric(series):
+    Handles:
+    - pandas Series
+    - numpy values
+    - scalars
+    - strings
     """
-    Safely convert values
-    to numeric.
-    """
+
+    if isinstance(
+        value,
+        pd.Series,
+    ):
+
+        return pd.to_numeric(
+            value.astype(str)
+            .str.replace(
+                "%",
+                "",
+                regex=False,
+            )
+            .str.replace(
+                ",",
+                "",
+                regex=False,
+            ),
+            errors="coerce",
+        )
+
+
+    if isinstance(
+        value,
+        (int, float, np.integer, np.floating),
+    ):
+
+        return float(value)
+
 
     return pd.to_numeric(
-        series,
+        str(value)
+        .replace(
+            "%",
+            "",
+        )
+        .replace(
+            ",",
+            "",
+        ),
         errors="coerce",
-    ).replace(
-        [
-            np.inf,
-            -np.inf,
-        ],
-        np.nan,
     )
 
 
-def safe_divide(a, b):
+def safe_divide(
+    a,
+    b,
+    default=0.0,
+):
     """
-    Safe vectorized division.
+    Safe division.
+
+    Supports:
+    - Series / Series
+    - Series / scalar
+    - scalar / Series
     """
 
     a = numeric(a)
 
     b = numeric(b)
 
-    return a.divide(b.where((b != 0) & (~b.isna())))
 
+    if isinstance(a, pd.Series) or isinstance(b, pd.Series):
+
+        if not isinstance(a, pd.Series):
+
+            a = pd.Series(
+                a,
+                index=b.index,
+            )
+
+
+        if not isinstance(b, pd.Series):
+
+            b = pd.Series(
+                b,
+                index=a.index,
+            )
+
+
+        result = (
+            a /
+            b.replace(
+                0,
+                np.nan,
+            )
+        )
+
+
+        return (
+            result
+            .replace(
+                [
+                    np.inf,
+                    -np.inf,
+                ],
+                np.nan,
+            )
+            .fillna(
+                default,
+            )
+        )
+
+
+    if b == 0:
+
+        return default
+
+
+    result = a / b
+
+
+    if np.isnan(result) or np.isinf(result):
+
+        return default
+
+
+    return result
 
 # ============================================================
 # Opportunity Metrics

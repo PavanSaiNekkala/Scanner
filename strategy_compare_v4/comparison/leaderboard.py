@@ -227,8 +227,8 @@ class LeaderboardEngine:
 
 
         ranking_column = (
-            "Institutional Score"
-            if "Institutional Score"
+            "Final Institutional Score"
+            if "Final Institutional Score"
             in filtered.columns
             else COMPOSITE_SCORE
         )
@@ -255,17 +255,27 @@ class LeaderboardEngine:
         )
 
 
-        self.stock_board.insert(
-            0,
-            INSTITUTION_RANK,
-            np.arange(
-                1,
-                len(self.stock_board)+1,
-            ),
+        self.stock_board[INSTITUTION_RANK] = np.arange(
+            1,
+            len(self.stock_board) + 1,
         )
 
-        return self
 
+        self.stock_board = self.stock_board[
+            [
+                INSTITUTION_RANK,
+            ]
+            +
+            [
+                column
+                for column in self.stock_board.columns
+                if column != INSTITUTION_RANK
+            ]
+        ]
+
+
+        return self
+    
     # ---------------------------------------------------------
     # Strategy Leaderboard
     # ---------------------------------------------------------

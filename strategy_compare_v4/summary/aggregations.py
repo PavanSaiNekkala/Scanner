@@ -33,11 +33,12 @@ from strategy_compare_v4.utils.helpers import (
     sort_dataframe,
 )
 from strategy_compare_v4.utils.io_utils import write_csv
+from strategy_compare_v4.config.thresholds import (
+    MIN_TRADES,
+)
 
 from .io import load_strategy_directory
-from strategy_compare_v4.derived_metrics.derived_engine import (
-    DerivedMetricsEngine,
-)
+from .metrics import compute_trade_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ PREFERRED_COLUMNS = [
     "Avg days",
     "Years",
     "Annual Return %",
-    "CAGR",
+    "CAGR %",
     "Max Drawdown %",
     "Sharpe",
     "Sortino",
@@ -68,9 +69,11 @@ PREFERRED_COLUMNS = [
     "Risk Score",
     "Efficiency Score",
     "Opportunity Score",
+    "Validation Score",
     "Reliability Score",
+    "Consistency Score",
     "Composite Score",
-    "Institutional Score",
+    "Final Institutional Score",
     "Recommendation",
     "Strategy Rank",
 ]
@@ -109,29 +112,28 @@ def build_strategy_summary(
     skipped = 0
 
     for stock, df in trade_logs.items():
+
         if df.empty:
             skipped += 1
 
             continue
 
-        engine = DerivedMetricsEngine(
-            df=df,
+
+        metrics = compute_trade_metrics(
+            stock,
+            df,
         )
 
-        metrics_df = engine.run()
-
-        metrics = (
-            metrics_df
-            .iloc[0]
-            .to_dict()
-        )
-
-        metrics[STOCK] = stock
 
         if strategy_name is not None:
+
             metrics[STRATEGY] = strategy_name
 
-        rows.append(metrics)
+
+        rows.append(
+            metrics,
+        )
+
 
         processed += 1
 
@@ -142,7 +144,7 @@ def build_strategy_summary(
     if "Trades" in summary.columns:
 
         summary = summary.loc[
-            summary["Trades"] >= 30
+            summary["Trades"] >= MIN_TRADES
         ].reset_index(
             drop=True
         )
@@ -166,11 +168,11 @@ def build_strategy_summary(
     # Sorting
     # ------------------------------------------------------
 
-    if "Institutional Score" in summary.columns:
+    if "Final Institutional Score" in summary.columns:
 
         summary = sort_dataframe(
             summary,
-            column="Institutional Score",
+            column="Final Institutional Score",
             ascending=False,
         )
 

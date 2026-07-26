@@ -728,118 +728,260 @@ def consecutive_losses(
 # Trade Quality Summary
 # ==========================================================
 
-
 def trade_quality_statistics(
     returns: pd.Series,
 ) -> MetricsDict:
     """
     Core trade statistics block.
+
+    Produces:
+    - Base trade statistics
+    - Institutional metric aliases
     """
 
+    avg_win = average_win(
+        returns,
+    )
+
+    avg_loss = average_loss(
+        returns,
+    )
+
+    exp = expectancy(
+        returns,
+    )
+
     return {
-        "Trades": trade_count(returns),
-        "Wins": win_count(returns),
-        "Losses": loss_count(returns),
+
+        "Trades": trade_count(
+            returns,
+        ),
+
+        "Wins": win_count(
+            returns,
+        ),
+
+        "Losses": loss_count(
+            returns,
+        ),
+
+
         "Win%": round(
-            win_rate(returns),
+            win_rate(
+                returns,
+            ),
             2,
         ),
+
+
+        # -------------------------
+        # Average Trade Returns
+        # -------------------------
+
         "Avg Win %": round(
-            average_win(returns),
+            avg_win,
             2,
         ),
+
         "Avg Loss %": round(
-            average_loss(returns),
+            avg_loss,
             2,
         ),
+
+
+        # Compatibility aliases
+        # Required by V4 derived metrics
+
+        "Avg win%": round(
+            avg_win,
+            2,
+        ),
+
+        "Avg loss%": round(
+            avg_loss,
+            2,
+        ),
+
+
+        # -------------------------
+        # Edge Metrics
+        # -------------------------
+
         "Profit Factor": round(
-            profit_factor(returns),
+            profit_factor(
+                returns,
+            ),
             3,
         ),
+
         "Reward Risk": round(
-            reward_risk_ratio(returns),
+            reward_risk_ratio(
+                returns,
+            ),
             3,
         ),
+
         "Expectancy": round(
-            expectancy(returns),
+            exp,
             3,
         ),
+
+
+        # Compatibility alias
+
+        "Expectancy%": round(
+            exp,
+            3,
+        ),
+
+
+        # -------------------------
+        # Distribution Metrics
+        # -------------------------
+
         "Best Trade %": round(
-            best_trade(returns),
+            best_trade(
+                returns,
+            ),
             2,
         ),
+
         "Worst Trade %": round(
-            worst_trade(returns),
+            worst_trade(
+                returns,
+            ),
             2,
         ),
+
         "Std Return %": round(
-            return_std(returns),
+            return_std(
+                returns,
+            ),
             2,
         ),
-        "Winning Streak": consecutive_wins(returns),
-        "Losing Streak": consecutive_losses(returns),
+
+
+        # -------------------------
+        # Streak Metrics
+        # -------------------------
+
+        "Winning Streak": consecutive_wins(
+            returns,
+        ),
+
+        "Losing Streak": consecutive_losses(
+            returns,
+        ),
     }
-
-
-# ==========================================================
-# Annual Performance Metrics
-# ==========================================================
-
 
 def annual_statistics(
     returns: pd.Series,
     years: float,
 ) -> MetricsDict:
     """
-    Institutional annual performance.
+    Annual return statistics.
 
-    Metrics:
+    Produces:
     - Total Return %
+    - Net %
     - Annual Return %
     - CAGR %
     """
 
-    equity = build_equity_curve(
-        returns,
-    )
-
-    if equity.empty:
+    if returns.empty:
         return {
+            "Net %": 0.0,
             "Total Return %": 0.0,
             "Annual Return %": 0.0,
             "CAGR %": 0.0,
         }
 
-    total_return = (equity.iloc[-1] / INITIAL_CAPITAL - 1) * 100
+
+    equity = build_equity_curve(
+        returns,
+    )
+
+
+    if equity.empty:
+        return {
+            "Net %": 0.0,
+            "Total Return %": 0.0,
+            "Annual Return %": 0.0,
+            "CAGR %": 0.0,
+        }
+
+
+    final_equity = equity.iloc[-1]
+
+
+    total_return = (
+        final_equity
+        /
+        INITIAL_CAPITAL
+        -
+        1
+    ) * 100
+
 
     if years <= 0:
+
+        annual_return = 0.0
+
         cagr = 0.0
 
     else:
-        growth_factor = equity.iloc[-1] / INITIAL_CAPITAL
 
-        cagr = (growth_factor ** (1 / years) - 1) * 100
+        annual_return = (
+            total_return
+            /
+            years
+        )
 
-    # Institutional definition:
-    # Annual Return = CAGR
 
-    annual_return = cagr
+        cagr = (
+            (
+                final_equity
+                /
+                INITIAL_CAPITAL
+            )
+            **
+            (
+                1
+                /
+                years
+            )
+            -
+            1
+        ) * 100
+
 
     return {
+
+        # Compatibility field
+
+        "Net %": round(
+            total_return,
+            2,
+        ),
+
+
         "Total Return %": round(
-            float(total_return),
+            total_return,
             2,
         ),
+
+
         "Annual Return %": round(
-            float(annual_return),
+            annual_return,
             2,
         ),
+
+
         "CAGR %": round(
-            float(cagr),
+            cagr,
             2,
         ),
     }
-
 
 # ==========================================================
 # Sharpe Ratio
@@ -1168,109 +1310,192 @@ def exit_statistics(
 ) -> MetricsDict:
     """
     Exit quality analysis.
+
+    Generates:
+    - Exit distribution
+    - Institutional compatibility fields
     """
 
     exits = detect_exit_reason(
         df,
     )
 
-    total = len(exits)
+    total = len(
+        exits,
+    )
+
 
     if total == 0:
+
         return {
+
+            "Target #": 0,
+
+            "Trail #": 0,
+
+            "Stop #": 0,
+
+            "Time #": 0,
+
+
             "Target Exit %": 0.0,
+
+            "Trailing Exit %": 0.0,
+
             "Stop Exit %": 0.0,
-            "Trail Exit %": 0.0,
+
             "Time Exit %": 0.0,
+
         }
 
+
     normalized = exits.str.lower()
+
 
     target = normalized.str.contains(
         "target",
     ).sum()
 
+
     stop = normalized.str.contains(
         "stop",
     ).sum()
+
 
     trail = normalized.str.contains(
         "trail",
     ).sum()
 
+
     time_exit = normalized.str.contains(
         "time",
     ).sum()
 
+
+    target_pct = (
+        target / total
+    ) * 100
+
+
+    trail_pct = (
+        trail / total
+    ) * 100
+
+
+    stop_pct = (
+        stop / total
+    ) * 100
+
+
+    time_pct = (
+        time_exit / total
+    ) * 100
+
+
     return {
-        "Target #": int(target),
-        "Trail #": int(trail),
-        "Stop #": int(stop),
-        "Time #": int(time_exit),
+
+        "Target #": int(
+            target,
+        ),
+
+        "Trail #": int(
+            trail,
+        ),
+
+        "Stop #": int(
+            stop,
+        ),
+
+        "Time #": int(
+            time_exit,
+        ),
+
+
+        # Existing V5 naming
+
         "Target %": round(
-            target / total * 100,
+            target_pct,
             2,
         ),
+
         "Trail %": round(
-            trail / total * 100,
+            trail_pct,
             2,
         ),
+
         "Stop %": round(
-            stop / total * 100,
+            stop_pct,
             2,
         ),
+
         "Time %": round(
-            time_exit / total * 100,
+            time_pct,
+            2,
+        ),
+
+
+        # V4/V5 compatibility naming
+
+        "Target Exit %": round(
+            target_pct,
+            2,
+        ),
+
+        "Trailing Exit %": round(
+            trail_pct,
+            2,
+        ),
+
+        "Stop Exit %": round(
+            stop_pct,
+            2,
+        ),
+
+        "Time Exit %": round(
+            time_pct,
             2,
         ),
     }
-
 
 # ==========================================================
 # Efficiency Metrics
 # ==========================================================
 
 def holding_efficiency(
-    annual_return: float,
+    returns: pd.Series,
     days: pd.Series,
-):
-
-    avg_days = days.mean()
-
-    return safe_divide(
-        annual_return,
-        avg_days,
-    )
-
-
-def capital_efficiency(
-    cagr: float,
-    max_drawdown: float,
 ) -> float:
     """
-    Return generated per unit risk.
+    Return generated per holding day.
+
+    Formula:
+
+    Average Trade Return
+    --------------------
+    Average Holding Days
     """
 
-    if max_drawdown <= EPSILON:
+    if returns.empty:
         return 0.0
 
-    return safe_divide(
-        cagr,
-        max_drawdown,
+
+    avg_days = safe_mean(
+        days,
     )
 
 
-def trade_velocity(
-    trades: int,
-    years: float,
-) -> float:
-    """
-    Trades generated per year.
-    """
+    if avg_days <= 0:
+        return 0.0
 
-    return trades_per_year(
-        trades,
-        years,
+
+    avg_return = safe_mean(
+        returns,
+    )
+
+
+    return safe_divide(
+        avg_return,
+        avg_days,
     )
 
 
@@ -1280,41 +1505,116 @@ def trade_velocity(
 
 def opportunity_score(
     returns: pd.Series,
-):
+) -> float:
+    """
+    Institutional opportunity score.
+
+    Components:
+
+    Trade Capacity       40%
+    Expectancy Quality   35%
+    Win Reliability      25%
+
+    Output:
+
+    0 - 100
+    """
 
     if returns.empty:
         return 0.0
 
 
-    trade_score = min(
+    trade_capacity = min(
         len(returns) / 500,
+        1.0,
+    )
+
+
+    expectancy_value = expectancy(
+        returns,
+    )
+
+
+    expectancy_quality = min(
+        max(
+            expectancy_value / 10,
+            0,
+        ),
         1,
     )
 
 
-    expectancy_score = max(
-        expectancy(returns),
-        0,
+    win_quality = (
+        win_rate(
+            returns,
+        )
+        /
+        100
     )
 
 
-    win_score = win_rate(
-        returns
-    ) / 100
+    score = (
+
+        trade_capacity * 40
+
+        +
+
+        expectancy_quality * 35
+
+        +
+
+        win_quality * 25
+
+    )
 
 
-    return float(
-        trade_score
-        *
-        expectancy_score
-        *
-        win_score
+    return round(
+        float(score),
+        2,
+    )
+
+def trade_velocity(
+    trades: int,
+    years: float,
+) -> float:
+    """
+    Annual trade frequency.
+
+    Formula:
+
+    Trades / Years
+    """
+
+    if years <= 0:
+        return 0.0
+
+    return safe_divide(
+        trades,
+        years,
+    )
+
+def capital_efficiency(
+    cagr: float,
+    max_drawdown: float,
+) -> float:
+    """
+    Risk adjusted capital efficiency.
+
+    Formula:
+
+    CAGR / Max Drawdown
+
+    Equivalent to Calmar Ratio.
+    """
+
+    return safe_divide(
+        cagr,
+        abs(max_drawdown),
     )
 
 # ==========================================================
 # Final Metrics Engine
 # ==========================================================
-
 
 def compute_trade_metrics(
     stock: str,
@@ -1323,63 +1623,161 @@ def compute_trade_metrics(
     """
     Complete institutional metric calculation.
 
-    One stock
+    Flow:
+
+    Trade Data
         ↓
-    Trade dataframe
+    Base Statistics
         ↓
-    Metric dictionary
+    Performance Metrics
+        ↓
+    Risk Metrics
+        ↓
+    Efficiency Metrics
+        ↓
+    Opportunity Metrics
+
     """
 
     validate_trade_dataframe(
         df,
     )
 
-    returns = validate_returns(numeric(df["net_return_%"]))
+
+    returns = validate_returns(
+        numeric(
+            df["net_return_%"]
+        )
+    )
+
 
     years = calculate_calendar_years(
         df,
     )
 
-    days = numeric(df["days_held"])
 
-    trades = len(returns)
+    days = numeric(
+        df["days_held"]
+    )
+
+
+    trades = len(
+        returns,
+    )
+
 
     risk = risk_statistics(
         returns,
         years,
     )
 
+
     trade_quality = trade_quality_statistics(
         returns,
     )
 
+
     exits = exit_statistics(
         df,
     )
+
 
     max_dd = risk.get(
         "Max Drawdown %",
         0.0,
     )
 
+
     cagr = risk.get(
         "CAGR %",
         0.0,
     )
 
+
+    total_return = risk.get(
+        "Net %",
+        0.0,
+    )
+
+
     return {
+
+        # -------------------------
+        # Identity
+        # -------------------------
+
         "Stock": stock,
+
+
+        # -------------------------
+        # Duration
+        # -------------------------
+
         "Years": round(
             years,
             2,
         ),
-        **trade_quality,
-        **risk,
-        **exits,
+
+
         "Avg days": round(
             safe_mean(days),
             2,
         ),
+
+
+        # -------------------------
+        # Trade Statistics
+        # -------------------------
+
+        **trade_quality,
+
+
+        # -------------------------
+        # Performance Metrics
+        # -------------------------
+
+        "Net %": round(
+            total_return,
+            2,
+        ),
+
+
+        "Total Return %": round(
+            total_return,
+            2,
+        ),
+
+
+        "Annual Return %": risk.get(
+            "Annual Return %",
+            0.0,
+        ),
+
+
+        "CAGR %": round(
+            cagr,
+            2,
+        ),
+
+
+        # -------------------------
+        # Risk Metrics
+        # -------------------------
+
+        **risk,
+
+
+        # -------------------------
+        # Exit Metrics
+        # -------------------------
+
+        **exits,
+
+
+        # -------------------------
+        # Efficiency Metrics
+        # -------------------------
+
         "Trades / Year": round(
             trade_velocity(
                 trades,
@@ -1387,6 +1785,8 @@ def compute_trade_metrics(
             ),
             2,
         ),
+
+
         "Holding Efficiency": round(
             holding_efficiency(
                 returns,
@@ -1394,12 +1794,26 @@ def compute_trade_metrics(
             ),
             4,
         ),
+
+
         "Capital Efficiency": round(
             capital_efficiency(
                 cagr,
                 max_dd,
             ),
             3,
+        ),
+
+
+        # -------------------------
+        # Opportunity Metrics
+        # -------------------------
+
+        "Opportunity Score": round(
+            opportunity_score(
+                returns,
+            ),
+            2,
         ),
     }
 
@@ -1409,32 +1823,76 @@ def compute_trade_metrics(
 # ==========================================================
 
 __all__ = [
+
     "INITIAL_CAPITAL",
+
     "EPSILON",
+
     "numeric",
+
     "safe_divide",
+
     "safe_mean",
+
     "safe_median",
+
     "safe_std",
+
+
     "validate_trade_dataframe",
+
     "validate_returns",
+
+
     "calculate_calendar_years",
+
+
     "build_equity_curve",
+
     "drawdown_series",
+
     "maximum_drawdown",
+
+
     "trade_quality_statistics",
+
+
     "profit_factor",
+
     "reward_risk_ratio",
+
     "expectancy",
+
+
     "annual_statistics",
+
     "risk_statistics",
+
+
     "sharpe_ratio",
+
     "sortino_ratio",
+
     "recovery_factor",
+
     "calmar_ratio",
+
     "mar_ratio",
+
+
     "exit_statistics",
+
+
     "holding_efficiency",
+
     "capital_efficiency",
+
+    "trade_velocity",
+
+
+    "opportunity_score",
+
+
     "compute_trade_metrics",
+
 ]

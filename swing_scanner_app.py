@@ -541,7 +541,7 @@ def main():
             st.markdown("**Thresholds** (defaults are lenient — this is a NO-TRADE filter, "
                         "not a stock picker)")
             roe_min      = st.slider("Quality: min ROE %",              -5.0, 20.0, 5.0, 0.5)
-            roce_min     = st.slider("Quality: min ROCE % (non-fin only)", -5.0, 30.0, 10.0, 0.5)
+            roce_min     = st.slider("Quality: min ROCE % (non-fin only)", -5.0, 30.0, 5.0, 0.5)
             de_max       = st.slider("Quality: max D/E (non-fin only)",  0.5, 10.0, 3.0, 0.1)
             ic_min       = st.slider("Quality: min interest cover (×)",  0.5, 10.0, 1.5, 0.1)
             cr_min       = st.slider("Quality: min current ratio",       0.3,  3.0, 0.8, 0.05)

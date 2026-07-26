@@ -362,54 +362,7 @@ class RiskMetrics:
 
         return self
 
-    # --------------------------------------------------------
-    # Drawdown Proxy
-    # --------------------------------------------------------
-
-    def drawdown_proxy(self):
-        """
-        Estimate drawdown risk.
-        Priority:
-        1. Actual Max Drawdown %
-        2. Loss sequence based proxy
-        Formula:
-        If actual drawdown exists:
-            Drawdown Proxy = |Max Drawdown %|
-        Else:
-            Drawdown Proxy =
-            Average Loss × √(Number of Losing Trades)
-        """
-
-        if "Max Drawdown %" in self.df.columns:
-            drawdown = self.df["Max Drawdown %"].abs()
-
-        else:
-            losing_trades = (
-                self.df["Trades"]
-                *
-                (
-                    1 -
-                    safe_divide(
-                        self.df["Win%"],
-                        100,
-                    )
-                )
-            )
-
-            drawdown = (
-                self.df["Avg loss%"].abs()
-                *
-                np.sqrt(
-                    losing_trades.clip(
-                        lower=0
-                    )
-                )
-            )
-
-        self.df["Drawdown Proxy"] = drawdown
-
-        return self
-
+    
     # --------------------------------------------------------
     # Risk Adjusted Return
     # --------------------------------------------------------
@@ -434,7 +387,10 @@ class RiskMetrics:
 
         self.df["Risk Adjusted Return"] = safe_divide(
             annual_return,
-            self.df["Drawdown Proxy"],
+            self.df.get(
+                "Max Drawdown %",
+                0.0
+            )
         )
 
         return self
@@ -628,7 +584,7 @@ class RiskMetrics:
 
         self.df["Recovery Factor"] = safe_divide(
             net_return,
-            self.df["Drawdown Proxy"],
+            self.df["Max Drawdown %"],
         )
 
         return self
@@ -921,6 +877,7 @@ class RiskMetrics:
             "Annual Loss %",
             "Loss Velocity",
             "Downside Risk",
+            "Maximum Drawdown %",
             "Drawdown Proxy",
             "Risk Adjusted Return",
             "Stop Efficiency",
@@ -966,6 +923,7 @@ class RiskMetrics:
             "Annual Loss %",
             "Loss Velocity",
             "Downside Risk",
+            "Maximum Drawdown %",
             "Drawdown Proxy",
             "Risk Adjusted Return",
             "Stop Efficiency",
@@ -1005,7 +963,6 @@ class RiskMetrics:
             .annual_loss()
             .loss_velocity()
             .downside_risk()
-            .drawdown_proxy()
             .risk_adjusted_return()
             .stop_efficiency()
             .downside_protection()

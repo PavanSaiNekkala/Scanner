@@ -405,17 +405,40 @@ def maximum_drawdown(
     equity: pd.Series,
 ) -> float:
     """
-    Maximum historical drawdown.
+    Calculate maximum drawdown.
+
+    Formula:
+
+    Drawdown =
+    (Equity - Peak Equity)
+    / Peak Equity
+
+    Maximum Drawdown =
+    Absolute minimum drawdown
     """
 
     if equity.empty:
         return 0.0
 
-    dd = drawdown_series(
-        equity,
+
+    peak = (
+        equity
+        .cummax()
     )
 
-    return abs(float(dd.min()))
+
+    drawdown = (
+        equity
+        /
+        peak
+        -
+        1
+    ) * 100
+
+
+    return abs(
+        drawdown.min()
+    )
 
 
 # ==========================================================
@@ -953,14 +976,16 @@ def annual_statistics(
             -
             1
         ) * 100
+        
 
+    net_return = returns.sum()
 
     return {
 
         # Compatibility field
 
         "Net %": round(
-            total_return,
+            net_return,
             2,
         ),
 
@@ -1643,56 +1668,51 @@ def compute_trade_metrics(
         df,
     )
 
-
     returns = validate_returns(
         numeric(
             df["net_return_%"]
         )
     )
 
-
     years = calculate_calendar_years(
         df,
     )
-
 
     days = numeric(
         df["days_held"]
     )
 
-
     trades = len(
         returns,
     )
-
 
     risk = risk_statistics(
         returns,
         years,
     )
 
-
     trade_quality = trade_quality_statistics(
         returns,
     )
 
-
     exits = exit_statistics(
         df,
     )
-
 
     max_dd = risk.get(
         "Max Drawdown %",
         0.0,
     )
 
-
     cagr = risk.get(
         "CAGR %",
         0.0,
     )
 
+    net_return = risk.get(
+        "Net %",
+        0.0,
+    )
 
     total_return = risk.get(
         "Net %",
@@ -1737,7 +1757,7 @@ def compute_trade_metrics(
         # -------------------------
 
         "Net %": round(
-            total_return,
+            net_return,
             2,
         ),
 

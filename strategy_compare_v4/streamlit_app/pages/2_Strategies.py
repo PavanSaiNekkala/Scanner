@@ -21,9 +21,23 @@ from components.charts import (
 from services.loader import get_sheet
 from themes import apply_theme
 
+
 # ============================================================
 # Page Configuration
 # ============================================================
+st.markdown(
+    """
+    <style>
+    div[data-testid="stMetricValue"] {
+        font-size: 26px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.set_page_config(
     page_title="Strategy Analytics",

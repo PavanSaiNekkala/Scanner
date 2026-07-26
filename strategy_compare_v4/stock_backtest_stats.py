@@ -41,7 +41,9 @@ logger = get_logger(__name__)
 # Configuration
 # ============================================================
 
-BACKTEST_PATTERN = "backtest_*"
+BACKTEST_FOLDER_PATTERN = "backtest_*"
+
+BACKTEST_CSV_PATTERN = "*_backtest_*.csv"
 
 CSV_PATTERN = "*.csv"
 
@@ -147,10 +149,15 @@ def build_statistics(
 
     stats["Variance"] = numeric.var()
 
-    stats["Std Dev"] = numeric.std()
+    stats["Std Dev"] = numeric.std(
+        ddof=0,
+    )
 
-    stats["Std Error"] = stats["Std Dev"] / np.sqrt(
-        stats["Count"],
+    stats["Std Error"] = np.where(
+        stats["Count"] > 0,
+        stats["Std Dev"] /
+        np.sqrt(stats["Count"]),
+        np.nan,
     )
 
     stats["Min"] = numeric.min()
@@ -272,7 +279,7 @@ def process_folder(
 
     csv_files = sorted(
         folder.glob(
-            CSV_PATTERN,
+            BACKTEST_CSV_PATTERN,
         )
     )
 
@@ -376,11 +383,13 @@ def main() -> None:
 
     start = time.perf_counter()
 
-    root = Path.cwd()
+    root = Path(
+        __file__
+    ).resolve().parent
 
     backtest_dirs = sorted(
         root.glob(
-            BACKTEST_PATTERN,
+            BACKTEST_FOLDER_PATTERN,
         )
     )
 

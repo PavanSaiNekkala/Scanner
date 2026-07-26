@@ -31,7 +31,7 @@ import pandas as pd
 # ============================================================
 
 ROOT_DIRECTORY = Path(
-    "/workspaces/Scanner/strategy_compare_v3",
+    "/workspaces/Scanner/strategy_compare_v4",
 )
 
 BACKTEST_PATTERN = "backtest_*"

@@ -7,7 +7,7 @@ on:
 
   # Daily execution
   schedule:
-    - cron: "30 3 * * 1-5"
+    - cron: "30 2 * * 1-5"
 
 
 jobs:

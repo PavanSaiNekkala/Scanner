@@ -1,14 +1,32 @@
+from __future__ import annotations
+
 import pandas as pd
-from pathlib import Path
 
 from services.workflow_service import WorkflowService
 
-# Load your universe
-universe = pd.read_csv("backtest/data/universe.csv")
+
+# ==========================================================
+# Load Universe
+# ==========================================================
+
+universe = pd.read_csv(
+    "backtest/data/universe.csv"
+)
+
+
+# ==========================================================
+# Initialize Workflow
+# ==========================================================
 
 workflow = WorkflowService()
 
+
+# ==========================================================
+# Execute Pipeline
+# ==========================================================
+
 result = workflow.run(
+
     tickers=universe["Symbol"].tolist(),
 
     strategy="PASS_combined",
@@ -35,41 +53,46 @@ result = workflow.run(
 )
 
 
-output_dir = Path("reports")
+# ==========================================================
+# Execution Summary
+# ==========================================================
 
-output_dir.mkdir(
-    exist_ok=True
+print(
+    "\n=============================="
 )
 
-# Portfolio
-result.portfolio.portfolio.to_csv(
-    output_dir / "portfolio.csv",
-    index=False,
+print(
+    "WORKFLOW COMPLETED"
+)
+
+print(
+    "STATUS:",
+    result.statistics.status,
+)
+
+print(
+    "DURATION:",
+    result.statistics.total_duration,
 )
 
 
-# Orders
-result.execution.orders.to_csv(
-    output_dir / "execution_orders.csv",
-    index=False,
-)
+# ==========================================================
+# Reports
+# ==========================================================
 
+if result.report:
 
-# Risk
-if hasattr(result.risk, "metrics"):
-
-    pd.DataFrame(
-        result.risk.metrics
-    ).to_csv(
-        output_dir / "risk_metrics.csv",
-        index=False,
+    print(
+        "\nREPORTS GENERATED:"
     )
+
+    for file in result.report.exported_files:
+
+        print(
+            file
+        )
 
 
 print(
-    "Outputs saved:",
-    output_dir.resolve()
+    "==============================\n"
 )
-
-print(result.statistics.status)
-print(result.statistics.total_duration)

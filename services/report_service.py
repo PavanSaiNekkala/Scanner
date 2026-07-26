@@ -68,7 +68,9 @@ class ReportConfig:
 
     include_charts: bool = True
 
-    overwrite: bool = True
+    overwrite: bool = False
+
+    append_history: bool = True
 
 
 # =============================================================================
@@ -244,6 +246,26 @@ class ReportService:
             },
         )
 
+
+        run_id = datetime.now().strftime(
+            "%Y%m%d_%H%M%S"
+        )
+
+
+        run_directory = (
+            self.config.output_directory
+            /
+            "runs"
+            /
+            run_id
+        )
+
+
+        run_directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
         # -----------------------------------------------------
         # Export Excel
         # -----------------------------------------------------
@@ -311,7 +333,7 @@ class ReportService:
                     - start_time
                 ).total_seconds(),
                 "report_directory": str(
-                    self.config.output_directory
+                    run_directory
                 ),
             }
         )
@@ -1569,6 +1591,21 @@ class ReportService:
                 self.config.output_directory
                 / filename
             )
+
+            if filepath.exists():
+
+                old = pd.read_csv(
+                    filepath
+                )
+
+                dataframe = pd.concat(
+                    [
+                        old,
+                        dataframe,
+                    ],
+                    ignore_index=True,
+                )
+
 
             dataframe.to_csv(
                 filepath,

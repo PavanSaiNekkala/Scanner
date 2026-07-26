@@ -556,26 +556,6 @@ class PortfolioManager:
 
         accepted = candidates.copy()
 
-        print("\n========== PORTFOLIO DEBUG ==========")
-
-        print(
-            accepted[
-                [
-                    "ticker",
-                    "confidence",
-                    "rank_score",
-                    "relative_strength",
-                    "expectancy",
-                    "win_rate",
-                ]
-            ]
-        )
-
-        print(
-            "Total candidates:",
-            len(accepted)
-        )
-
         rejected_frames: list[pd.DataFrame] = []
 
         def reject(
@@ -612,7 +592,7 @@ class PortfolioManager:
             "Low Confidence",
         )
 
-        print(
+        logger.debug(
             "After confidence:",
             len(accepted)
         )
@@ -627,7 +607,7 @@ class PortfolioManager:
             "Low Rank Score",
         )
 
-        print(
+        logger.debug(
             "After rank:",
             len(accepted)
         )
@@ -654,7 +634,7 @@ class PortfolioManager:
                 "Negative Expectancy",
             )
 
-        print(
+        logger.debug(
             "After expectancy:",
             len(accepted)
         )
@@ -671,7 +651,7 @@ class PortfolioManager:
                 "Low Win Rate",
             )
 
-        print(
+        logger.debug(
             "After win rate:",
             len(accepted)
         )
@@ -1333,7 +1313,7 @@ class PortfolioManager:
         # Build Orders
         # -----------------------------------------------------
 
-        print(
+        logger.debug(
             "PORTFOLIO COLUMNS:",
             portfolio.columns.tolist()
         )
@@ -1452,10 +1432,6 @@ class PortfolioManager:
             "Generated %d executable orders.",
             len(orders),
         )
-
-        print("\n========== ORDERS DEBUG ==========")
-        print(orders.head())
-        print(orders.columns.tolist())
 
         return orders
     

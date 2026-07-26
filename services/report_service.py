@@ -54,6 +54,10 @@ class ReportConfig:
 
     output_directory: Path = Path("reports")
 
+    latest_directory: str = "latest"
+
+    history_directory: str = "history"
+
     report_name: str = "Portfolio_Report"
 
     export_excel: bool = True
@@ -174,6 +178,172 @@ class ReportService:
             "ReportService initialized."
         )
 
+
+    def _prepare_directories(self):
+
+        latest = (
+            self.config.output_directory
+            /
+            self.config.latest_directory
+        )
+
+
+        history = (
+            self.config.output_directory
+            /
+            self.config.history_directory
+        )
+
+
+        latest.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+
+        history.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+
+        return latest, history
+
+
+    def _append_history(
+        self,
+        df: pd.DataFrame,
+        filename: str,
+        history_dir: Path,
+    ):
+
+        if df.empty:
+
+            return
+
+
+        file = (
+            history_dir
+            /
+            filename
+        )
+
+
+        # ---------------------------------------
+        # Add new history
+        # ---------------------------------------
+
+        if file.exists():
+
+            old = pd.read_csv(
+                file
+            )
+
+
+            combined = pd.concat(
+                [
+                    old,
+                    df,
+                ],
+                ignore_index=True,
+            )
+
+
+        else:
+
+            combined = df.copy()
+
+
+
+        # ---------------------------------------
+        # Remove duplicate executions
+        # ---------------------------------------
+
+        duplicate_keys = []
+
+
+        if "timestamp" in combined.columns:
+
+            combined["date"] = (
+                pd.to_datetime(
+                    combined["timestamp"]
+                )
+                .dt.date
+            )
+
+
+        if "date" in combined.columns:
+
+            duplicate_keys.append(
+                "date"
+            )
+
+
+        if "ticker" in combined.columns:
+
+            duplicate_keys.append(
+                "ticker"
+            )
+
+
+        # ---------------------------------------
+        # Remove duplicates only when keys exist
+        # ---------------------------------------
+
+        if duplicate_keys:
+
+            combined = (
+                combined
+                .drop_duplicates(
+                    subset=duplicate_keys,
+                    keep="last",
+                )
+            )
+
+
+        # ---------------------------------------
+        # Save
+        # ---------------------------------------
+
+        combined.to_csv(
+            file,
+            index=False,
+        )
+
+        if df.empty:
+
+            return
+
+
+        file = (
+            history_dir
+            /
+            filename
+        )
+
+
+        if file.exists():
+
+            old = pd.read_csv(
+                file
+            )
+
+
+            df = pd.concat(
+                [
+                    old,
+                    df,
+                ],
+                ignore_index=True,
+            )
+
+
+        df.to_csv(
+            file,
+            index=False,
+        )
+    
+
     # =========================================================
     # Public API
     # =========================================================
@@ -187,6 +357,20 @@ class ReportService:
         """
         Generate complete institutional reports.
         """
+
+    
+        run_time = datetime.now()
+
+
+        run_id = (
+            run_time.strftime(
+                "%Y%m%d_%H%M%S"
+            )
+        )
+
+        latest_dir, history_dir = (
+            self._prepare_directories()
+        )
 
         logger.info(
             "Generating portfolio reports."
@@ -206,6 +390,110 @@ class ReportService:
 
         holdings = (
             portfolio.portfolio.copy()
+        )
+
+        holdings["run_id"] = run_id
+
+        holdings["timestamp"] = run_time
+
+        # -----------------------------------------------------
+        # Signal History Snapshot
+        # -----------------------------------------------------
+
+        signal_history = holdings.copy()
+
+
+        signal_columns = [
+
+            "ticker",
+            "signals_today",
+            "confidence",
+            "rank_score",
+            "portfolio_rank",
+            "regime_today",
+            "run_id",
+            "timestamp",
+
+        ]
+
+
+        signal_history = (
+            signal_history[
+                [
+                    col
+                    for col in signal_columns
+                    if col in signal_history.columns
+                ]
+            ]
+        )
+
+
+        # -----------------------------------------------------
+        # Performance History Snapshot
+        # -----------------------------------------------------
+
+        performance_history = holdings.copy()
+
+
+        performance_columns = [
+
+            "ticker",
+            "expectancy",
+            "win_rate",
+            "cagr_%",
+            "max_drawdown_%",
+            "profit_factor",
+            "reward_risk_ratio",
+            "run_id",
+            "timestamp",
+
+        ]
+
+
+        performance_history = (
+            performance_history[
+                [
+                    col
+                    for col in performance_columns
+                    if col in performance_history.columns
+                ]
+            ]
+        )
+
+        # -----------------------------------------------------
+        # Regime History Snapshot
+        # -----------------------------------------------------
+
+        regime_history = holdings.copy()
+
+
+        regime_columns = [
+
+            "ticker",
+            "regime_today",
+            "day_chg_%",
+            "above_50dma",
+            "run_id",
+            "timestamp",
+
+        ]
+
+
+        regime_history = (
+            regime_history[
+                [
+                    col
+                    for col in regime_columns
+                    if col in regime_history.columns
+                ]
+            ]
+        )
+
+
+        self._append_history(
+            regime_history,
+            "regime_history.csv",
+            history_dir,
         )
 
         # -----------------------------------------------------
@@ -252,19 +540,19 @@ class ReportService:
         )
 
 
-        run_directory = (
-            self.config.output_directory
-            /
-            "runs"
-            /
-            run_id
-        )
+        #run_directory = (
+            #self.config.output_directory
+            #/
+            #"runs"
+            #/
+            #run_id
+        #)
 
 
-        run_directory.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+        #run_directory.mkdir(
+            #parents=True,
+            #exist_ok=True,
+        #)
 
         # -----------------------------------------------------
         # Export Excel
@@ -282,6 +570,10 @@ class ReportService:
         # Export CSV
         # -----------------------------------------------------
 
+        result.holdings["run_id"] = run_id
+
+        result.holdings["timestamp"] = run_time
+
         if self.config.export_csv:
 
             exported_files.extend(
@@ -289,6 +581,27 @@ class ReportService:
                     result,
                 )
             )
+
+        # -----------------------------------------------------
+        # Additional Historical Tracking
+        # -----------------------------------------------------
+
+        if self.config.append_history:
+
+
+            self._append_history(
+                signal_history,
+                "signal_history.csv",
+                history_dir,
+            )
+
+
+            self._append_history(
+                performance_history,
+                "performance_history.csv",
+                history_dir,
+            )
+
 
         # -----------------------------------------------------
         # Export JSON
@@ -333,7 +646,7 @@ class ReportService:
                     - start_time
                 ).total_seconds(),
                 "report_directory": str(
-                    run_directory
+                    latest_dir
                 ),
             }
         )
@@ -1340,9 +1653,15 @@ class ReportService:
             Excel report path.
         """
 
+        latest_dir, _ = (
+            self._prepare_directories()
+        )
+
+
         output_file = (
-            self.config.output_directory
-            / f"{self.config.report_name}.xlsx"
+            latest_dir
+            /
+            f"{self.config.report_name}.xlsx"
         )
 
         with pd.ExcelWriter(
@@ -1587,33 +1906,74 @@ class ReportService:
             ):
                 continue
 
-            filepath = (
-                self.config.output_directory
-                / filename
+            latest_dir, history_dir = (
+                self._prepare_directories()
             )
 
-            if filepath.exists():
 
-                old = pd.read_csv(
-                    filepath
-                )
+            # -------------------------------
+            # Latest snapshot
+            # -------------------------------
 
-                dataframe = pd.concat(
-                    [
-                        old,
-                        dataframe,
-                    ],
-                    ignore_index=True,
-                )
+            latest_file = (
+                latest_dir
+                /
+                filename
+            )
 
 
             dataframe.to_csv(
-                filepath,
+                latest_file,
                 index=False,
             )
 
+
             exported.append(
-                filepath,
+                latest_file,
+            )
+
+
+            # -------------------------------
+            # History append
+            # -------------------------------
+
+            history_map = {
+
+                "portfolio_summary.csv":
+                    "portfolio_history.csv",
+
+                "holdings.csv":
+                    "portfolio_history.csv",
+
+                "risk_summary.csv":
+                    "risk_history.csv",
+
+                "execution_summary.csv":
+                    "execution_history.csv",
+
+                "performance_summary.csv":
+                    "performance_history.csv",
+
+                "orders.csv":
+                    "execution_history.csv",
+
+            }
+
+
+            history_filename = (
+                history_map.get(
+                    filename,
+                    filename.replace(
+                        ".csv",
+                        "_history.csv",
+                    ),
+                )
+            )
+
+            self._append_history(
+                dataframe,
+                history_filename,
+                history_dir,
             )
 
         logger.info(
@@ -1639,9 +1999,14 @@ class ReportService:
 
         import json
 
+        latest_dir, _ = (
+            self._prepare_directories()
+        )
+
         output_file = (
-            self.config.output_directory
-            / f"{self.config.report_name}.json"
+            latest_dir
+            /
+            f"{self.config.report_name}.json"
         )
 
         report = {

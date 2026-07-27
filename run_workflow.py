@@ -49,7 +49,7 @@ result = workflow.run(
 
     start_date="2018-01-01",
 
-    end_date="2026-01-01",
+    end_date="2026-07-01",
 )
 
 

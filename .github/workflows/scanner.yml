@@ -45,7 +45,7 @@ jobs:
       # --------------------------------------------------
       - name: Execute Scanner Workflow
         run: |
-          python scanner_monitor/run_workflow.py
+          python -m scanner_monitor.run_workflow
 
       # --------------------------------------------------
       # Upload Results

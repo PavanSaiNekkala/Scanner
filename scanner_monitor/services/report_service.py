@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any
 
@@ -179,6 +180,31 @@ class ReportService:
         )
 
 
+    def _remove_timezone(
+        self,
+        df: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Remove timezone information from datetime columns
+        before exporting to Excel.
+        """
+
+        df = df.copy()
+
+        for column in df.columns:
+
+            if pd.api.types.is_datetime64tz_dtype(
+                df[column]
+            ):
+
+                df[column] = (
+                    df[column]
+                    .dt.tz_localize(None)
+                )
+
+        return df
+    
+
     def _prepare_directories(self):
 
         latest = (
@@ -220,7 +246,6 @@ class ReportService:
         if df.empty:
 
             return
-
 
         file = (
             history_dir
@@ -359,7 +384,7 @@ class ReportService:
         """
 
     
-        run_time = datetime.now()
+        run_time = datetime.now(ZoneInfo("Asia/Kolkata"))
 
 
         run_id = (
@@ -376,7 +401,7 @@ class ReportService:
             "Generating portfolio reports."
         )
 
-        start_time = datetime.now()
+        start_time = datetime.now(ZoneInfo("Asia/Kolkata"))
 
         # -----------------------------------------------------
         # Portfolio
@@ -530,12 +555,12 @@ class ReportService:
             statistics=ReportStatistics(),
             exported_files=[],
             metadata={
-                "generated_at": datetime.now(),
+                "generated_at": datetime.now(ZoneInfo("Asia/Kolkata")),
             },
         )
 
 
-        run_id = datetime.now().strftime(
+        run_id = datetime.now(ZoneInfo("Asia/Kolkata")).strftime(
             "%Y%m%d_%H%M%S"
         )
 
@@ -642,7 +667,7 @@ class ReportService:
         result.metadata.update(
             {
                 "duration_seconds": (
-                    datetime.now()
+                    datetime.now(ZoneInfo("Asia/Kolkata"))
                     - start_time
                 ).total_seconds(),
                 "report_directory": str(
@@ -1673,7 +1698,9 @@ class ReportService:
             # Portfolio Summary
             # =====================================================
 
-            result.portfolio_summary.to_excel(
+            self._remove_timezone(
+                result.portfolio_summary,
+            ).to_excel(
                 writer,
                 sheet_name="Portfolio Summary",
                 index=False,
@@ -1683,17 +1710,20 @@ class ReportService:
             # Holdings
             # =====================================================
 
-            result.holdings.to_excel(
+            self._remove_timezone(
+                result.holdings,
+            ).to_excel(
                 writer,
                 sheet_name="Holdings",
-                index=False,
             )
 
             # =====================================================
             # Risk Summary
             # =====================================================
 
-            result.risk_summary.to_excel(
+            self._remove_timezone(
+                result.risk_summary,
+            ).to_excel(
                 writer,
                 sheet_name="Risk Summary",
                 index=False,
@@ -1703,7 +1733,9 @@ class ReportService:
             # Execution Summary
             # =====================================================
 
-            result.execution_summary.to_excel(
+            self._remove_timezone(
+                result.execution_summary,
+            ).to_excel(
                 writer,
                 sheet_name="Execution Summary",
                 index=False,
@@ -1718,9 +1750,11 @@ class ReportService:
                 in result.metadata
             ):
 
-                result.metadata[
-                    "performance_summary"
-                ].to_excel(
+                self._remove_timezone(
+                    result.metadata[
+                        "performance_summary"
+                    ],
+                ).to_excel(
                     writer,
                     sheet_name="Performance",
                     index=False,
@@ -1739,7 +1773,9 @@ class ReportService:
                 pd.DataFrame,
             ):
 
-                violations.to_excel(
+                self._remove_timezone(
+                    violations,
+                ).to_excel(
                     writer,
                     sheet_name="Risk Violations",
                     index=False,
@@ -1758,7 +1794,9 @@ class ReportService:
                 pd.DataFrame,
             ):
 
-                exposure.to_excel(
+                self._remove_timezone(
+                    exposure,
+                ).to_excel(
                     writer,
                     sheet_name="Sector Exposure",
                     index=False,
@@ -1777,7 +1815,9 @@ class ReportService:
                 pd.DataFrame,
             ):
 
-                orders.to_excel(
+                self._remove_timezone(
+                    orders,
+                ).to_excel(
                     writer,
                     sheet_name="Orders",
                     index=False,
@@ -1799,7 +1839,9 @@ class ReportService:
                 }
             )
 
-            metadata.to_excel(
+            self._remove_timezone(
+                metadata,
+            ).to_excel(
                 writer,
                 sheet_name="Metadata",
                 index=False,
@@ -2019,7 +2061,7 @@ class ReportService:
 
                 "report_name": self.config.report_name,
 
-                "generated_at": datetime.now().isoformat(),
+                "generated_at": datetime.now(ZoneInfo("Asia/Kolkata")).isoformat(),
 
                 "version": "1.0",
 
@@ -2215,7 +2257,7 @@ Generated:
 """
         )
 
-        html.append(str(datetime.now()))
+        html.append(str(datetime.now(ZoneInfo("Asia/Kolkata"))))
 
         html.append("</p>")
 
@@ -2444,7 +2486,7 @@ Generated:
                 3,
             ),
 
-            generated_at=datetime.now(),
+            generated_at=datetime.now(ZoneInfo("Asia/Kolkata")),
 
             warnings=warnings,
 

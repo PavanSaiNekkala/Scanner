@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Any
 
 import logging
@@ -380,7 +381,7 @@ class ExecutionService:
             orders=orders,
             statistics=statistics,
             metadata={
-                "generated_at": datetime.utcnow(),
+                "generated_at": datetime.now(ZoneInfo("Asia/Kolkata")),
                 "algorithm": self.config.execution_algorithm,
                 "currency": self.config.currency,
             },
@@ -725,7 +726,7 @@ class ExecutionService:
         # Timestamp
         # =====================================================
 
-        orders["created_at"] = datetime.utcnow()
+        orders["created_at"] = datetime.now(ZoneInfo("Asia/Kolkata"))
 
         # =====================================================
         # Column Order

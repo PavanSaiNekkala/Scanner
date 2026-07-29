@@ -52,6 +52,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Any
 
 import logging
@@ -282,7 +283,7 @@ class WorkflowService:
         start_time = time.perf_counter()
 
         statistics = WorkflowStatistics(
-            workflow_started=datetime.now(),
+            workflow_started=datetime.now(ZoneInfo("Asia/Kolkata")),
             status="RUNNING",
         )
 
@@ -304,7 +305,7 @@ class WorkflowService:
         # -----------------------------------------------------
 
         metadata: dict[str, Any] = {
-            "started_at": datetime.now(),
+            "started_at": datetime.now(ZoneInfo("Asia/Kolkata")),
             "workflow": "Institutional Investment Workflow",
             "version": "1.0",
         }
@@ -332,7 +333,7 @@ class WorkflowService:
 
         statistics.stages_completed += 1
 
-        metadata["batch_completed"] = datetime.now()
+        metadata["batch_completed"] = datetime.now(ZoneInfo("Asia/Kolkata"))
 
         # -----------------------------------------------------
         # Stage 2
@@ -349,7 +350,7 @@ class WorkflowService:
 
         statistics.stages_completed += 1
 
-        metadata["portfolio_completed"] = datetime.now()
+        metadata["portfolio_completed"] = datetime.now(ZoneInfo("Asia/Kolkata"))
 
         # -----------------------------------------------------
         # Stage 3
@@ -367,7 +368,7 @@ class WorkflowService:
 
         statistics.stages_completed += 1
 
-        metadata["risk_completed"] = datetime.now()
+        metadata["risk_completed"] = datetime.now(ZoneInfo("Asia/Kolkata"))
 
         # -----------------------------------------------------------------
         # Continue in Part 1B:
@@ -395,7 +396,7 @@ class WorkflowService:
         statistics.stages_completed += 1
 
         metadata["execution_completed"] = (
-            datetime.now()
+            datetime.now(ZoneInfo("Asia/Kolkata"))
         )
 
         # -----------------------------------------------------
@@ -416,7 +417,7 @@ class WorkflowService:
         statistics.stages_completed += 1
 
         metadata["report_completed"] = (
-            datetime.now()
+            datetime.now(ZoneInfo("Asia/Kolkata"))
         )
 
         # -----------------------------------------------------
@@ -424,7 +425,7 @@ class WorkflowService:
         # -----------------------------------------------------
 
         statistics.workflow_completed = (
-            datetime.now()
+            datetime.now(ZoneInfo("Asia/Kolkata"))
         )
 
         statistics.total_duration = (
@@ -436,7 +437,7 @@ class WorkflowService:
 
         metadata.update(
             {
-                "completed_at": datetime.now(),
+                "completed_at": datetime.now(ZoneInfo("Asia/Kolkata")),
                 "duration_seconds": round(
                     statistics.total_duration,
                     3,
@@ -498,7 +499,7 @@ class WorkflowService:
         """
 
         metadata[f"{stage}_completed"] = (
-            datetime.now()
+            datetime.now(ZoneInfo("Asia/Kolkata"))
         )
 
     def _handle_exception(
@@ -516,7 +517,7 @@ class WorkflowService:
         statistics.stages_failed += 1
 
         statistics.workflow_completed = (
-            datetime.now()
+            datetime.now(ZoneInfo("Asia/Kolkata"))
         )
 
         logger.exception(

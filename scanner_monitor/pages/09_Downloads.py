@@ -47,6 +47,7 @@ from ui.cards import dashboard_header
 from ui.cards import summary_row
 from ui.tables import holdings_table
 
+
 # ==========================================================
 # Configuration
 # ==========================================================

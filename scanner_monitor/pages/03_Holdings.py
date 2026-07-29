@@ -106,21 +106,14 @@ initialize_session()
 
 
 # ---------------------------------------------------------------------
-# Cached Loading
+# Data Loading
 # ---------------------------------------------------------------------
 
-@st.cache_data(show_spinner=False)
-def load_holdings_data() -> ReportData:
-    """
-    Load report data.
-    """
+LOGGER.info(
+    "Loading holdings reports."
+)
 
-    LOGGER.info("Loading holdings reports.")
-
-    return load_reports()
-
-
-reports = load_holdings_data()
+reports = load_reports()
 
 holdings = reports.holdings.copy()
 

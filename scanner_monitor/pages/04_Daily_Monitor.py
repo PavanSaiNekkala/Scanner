@@ -29,6 +29,9 @@ from ui.components import (
 from ui.sidebar import render_sidebar
 
 from ui.metrics import dataframe_info
+
+from ui.loader import load_first_available_csv
+
 from ui.tables import (
     download_buttons,
     holdings_table,
@@ -118,61 +121,26 @@ st.session_state.setdefault(
 
 )
 
-# =============================================================================
-# Cached Loaders
-# =============================================================================
-
-@st.cache_data(show_spinner=False)
-def load_csv(*filenames: str) -> pd.DataFrame:
-    """
-    Load the first existing CSV from the latest
-    reports folder, then fall back to DATA_DIR.
-    """
-
-    search_dirs = [
-        LATEST_REPORTS_DIR,
-        DATA_DIR,
-    ]
-
-    for directory in search_dirs:
-
-        for filename in filenames:
-
-            path = directory / filename
-
-            if path.exists():
-
-                try:
-                    return pd.read_csv(path)
-
-                except Exception as e:
-                    st.warning(f"Failed to read {path}: {e}")
-
-    return pd.DataFrame()
 
 
-scanner_df = load_csv(
-
-    CONFIG.scanner_file,
-
+scanner_df = load_first_available_csv(
+    LATEST_REPORTS_DIR / CONFIG.scanner_file,
+    DATA_DIR / CONFIG.scanner_file,
 )
 
-portfolio_df = load_csv(
-
-    CONFIG.portfolio_file,
-
+portfolio_df = load_first_available_csv(
+    LATEST_REPORTS_DIR / CONFIG.portfolio_file,
+    DATA_DIR / CONFIG.portfolio_file,
 )
 
-holdings_df = load_csv(
-
-    CONFIG.holdings_file,
-
+holdings_df = load_first_available_csv(
+    LATEST_REPORTS_DIR / CONFIG.holdings_file,
+    DATA_DIR / CONFIG.holdings_file,
 )
 
-signals_df = load_csv(
-
-    CONFIG.signal_file,
-
+signals_df = load_first_available_csv(
+    LATEST_REPORTS_DIR / CONFIG.signal_file,
+    DATA_DIR / CONFIG.signal_file,
 )
 
 # =============================================================================

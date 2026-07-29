@@ -27,7 +27,30 @@ st.set_page_config(
 # Load Reports
 # =============================================================================
 
-reports = load_reports()
+
+@st.cache_data(
+    show_spinner=False,
+)
+def get_reports():
+
+    return load_reports()
+
+
+try:
+
+    reports = get_reports()
+
+except Exception as exc:
+
+    st.error(
+        "Unable to load reports.",
+    )
+
+    st.exception(
+        exc,
+    )
+
+    st.stop()
 
 # =============================================================================
 # Title
@@ -45,42 +68,140 @@ st.divider()
 # KPI Cards
 # =============================================================================
 
-holdings_count = len(reports.holdings)
+holdings_count = len(
+    reports.holdings,
+)
 
-active_trades = len(reports.daily_monitor)
+active_trades = len(
+    reports.daily_monitor,
+)
 
-risk_metrics = len(reports.risk_summary)
+risk_metrics = len(
+    reports.risk_summary,
+)
 
-execution_metrics = len(reports.execution_summary)
+execution_metrics = len(
+    reports.execution_summary,
+)
 
-col1, col2, col3, col4 = st.columns(4)
+universe_size = 0
+
+if not reports.daily_monitor.empty:
+
+    universe_size = len(
+        reports.daily_monitor,
+    )
+
+target_hits = 0
+
+stop_losses = 0
+
+if (
+
+    not reports.daily_monitor.empty
+
+    and
+
+    "trade_status"
+
+    in reports.daily_monitor.columns
+
+):
+
+    target_hits = int(
+
+        (
+
+            reports.daily_monitor[
+                "trade_status"
+            ]
+
+            ==
+
+            "TARGET HIT"
+
+        ).sum()
+
+    )
+
+    stop_losses = int(
+
+        (
+
+            reports.daily_monitor[
+                "trade_status"
+            ]
+
+            ==
+
+            "STOP LOSS"
+
+        ).sum()
+
+    )
+
+col1, col2, col3 = st.columns(3)
 
 with col1:
 
     st.metric(
-        label="Holdings",
-        value=holdings_count,
+
+        "Portfolio",
+
+        holdings_count,
+
     )
 
 with col2:
 
     st.metric(
-        label="Active Trades",
-        value=active_trades,
+
+        "Active Trades",
+
+        active_trades,
+
     )
 
 with col3:
 
     st.metric(
-        label="Risk Metrics",
-        value=risk_metrics,
+
+        "Universe",
+
+        universe_size,
+
     )
+
+col4, col5, col6 = st.columns(3)
 
 with col4:
 
     st.metric(
-        label="Execution Metrics",
-        value=execution_metrics,
+
+        "Risk Metrics",
+
+        risk_metrics,
+
+    )
+
+with col5:
+
+    st.metric(
+
+        "Target Hits",
+
+        target_hits,
+
+    )
+
+with col6:
+
+    st.metric(
+
+        "Stop Losses",
+
+        stop_losses,
+
     )
 
 st.divider()
@@ -138,10 +259,26 @@ if reports.daily_monitor.empty:
 else:
 
     st.dataframe(
-        reports.daily_monitor,
+
+        reports.daily_monitor.head(
+            20,
+        ),
+
         use_container_width=True,
         hide_index=True,
+
     )
+
+    if len(
+        reports.daily_monitor,
+    ) > 20:
+
+        st.caption(
+
+            f"Showing first 20 of "
+            f"{len(reports.daily_monitor)} rows."
+
+        )
 
 st.divider()
 

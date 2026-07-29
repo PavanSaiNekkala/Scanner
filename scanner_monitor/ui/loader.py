@@ -154,6 +154,128 @@ def _read_json(path: Path) -> dict[str, Any]:
 
         return {}
 
+# =============================================================================
+# Public Loaders
+# =============================================================================
+
+
+@st.cache_data(show_spinner=False)
+def load_csv(
+    path: Path,
+) -> pd.DataFrame:
+    """
+    Load a CSV file using the shared
+    institutional loader.
+
+    Parameters
+    ----------
+    path : Path
+        CSV file path.
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+
+    return _read_csv(path)
+
+@st.cache_data(show_spinner=False)
+def load_first_available_csv(
+    *paths: Path,
+) -> pd.DataFrame:
+    """
+    Load the first available CSV from a
+    sequence of candidate paths.
+
+    Parameters
+    ----------
+    *paths : Path
+        Candidate CSV paths in priority order.
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+
+    for path in paths:
+
+        if path.exists():
+
+            return _read_csv(path)
+
+    LOGGER.warning(
+        "No candidate CSV files were found."
+    )
+
+    return _empty()
+
+
+@st.cache_data(show_spinner=False)
+def load_excel(
+    path: Path,
+    sheet_name: str | int | None = 0,
+) -> pd.DataFrame:
+    """
+    Load an Excel workbook safely.
+
+    Parameters
+    ----------
+    path : Path
+        Excel workbook.
+
+    sheet_name : str | int | None
+        Worksheet to load.
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+
+    if not path.exists():
+
+        LOGGER.warning(
+            "Missing Excel: %s",
+            path.name,
+        )
+
+        return _empty()
+
+    try:
+
+        return pd.read_excel(
+            path,
+            sheet_name=sheet_name,
+        )
+
+    except Exception:
+
+        LOGGER.exception(
+            "Unable to read %s",
+            path.name,
+        )
+
+        return _empty()
+
+
+@st.cache_data(show_spinner=False)
+def load_json(
+    path: Path,
+) -> dict[str, Any]:
+    """
+    Load a JSON document safely.
+
+    Parameters
+    ----------
+    path : Path
+        JSON file.
+
+    Returns
+    -------
+    dict[str, Any]
+    """
+
+    return _read_json(path)
+
 
 # =============================================================================
 # Loader
@@ -280,6 +402,16 @@ def history_files() -> list[Path]:
     )
 
 
+def file_exists(
+    path: Path,
+) -> bool:
+    """
+    Return True if the file exists.
+    """
+
+    return path.exists()
+
+
 def report_exists(
     filename: str,
 ) -> bool:
@@ -312,9 +444,47 @@ def history_path(
     return HISTORY_DIR / filename
 
 
-def refresh_reports() -> None:
+def clear_cache() -> None:
     """
-    Clear Streamlit cache.
+    Clear all cached report data.
     """
 
     st.cache_data.clear()
+
+
+def refresh_reports() -> None:
+    """
+    Backward-compatible alias.
+    """
+
+    clear_cache()
+
+__all__ = [
+
+    "ReportData",
+
+    "load_reports",
+
+    "load_csv",
+
+    "load_excel",
+
+    "load_json",
+
+    "latest_files",
+
+    "history_files",
+
+    "report_exists",
+
+    "report_path",
+
+    "history_path",
+
+    "file_exists",
+
+    "clear_cache",
+
+    "refresh_reports",
+
+]

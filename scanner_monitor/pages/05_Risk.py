@@ -35,6 +35,10 @@ from ui.sidebar import render_sidebar
 from ui.tables import dataframe_info
 from ui.tables import holdings_table
 
+from ui.loader import (
+    load_first_available_csv,
+)
+
 # -------------------------------------------------------
 # Configuration
 # -------------------------------------------------------
@@ -97,21 +101,18 @@ st.caption(
     "portfolio diagnostics and stress testing."
 )
 
-@st.cache_data(show_spinner=False)
-def load_csv(path: Path) -> pd.DataFrame:
 
-    if path.exists():
+portfolio = load_first_available_csv(
+    CONFIG.portfolio_file,
+)
 
-        return pd.read_csv(path)
+holdings = load_first_available_csv(
+    CONFIG.holdings_file,
+)
 
-    return pd.DataFrame()
-
-
-portfolio = load_csv(CONFIG.portfolio_file)
-
-holdings = load_csv(CONFIG.holdings_file)
-
-risk = load_csv(CONFIG.risk_file)
+risk = load_first_available_csv(
+    CONFIG.risk_file,
+)
 
 if holdings.empty:
 
@@ -1750,13 +1751,9 @@ history_file = (
 
 )
 
-if history_file.exists():
+history = load_first_available_csv(history_file)
 
-    history = pd.read_csv(
-
-        history_file,
-
-    )
+if not history.empty:
 
     date_col = first_existing(
 

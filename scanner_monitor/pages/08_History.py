@@ -36,10 +36,12 @@ from ui.sidebar import render_sidebar
 from ui.tables import dataframe_info
 from ui.tables import holdings_table
 
+from ui.loader import load_first_available_csv
+
+
 # ==========================================================
 # Configuration
 # ==========================================================
-
 
 @dataclass(slots=True)
 class HistoryConfig:
@@ -135,59 +137,44 @@ st.caption(
     "Institutional historical analytics, audit trail and portfolio evolution."
 )
 
-# ==========================================================
-# Cached Loader
-# ==========================================================
-
-
-@st.cache_data(show_spinner=False)
-def load_csv(
-    path: Path,
-) -> pd.DataFrame:
-
-    if path.exists():
-
-        return pd.read_csv(path)
-
-    return pd.DataFrame()
 
 # ==========================================================
 # Load Historical Data
 # ==========================================================
 
-portfolio = load_csv(
+portfolio = load_first_available_csv(
     CONFIG.portfolio_history,
 )
 
-holdings = load_csv(
+holdings = load_first_available_csv(
     CONFIG.holdings_history,
 )
 
-performance = load_csv(
+performance = load_first_available_csv(
     CONFIG.performance_history,
 )
 
-risk = load_csv(
+risk = load_first_available_csv(
     CONFIG.risk_history,
 )
 
-execution = load_csv(
+execution = load_first_available_csv(
     CONFIG.execution_history,
 )
 
-rebalance = load_csv(
+rebalance = load_first_available_csv(
     CONFIG.rebalance_history,
 )
 
-signals = load_csv(
+signals = load_first_available_csv(
     CONFIG.signal_history,
 )
 
-transactions = load_csv(
+transactions = load_first_available_csv(
     CONFIG.transaction_history,
 )
 
-audit = load_csv(
+audit = load_first_available_csv(
     CONFIG.audit_history,
 )
 

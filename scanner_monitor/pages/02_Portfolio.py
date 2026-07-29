@@ -140,21 +140,7 @@ initialize_session()
 # Data Loading
 # =============================================================================
 
-
-@st.cache_data(show_spinner=False)
-def load_portfolio_data() -> ReportData:
-    """
-    Load cached portfolio reports.
-    """
-
-    LOGGER.info(
-        "Loading portfolio reports."
-    )
-
-    return load_reports()
-
-
-reports = load_portfolio_data()
+reports = load_reports()
 
 portfolio_summary = reports.portfolio_summary.copy()
 

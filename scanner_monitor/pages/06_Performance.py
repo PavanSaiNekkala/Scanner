@@ -35,6 +35,8 @@ from ui.sidebar import render_sidebar
 from ui.tables import dataframe_info
 from ui.tables import holdings_table
 
+from ui.loader import load_first_available_csv
+
 # ==========================================================
 # Configuration
 # ==========================================================
@@ -101,28 +103,15 @@ st.caption(
 # Data Loading
 # ==========================================================
 
-
-@st.cache_data(show_spinner=False)
-def load_csv(
-    path: Path,
-) -> pd.DataFrame:
-
-    if path.exists():
-
-        return pd.read_csv(path)
-
-    return pd.DataFrame()
-
-
-portfolio = load_csv(
+portfolio = load_first_available_csv(
     CONFIG.portfolio_file,
 )
 
-holdings = load_csv(
+holdings = load_first_available_csv(
     CONFIG.holdings_file,
 )
 
-performance = load_csv(
+performance = load_first_available_csv(
     CONFIG.performance_file,
 )
 # ==========================================================

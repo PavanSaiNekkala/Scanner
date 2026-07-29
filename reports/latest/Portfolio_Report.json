@@ -1,13 +1,13 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-07-26 21:26:06.084017",
+        "generated_at": "2026-07-27 15:57:58.028050",
         "version": "1.0"
     },
     "portfolio_summary": [
         {
             "Metric": "Portfolio Holdings",
-            "Value": 2
+            "Value": 1
         },
         {
             "Metric": "Total Weight",
@@ -23,19 +23,19 @@
         },
         {
             "Metric": "Largest Position",
-            "Value": 0.5
+            "Value": 1.0
         },
         {
             "Metric": "Smallest Position",
-            "Value": 0.5
+            "Value": 1.0
         },
         {
             "Metric": "Average Position",
-            "Value": 0.5
+            "Value": 1.0
         },
         {
             "Metric": "Median Position",
-            "Value": 0.5
+            "Value": 1.0
         },
         {
             "Metric": "Sector Count",
@@ -64,78 +64,6 @@
     ],
     "holdings": [
         {
-            "ticker": "RVNL",
-            "yahoo": "RVNL",
-            "status": "ok",
-            "sector": "UNKNOWN",
-            "signals_today": false,
-            "regime_today": "",
-            "bt_from": "2019-04-11",
-            "bt_to": "2025-12-31",
-            "years": 6.7,
-            "hist_trades": 561,
-            "win_%": 46.2,
-            "win_rate": 46.2,
-            "expectancy_%": 3.47,
-            "expectancy": 3.47,
-            "avg_win_%": 13.61,
-            "avg_loss_%": -5.22,
-            "avg_days": 7.3,
-            "confidence": 20.87,
-            "exp_per_day_%": 0.476,
-            "cut_exits": 0,
-            "trail_exits": 38,
-            "total_return_sum_%": 1946.82,
-            "profit_factor": 2.23,
-            "reward_risk_ratio": 2.61,
-            "cagr_%": -21.56,
-            "max_drawdown_%": -82.89,
-            "recovery_factor": -0.95,
-            "max_consecutive_losses": 11,
-            "seq_trades": 135,
-            "rel_strength": 4.57,
-            "relative_strength": 4.57,
-            "rank_score": 24.05,
-            "day_chg_%": -0.86,
-            "above_50dma": true,
-            "last_close": 356.13,
-            "last_atr_pct": 3.67,
-            "entry_ref": 356.13,
-            "limit_price": NaN,
-            "plan_entry": 356.13,
-            "stop_price": 330.0,
-            "stop_%": -7.34,
-            "target_price": 391.74,
-            "exp_days_to_target": "9d",
-            "target_hits": 222,
-            "target_%": 39.6,
-            "stop_hits": 301,
-            "stop_hit_%": 53.7,
-            "trail_%": 6.8,
-            "time_exits": 0,
-            "time_%": 0.0,
-            "time_win": 0,
-            "time_loss": 0,
-            "remark": "limited history: 6.7y (<10y) - lower confidence",
-            "confidence_norm": 1.0,
-            "rank_score_norm": 1.0,
-            "relative_strength_norm": 0.0,
-            "expectancy_norm": 1.0,
-            "win_rate_norm": 0.0,
-            "portfolio_score": 0.7499999999999999,
-            "portfolio_rank": 1,
-            "weight": 0.5,
-            "weight_pct": 50.0,
-            "capital_fraction": 0.5,
-            "current_weight": 0.0,
-            "target_weight": 0.5,
-            "weight_change": 0.5,
-            "rebalance_action": "BUY",
-            "turnover": 0.5,
-            "run_id": "20260726_212606",
-            "timestamp": "2026-07-26 21:26:06.064703"
-        },
-        {
             "ticker": "LAURUSLABS",
             "yahoo": "LAURUSLABS",
             "status": "ok",
@@ -143,69 +71,69 @@
             "signals_today": true,
             "regime_today": "UPTREND",
             "bt_from": "2018-01-01",
-            "bt_to": "2025-12-31",
-            "years": 8.0,
-            "hist_trades": 553,
-            "win_%": 48.5,
-            "win_rate": 48.5,
-            "expectancy_%": 2.12,
-            "expectancy": 2.12,
-            "avg_win_%": 9.12,
-            "avg_loss_%": -4.47,
-            "avg_days": 8.5,
-            "confidence": 11.41,
+            "bt_to": "2026-06-30",
+            "years": 8.5,
+            "hist_trades": 619,
+            "win_%": 50.4,
+            "win_rate": 50.4,
+            "expectancy_%": 2.24,
+            "expectancy": 2.24,
+            "avg_win_%": 8.75,
+            "avg_loss_%": -4.38,
+            "avg_days": 9.0,
+            "confidence": 11.92,
             "exp_per_day_%": 0.248,
             "cut_exits": 0,
-            "trail_exits": 93,
-            "total_return_sum_%": 1170.86,
-            "profit_factor": 1.92,
-            "reward_risk_ratio": 2.04,
-            "cagr_%": -15.82,
+            "trail_exits": 116,
+            "total_return_sum_%": 1385.36,
+            "profit_factor": 2.03,
+            "reward_risk_ratio": 2.0,
+            "cagr_%": -14.17,
             "max_drawdown_%": -80.69,
-            "recovery_factor": -0.9,
+            "recovery_factor": -0.88,
             "max_consecutive_losses": 8,
-            "seq_trades": 120,
-            "rel_strength": 31.86,
-            "relative_strength": 31.86,
-            "rank_score": 17.12,
-            "day_chg_%": 1.47,
+            "seq_trades": 129,
+            "rel_strength": 53.01,
+            "relative_strength": 53.01,
+            "rank_score": 17.88,
+            "day_chg_%": 1.14,
             "above_50dma": true,
-            "last_close": 1106.9,
-            "last_atr_pct": 2.04,
-            "entry_ref": 1106.9,
+            "last_close": 1517.4,
+            "last_atr_pct": 2.51,
+            "entry_ref": 1517.4,
             "limit_price": NaN,
-            "plan_entry": 1106.9,
-            "stop_price": 1061.81,
-            "stop_%": -4.07,
-            "target_price": 1217.59,
-            "exp_days_to_target": "14d",
-            "target_hits": 179,
-            "target_%": 32.4,
-            "stop_hits": 281,
-            "stop_hit_%": 50.8,
-            "trail_%": 16.8,
+            "plan_entry": 1517.4,
+            "stop_price": 1441.16,
+            "stop_%": -5.02,
+            "target_price": 1669.14,
+            "exp_days_to_target": "15d",
+            "target_hits": 200,
+            "target_%": 32.3,
+            "stop_hits": 303,
+            "stop_hit_%": 48.9,
+            "trail_%": 18.7,
             "time_exits": 0,
             "time_%": 0.0,
             "time_win": 0,
             "time_loss": 0,
-            "remark": "limited history: 8.0y (<10y) - lower confidence",
-            "confidence_norm": 0.0,
-            "rank_score_norm": 0.0,
+            "remark": "limited history: 8.5y (<10y) - lower confidence",
+            "confidence_norm": 1.0,
+            "rank_score_norm": 1.0,
             "relative_strength_norm": 1.0,
-            "expectancy_norm": 0.0,
+            "expectancy_norm": 1.0,
             "win_rate_norm": 1.0,
-            "portfolio_score": 0.25,
-            "portfolio_rank": 2,
-            "weight": 0.5,
-            "weight_pct": 50.0,
-            "capital_fraction": 0.5,
+            "portfolio_score": 0.9999999999999999,
+            "portfolio_rank": 1,
+            "weight": 1.0,
+            "weight_pct": 100.0,
+            "capital_fraction": 1.0,
             "current_weight": 0.0,
-            "target_weight": 0.5,
-            "weight_change": 0.5,
+            "target_weight": 1.0,
+            "weight_change": 1.0,
             "rebalance_action": "BUY",
-            "turnover": 0.5,
-            "run_id": "20260726_212606",
-            "timestamp": "2026-07-26 21:26:06.064703"
+            "turnover": 1.0,
+            "run_id": "20260727_155758",
+            "timestamp": "2026-07-27 15:57:57.999438"
         }
     ],
     "risk_summary": [
@@ -231,15 +159,15 @@
         },
         {
             "Metric": "HHI",
-            "Value": 0.5
+            "Value": 1.0
         },
         {
             "Metric": "Effective Positions",
-            "Value": 2.0
+            "Value": 1.0
         },
         {
             "Metric": "Largest Position",
-            "Value": 0.5
+            "Value": 1.0
         },
         {
             "Metric": "Sector Count",
@@ -259,11 +187,11 @@
         },
         {
             "Metric": "Risk Violations",
-            "Value": 6.0
+            "Value": 5.0
         },
         {
             "Metric": "Overall Risk Score",
-            "Value": 21.0
+            "Value": 25.0
         },
         {
             "Metric": "Risk Rating",
@@ -273,11 +201,11 @@
     "execution_summary": [
         {
             "Metric": "Total Orders",
-            "Value": 2.0
+            "Value": 1.0
         },
         {
             "Metric": "Buy Orders",
-            "Value": 2.0
+            "Value": 1.0
         },
         {
             "Metric": "Sell Orders",
@@ -285,19 +213,19 @@
         },
         {
             "Metric": "Executed Value",
-            "Value": 10004576.158185
+            "Value": 10004665.833
         },
         {
             "Metric": "Portfolio Turnover",
-            "Value": 1.0004576158185
+            "Value": 1.0004665833000002
         },
         {
             "Metric": "Estimated Cost",
-            "Value": 10502.30507200128
+            "Value": 10502.399208149094
         },
         {
             "Metric": "Slippage Cost",
-            "Value": 4999.788184999529
+            "Value": 4999.832999999094
         },
         {
             "Metric": "Valid Orders",
@@ -305,23 +233,23 @@
         },
         {
             "Metric": "Rejected Orders",
-            "Value": 2.0
+            "Value": 1.0
         },
         {
             "Metric": "Average Order Value",
-            "Value": 5002288.0790925
+            "Value": 10004665.833
         },
         {
             "Metric": "Average Quantity",
-            "Value": 9278.0
+            "Value": 6590.0
         },
         {
             "Metric": "Average Fill Price",
-            "Value": 731.8807575
+            "Value": 1518.1587
         },
         {
             "Metric": "Execution Efficiency",
-            "Value": 0.9989502498750624
+            "Value": 0.9989502498750625
         },
         {
             "Metric": "Average Participation Rate",

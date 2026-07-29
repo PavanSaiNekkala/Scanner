@@ -1,12 +1,12 @@
 Metric,Value
-Portfolio Holdings,2
+Portfolio Holdings,1
 Total Weight,1.0
 Invested Weight,1.0
 Cash Weight,0.0
-Largest Position,0.5
-Smallest Position,0.5
-Average Position,0.5
-Median Position,0.5
+Largest Position,1.0
+Smallest Position,1.0
+Average Position,1.0
+Median Position,1.0
 Sector Count,1
 Largest Sector,UNKNOWN
 Largest Sector Weight,1.0

@@ -291,7 +291,15 @@ class ReportService:
 
             combined["date"] = (
                 pd.to_datetime(
-                    combined["timestamp"]
+                    combined["timestamp"],
+                    utc=True,
+                    errors="coerce",
+                )
+                .dt.tz_convert(
+                    "Asia/Kolkata",
+                )
+                .dt.tz_localize(
+                    None,
                 )
                 .dt.date
             )
@@ -334,40 +342,7 @@ class ReportService:
             file,
             index=False,
         )
-
-        if df.empty:
-
-            return
-
-
-        file = (
-            history_dir
-            /
-            filename
-        )
-
-
-        if file.exists():
-
-            old = pd.read_csv(
-                file
-            )
-
-
-            df = pd.concat(
-                [
-                    old,
-                    df,
-                ],
-                ignore_index=True,
-            )
-
-
-        df.to_csv(
-            file,
-            index=False,
-        )
-    
+ 
 
     # =========================================================
     # Public API

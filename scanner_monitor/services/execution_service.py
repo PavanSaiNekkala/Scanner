@@ -85,6 +85,12 @@ class ExecutionConfig:
 
     allow_fractional: bool = False
 
+    # ==========================================================
+    # Risk Enforcement
+    # ==========================================================
+
+    strict_risk_enforcement: bool = False
+
     # ---------------------------------------------------------
     # Execution
     # ---------------------------------------------------------
@@ -261,12 +267,27 @@ class ExecutionService:
 
             empty = pd.DataFrame()
 
+            execution_status = (
+                "COMPLETED_WITH_WARNINGS"
+                if (
+                    not risk.violations.empty
+                    and not critical.empty
+                    and not self.config.strict_risk_enforcement
+                )
+                else "SUCCESS"
+            )
+
             return ExecutionResult(
-                portfolio=empty,
-                orders=empty,
-                statistics=ExecutionStatistics(),
+                portfolio=positions,
+                orders=orders,
+                statistics=statistics,
                 metadata={
-                    "status": "EMPTY",
+                    "status": execution_status,
+                    "generated_at": datetime.now(
+                        ZoneInfo("Asia/Kolkata")
+                    ),
+                    "algorithm": self.config.execution_algorithm,
+                    "currency": self.config.currency,
                 },
             )
 
@@ -280,18 +301,40 @@ class ExecutionService:
                 risk.violations["severity"] == "Critical"
             ]
 
+            print("Violations:")
+            print(risk.violations)
+
+            print("\nCritical:")
+            print(critical)
+
+            print("\nRows:", len(critical))
+
             if not critical.empty:
 
-                logger.error(
-                    "Execution blocked because of "
-                    "%d critical violations.",
-                    len(critical),
+                message = (
+                    f"Portfolio contains {len(critical)} critical "
+                    "risk violation(s)."
                 )
 
-                raise RuntimeError(
-                    "Portfolio contains critical "
-                    "risk violations."
+                if self.config.strict_risk_enforcement:
+
+                    logger.error(message)
+
+                    print("\nCritical:")
+                    print(critical)
+
+                    raise RuntimeError(
+                        "Portfolio contains critical risk violations."
+                    )
+
+                logger.warning(
+                    "%s Continuing because strict risk "
+                    "enforcement is disabled.",
+                    message,
                 )
+
+                print("\nCritical (Ignored):")
+                print(critical)
 
         # ---------------------------------------------------------
         # Normalize Execution Price

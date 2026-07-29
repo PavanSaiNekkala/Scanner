@@ -4,6 +4,9 @@ import pandas as pd
 
 from scanner_monitor.services.workflow_service import WorkflowService
 
+from scanner_monitor.universe_loader import (
+    get_buckets_and_sectors,
+)
 
 # ==========================================================
 # Load Universe
@@ -13,6 +16,11 @@ universe = pd.read_csv(
     "scanner_monitor/backtest/data/universe.csv"
 )
 
+_, sector_map, _ = get_buckets_and_sectors()
+
+print(
+    f"Loaded {len(sector_map)} sector mappings."
+)
 
 # ==========================================================
 # Initialize Workflow
@@ -50,6 +58,8 @@ result = workflow.run(
     start_date="2018-01-01",
 
     end_date="2026-07-01",
+
+    sector_map=sector_map,
 )
 
 

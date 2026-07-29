@@ -694,6 +694,11 @@ def _build_summary(
         "ticker": ticker.replace(".NS", "").replace(".BO", ""),
         "yahoo": ticker,
         "status": "ok",
+        "trade_status": (
+            "NEW"
+            if signals_today
+            else "WATCH"
+        ),
 
         "sector": (
             sector_map or {}
@@ -784,16 +789,187 @@ def _build_summary(
             else np.nan
         ),
 
+        "gap_%": round(
+            (
+                last["Open"]
+                / c_ser.iloc[-2]
+                - 1
+            ) * 100,
+            2,
+        )
+        if len(c_ser) > 1
+        else np.nan,
+
         "above_50dma": (
             bool(last["Close"] > last["sma50"])
             if np.isfinite(last["sma50"])
             else False
         ),
 
+        "pct_from_20dma": round(
+            (
+                last["Close"]
+                / last["sma20"]
+                - 1
+            ) * 100,
+            2,
+        ),
+
+        "pct_from_50dma": round(
+            (
+                last["Close"]
+                / last["sma50"]
+                - 1
+            ) * 100,
+            2,
+        ),
+
+        "pct_from_200dma": round(
+            (
+                last["Close"]
+                / last["sma200"]
+                - 1
+            ) * 100,
+            2,
+        ),
+
+        "scan_date": raw.index[-1].date(),
+        "signal_date": (
+            raw.index[-1].date()
+            if signals_today
+            else None
+        ),
+
+        "open": round(
+            float(last["Open"]),
+            2,
+        ),
+
+        "high": round(
+            float(last["High"]),
+            2,
+        ),
+
+        "low": round(
+            float(last["Low"]),
+            2,
+        ),
+
+        "close": round(
+            float(last["Close"]),
+            2,
+        ),
+
+        "candle_range": round(
+            float(
+                last["High"]
+                - last["Low"]
+            ),
+            2,
+        ),
+
+        "candle_range_%": round(
+            (
+                last["High"]
+                - last["Low"]
+            )
+            / last["Close"]
+            * 100,
+            2,
+        ),
+
+        "cmp": round(
+            float(last["Close"]),
+            2,
+        ),
+
+        "volume": int(
+            last["Volume"]
+        ),
+
+        "avg20_volume": int(
+            raw["Volume"]
+            .tail(20)
+            .mean()
+        ),
+
+        "volume_ratio": round(
+            float(
+                last["Volume"]
+                / raw["Volume"]
+                .tail(20)
+                .mean()
+            ),
+            2,
+        ),
+
+        "entry_price": round(
+            trade.plan_entry,
+            2,
+        ),
+
+        "stop_loss": round(
+            trade.stop_price,
+            2,
+        ),
+
+        "stop_loss_%": trade.stop_pct,
+
+        "target": round(
+            trade.target_price,
+            2,
+        ),
+
+        "target_%": round(
+            (
+                trade.target_price
+                / trade.plan_entry
+                - 1
+            ) * 100,
+            2,
+        ),
+
+        "risk_points": round(
+            trade.plan_entry
+            - trade.stop_price,
+            2,
+        ),
+
+        "reward_points": round(
+            trade.target_price
+            - trade.plan_entry,
+            2,
+        ),
+
+        "risk_reward": round(
+            (
+                trade.target_price
+                - trade.plan_entry
+            )
+            /
+            (
+                trade.plan_entry
+                - trade.stop_price
+            ),
+            2,
+        )
+        if trade.plan_entry > trade.stop_price
+        else np.nan,
+
         "last_close": round(trade.entry_ref, 2),
 
         "last_atr_pct": round(
             float(last["atr_pct"]),
+            2,
+        ),
+
+        "atr": round(
+            float(last["atr14"]),
+            2,
+        ),
+
+        "atr_points": round(
+            float(last["atr14"]),
             2,
         ),
 
@@ -937,7 +1113,6 @@ def scan_one(
         stats,
         bt_kwargs,
     )
-
 
     summary = _build_summary(
         ticker=ticker,

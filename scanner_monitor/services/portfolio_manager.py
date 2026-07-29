@@ -273,7 +273,6 @@ class PortfolioManager:
         candidates = self._validate_candidates(
             candidates,
         )
-
         # -----------------------------------------------------
         # Candidate Filters
         # -----------------------------------------------------
@@ -303,7 +302,7 @@ class PortfolioManager:
                     "market": batch.market,
                 },
             )
-
+        
         # -----------------------------------------------------
         # Ranking
         # -----------------------------------------------------

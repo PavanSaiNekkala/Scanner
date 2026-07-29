@@ -370,6 +370,10 @@ class ReportService:
     ) -> None:
         """
         Append Daily Monitor history.
+
+        A new snapshot is appended only if at least one field
+        other than scan_date has changed compared with the
+        latest snapshot of the same ticker.
         """
 
         if monitor.empty:
@@ -381,40 +385,94 @@ class ReportService:
 
             old = pd.read_csv(
                 file,
-                parse_dates=["scan_date", "signal_date"],
+                parse_dates=[
+                    "scan_date",
+                    "signal_date",
+                    "expected_exit_date",
+                ],
             )
 
-            combined = pd.concat(
-                [
-                    old,
-                    monitor,
-                ],
-                ignore_index=True,
-            )
+            rows_to_append = []
+
+            for _, new_row in monitor.iterrows():
+
+                ticker = new_row["ticker"]
+
+                history = old.loc[
+                    old["ticker"] == ticker
+                ]
+
+                # First occurrence of this ticker
+                if history.empty:
+
+                    rows_to_append.append(
+                        new_row
+                    )
+
+                    continue
+
+                # Latest snapshot
+                previous = (
+                    history
+                    .sort_values(
+                        "scan_date",
+                    )
+                    .iloc[-1]
+                )
+
+                changed = False
+
+                for column in monitor.columns:
+
+                    # Ignore scan timestamp
+                    if column == "scan_date":
+                        continue
+
+                    old_value = previous.get(
+                        column,
+                    )
+
+                    new_value = new_row.get(
+                        column,
+                    )
+
+                    if (
+                        pd.isna(old_value)
+                        and pd.isna(new_value)
+                    ):
+                        continue
+
+                    if old_value != new_value:
+
+                        changed = True
+
+                        break
+
+                if changed:
+
+                    rows_to_append.append(
+                        new_row
+                    )
+
+            if rows_to_append:
+
+                combined = pd.concat(
+                    [
+                        old,
+                        pd.DataFrame(
+                            rows_to_append,
+                        ),
+                    ],
+                    ignore_index=True,
+                )
+
+            else:
+
+                combined = old.copy()
 
         else:
 
             combined = monitor.copy()
-
-        # -----------------------------------------------------
-        # One snapshot per symbol per scan date
-        # -----------------------------------------------------
-
-        duplicate_keys = [
-            c
-            for c in [
-                "scan_date",
-                "ticker",
-            ]
-            if c in combined.columns
-        ]
-
-        if duplicate_keys:
-
-            combined = combined.drop_duplicates(
-                subset=duplicate_keys,
-                keep="last",
-            )
 
         combined.to_csv(
             file,

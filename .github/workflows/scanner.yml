@@ -54,5 +54,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: scanner-results
-          path: reports/
+          path: scanner_monitor/reports/
           retention-days: 30

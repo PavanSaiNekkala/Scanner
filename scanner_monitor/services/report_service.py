@@ -35,6 +35,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+
 from .execution_service import ExecutionResult
 from .portfolio_manager import PortfolioResult
 from .risk_manager import RiskResult
@@ -104,10 +105,25 @@ class ReportStatistics:
         default_factory=list,
     )
 
+
+# =============================================================================
+# Daily Monitor Configuration
+# =============================================================================
+
+@dataclass(frozen=True)
+class DailyMonitorConfig:
+    """
+    Daily Monitor configuration.
+    """
+
+    default_target_hold_days: int = 20
+
+    default_trade_status: str = "ACTIVE"
+
+
 # =============================================================================
 # Report Model
 # =============================================================================
-
 
 @dataclass
 class ReportResult:
@@ -173,6 +189,10 @@ class ReportService:
         self.config.output_directory.mkdir(
             parents=True,
             exist_ok=True,
+        )
+
+        self.daily_monitor_config = (
+            DailyMonitorConfig()
         )
 
         logger.info(
@@ -279,7 +299,6 @@ class ReportService:
             combined = df.copy()
 
 
-
         # ---------------------------------------
         # Remove duplicate executions
         # ---------------------------------------
@@ -342,7 +361,69 @@ class ReportService:
             file,
             index=False,
         )
- 
+
+
+    def _append_daily_monitor(
+        self,
+        monitor: pd.DataFrame,
+        history_dir: Path,
+    ) -> None:
+        """
+        Append Daily Monitor history.
+        """
+
+        if monitor.empty:
+            return
+
+        file = history_dir / "daily_monitor.csv"
+
+        if file.exists():
+
+            old = pd.read_csv(
+                file,
+                parse_dates=["scan_date", "signal_date"],
+            )
+
+            combined = pd.concat(
+                [
+                    old,
+                    monitor,
+                ],
+                ignore_index=True,
+            )
+
+        else:
+
+            combined = monitor.copy()
+
+        # -----------------------------------------------------
+        # One snapshot per symbol per scan date
+        # -----------------------------------------------------
+
+        duplicate_keys = [
+            c
+            for c in [
+                "scan_date",
+                "ticker",
+            ]
+            if c in combined.columns
+        ]
+
+        if duplicate_keys:
+
+            combined = combined.drop_duplicates(
+                subset=duplicate_keys,
+                keep="last",
+            )
+
+        combined.to_csv(
+            file,
+            index=False,
+        )
+
+        logger.info(
+            "Daily monitor history updated."
+        )
 
     # =========================================================
     # Public API
@@ -386,6 +467,10 @@ class ReportService:
             self._portfolio_summary(
                 portfolio,
             )
+        )
+
+        daily_monitor = self._daily_monitor(
+            portfolio,
         )
 
         holdings = (
@@ -516,6 +601,12 @@ class ReportService:
             )
         )
 
+        performance_summary = (
+            self._performance_summary(
+                portfolio,
+            )
+        )
+
         exported_files: list[Path] = []
 
         # -----------------------------------------------------
@@ -534,25 +625,76 @@ class ReportService:
             },
         )
 
-
-        run_id = datetime.now(ZoneInfo("Asia/Kolkata")).strftime(
-            "%Y%m%d_%H%M%S"
+        result.metadata["daily_monitor"] = (
+            daily_monitor
         )
 
+        result.metadata["performance_summary"] = (
+            performance_summary
+        )
 
-        #run_directory = (
-            #self.config.output_directory
-            #/
-            #"runs"
-            #/
-            #run_id
-        #)
+        result.metadata["daily_monitor_statistics"] = {
 
+            "active_trades": len(
+                daily_monitor,
+            ),
 
-        #run_directory.mkdir(
-            #parents=True,
-            #exist_ok=True,
-        #)
+            "target_hits": int(
+                (
+                    daily_monitor["trade_status"]
+                    == "TARGET HIT"
+                ).sum()
+            )
+            if "trade_status" in daily_monitor.columns
+            else 0,
+
+            "stop_losses": int(
+                (
+                    daily_monitor["trade_status"]
+                    == "STOP LOSS"
+                ).sum()
+            )
+            if "trade_status" in daily_monitor.columns
+            else 0,
+
+            "time_exits": int(
+                (
+                    daily_monitor["trade_status"]
+                    == "TIME EXIT"
+                ).sum()
+            )
+            if "trade_status" in daily_monitor.columns
+            else 0,
+
+            "average_expected_return_pct": float(
+                daily_monitor[
+                    "expected_return_pct"
+                ].mean()
+            )
+            if "expected_return_pct"
+            in daily_monitor.columns
+            else np.nan,
+
+            "average_current_return_pct": float(
+                daily_monitor[
+                    "current_return_pct"
+                ].mean()
+            )
+            if "current_return_pct"
+            in daily_monitor.columns
+            else np.nan,
+
+            "average_risk_reward": float(
+                daily_monitor[
+                    "risk_reward"
+                ].mean()
+            )
+            if "risk_reward"
+            in daily_monitor.columns
+            else np.nan,
+
+        }
+
 
         # -----------------------------------------------------
         # Export Excel
@@ -602,11 +744,15 @@ class ReportService:
                 history_dir,
             )
 
+            self._append_daily_monitor(
+                daily_monitor,
+                history_dir,
+            )
 
         # -----------------------------------------------------
         # Export JSON
         # -----------------------------------------------------
-
+        
         if self.config.export_json:
 
             exported_files.append(
@@ -1639,6 +1785,656 @@ class ReportService:
 
         return report
 
+    def _first_existing_column(
+        self,
+        df: pd.DataFrame,
+        *columns: str,
+    ) -> str | None:
+        """
+        Return the first matching column present in the DataFrame.
+        """
+
+        for column in columns:
+
+            if column in df.columns:
+                return column
+
+        return None
+
+    
+    def _daily_monitor(
+        self,
+        portfolio: PortfolioResult,
+    ) -> pd.DataFrame:
+        """
+        Build Daily Signal Monitor.
+
+        One row per active recommendation.
+
+        Returns
+        -------
+        pd.DataFrame
+        """
+
+        positions = portfolio.portfolio.copy()
+
+        if positions.empty:
+
+            return pd.DataFrame()
+
+        monitor = positions.copy()
+
+        # =====================================================
+        # Normalize common column names
+        # =====================================================
+
+        column_mapping = {
+
+            "ticker": self._first_existing_column(
+                monitor,
+                "ticker",
+                "symbol",
+            ),
+
+            "cmp": self._first_existing_column(
+                monitor,
+                "cmp",
+                "current_price",
+                "ltp",
+                "close",
+            ),
+
+            "entry": self._first_existing_column(
+                monitor,
+                "entry",
+                "entry_price",
+                "buy_price",
+            ),
+
+            "target": self._first_existing_column(
+                monitor,
+                "target",
+                "target_price",
+            ),
+
+            "stop_loss": self._first_existing_column(
+                monitor,
+                "stop_loss",
+                "sl",
+                "stop",
+            ),
+
+            "signal_date": self._first_existing_column(
+                monitor,
+                "signal_date",
+                "scan_date",
+            ),
+
+            "company": self._first_existing_column(
+                monitor,
+                "company",
+                "company_name",
+            ),
+
+            "sector": self._first_existing_column(
+                monitor,
+                "sector",
+            ),
+
+            "subsector": self._first_existing_column(
+                monitor,
+                "subsector",
+                "industry",
+            ),
+
+        }
+
+        for standard_name, existing_name in column_mapping.items():
+
+            if (
+                existing_name is not None
+                and existing_name != standard_name
+            ):
+
+                monitor.rename(
+                    columns={
+                        existing_name: standard_name,
+                    },
+                    inplace=True,
+                )
+
+        today = datetime.now(
+            ZoneInfo("Asia/Kolkata")
+        ).date()
+
+        # =====================================================
+        # Scan Date
+        # =====================================================
+
+        monitor["scan_date"] = today
+
+        # =====================================================
+        # Signal Date
+        # =====================================================
+
+        if "signal_date" not in monitor.columns:
+
+            monitor["signal_date"] = today
+
+        monitor["signal_date"] = pd.to_datetime(
+            monitor["signal_date"],
+            errors="coerce",
+        )
+
+        today = pd.Timestamp.now(
+            tz="Asia/Kolkata"        
+        ).normalize().tz_localize(None)
+        
+        # =====================================================
+        # Days Since Signal
+        # =====================================================
+
+        monitor["days_since_signal"] = (
+            today
+            - monitor["signal_date"].dt.normalize()
+        ).dt.days
+
+        monitor["days_since_signal"] = (
+            monitor["days_since_signal"]
+            .fillna(0)
+            .astype(int)
+        )
+
+        # =====================================================
+        # Hold Days
+        # =====================================================
+
+        if "target_hold_days" not in monitor.columns:
+
+            monitor["target_hold_days"] = (
+                self.daily_monitor_config.default_target_hold_days
+            )
+
+        monitor["days_remaining"] = (
+
+            monitor["target_hold_days"]
+
+            - monitor["days_since_signal"]
+
+        ).clip(
+            lower=0,
+        )
+
+        monitor["expected_exit_date"] = (
+
+            monitor["signal_date"]
+
+            +
+
+            pd.to_timedelta(
+                monitor["target_hold_days"],
+                unit="D",
+            )
+
+        )
+
+        monitor["holding_progress_pct"] = np.where(
+
+            monitor["target_hold_days"] > 0,
+
+            (
+                monitor["days_since_signal"]
+                /
+                monitor["target_hold_days"]
+
+            ) * 100,
+            np.nan,
+        )
+
+                
+        # =====================================================
+        # Expected Return %
+        # =====================================================
+
+        if {
+
+            "entry",
+            "target",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            monitor["expected_return_pct"] = (
+
+                (
+                    monitor["target"]
+
+                    - monitor["entry"]
+
+                )
+
+                /
+
+                monitor["entry"]
+
+            ) * 100
+
+            monitor["expected_return_points"] = (
+
+                monitor["target"]
+
+                - monitor["entry"]
+
+            )
+
+        # =====================================================
+        # Risk %
+        # =====================================================
+
+        if {
+
+            "entry",
+            "stop_loss",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            monitor["risk_points"] = (
+
+                monitor["entry"]
+
+                - monitor["stop_loss"]
+
+            )
+
+            monitor["risk_pct"] = (
+
+                monitor["risk_points"]
+
+                /
+
+                monitor["entry"]
+
+            ) * 100
+
+        # =====================================================
+        # Risk Reward
+        # =====================================================
+
+        if {
+
+            "expected_return_points",
+            "risk_points",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            monitor["risk_reward"] = np.where(
+
+                monitor["risk_points"] > 0,
+
+                monitor["expected_return_points"]
+
+                /
+
+                monitor["risk_points"],
+
+                np.nan,
+
+            )
+
+        # =====================================================
+        # Current Return
+        # =====================================================
+
+        if {
+
+            "cmp",
+            "entry",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            monitor["current_return_pct"] = (
+
+                (
+                    monitor["cmp"]
+
+                    - monitor["entry"]
+
+                )
+
+                /
+
+                monitor["entry"]
+
+            ) * 100
+
+
+        if {
+
+            "cmp",
+            "entry",
+            "target",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            denominator = (
+
+                monitor["target"]
+
+                - monitor["entry"]
+
+            )
+
+            monitor["target_progress_pct"] = np.where(
+
+                denominator != 0,
+
+                (
+
+                    monitor["cmp"]
+
+                    - monitor["entry"]
+
+                )
+
+                /
+
+                denominator
+
+                * 100,
+
+                np.nan,
+
+            )
+
+        # =====================================================
+        # Distance To Target
+        # =====================================================
+
+        if {
+
+            "cmp",
+            "target",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            monitor["distance_to_target_pct"] = (
+
+                (
+                    monitor["target"]
+
+                    - monitor["cmp"]
+
+                )
+
+                /
+
+                monitor["cmp"]
+
+            ) * 100
+
+        # =====================================================
+        # Distance To Stop
+        # =====================================================
+
+        if {
+
+            "cmp",
+            "stop_loss",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            monitor["distance_to_stop_pct"] = (
+
+                (
+                    monitor["cmp"]
+
+                    - monitor["stop_loss"]
+
+                )
+
+                /
+
+                monitor["cmp"]
+
+            ) * 100
+
+        # =====================================================
+        # Trade Status
+        # =====================================================
+
+        monitor["trade_status"] = (
+            self.daily_monitor_config.default_trade_status
+        )
+
+        if {
+
+            "cmp",
+            "target",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            monitor.loc[
+
+                monitor["cmp"]
+
+                >= monitor["target"],
+
+                "trade_status",
+
+            ] = "TARGET HIT"
+
+        if {
+
+            "cmp",
+            "stop_loss",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            monitor.loc[
+
+                monitor["cmp"]
+
+                <= monitor["stop_loss"],
+
+                "trade_status",
+
+            ] = "STOP LOSS"
+
+        if {
+
+            "days_since_signal",
+            "target_hold_days",
+
+        }.issubset(
+            monitor.columns
+        ):
+
+            expired = (
+
+                monitor["days_since_signal"]
+
+                >
+
+                monitor["target_hold_days"]
+
+            )
+
+            active = (
+
+                monitor["trade_status"]
+
+                == "ACTIVE"
+
+            )
+
+            monitor.loc[
+                expired & active,
+                "trade_status",
+            ] = "TIME EXIT"
+
+        # =====================================================
+        # Final Columns
+        # =====================================================
+
+
+        if "strategy" not in monitor.columns:
+
+            monitor["strategy"] = "Swing Scanner"
+
+        if "confidence" not in monitor.columns:
+
+            monitor["confidence"] = np.nan
+
+        if "regime_today" not in monitor.columns:
+
+            monitor["regime_today"] = np.nan
+            
+        # =====================================================
+        # Final Column Order
+        # =====================================================
+
+        columns = [
+
+            # -------------------------------------------------
+            # Dates
+            # -------------------------------------------------
+
+            "scan_date",
+
+            "signal_date",
+
+            "expected_exit_date",
+
+            # -------------------------------------------------
+            # Identification
+            # -------------------------------------------------
+
+            "ticker",
+
+            "company",
+
+            "sector",
+
+            "subsector",
+
+            "strategy",
+
+            "confidence",
+
+            "regime_today",
+
+            # -------------------------------------------------
+            # Market Data
+            # -------------------------------------------------
+
+            "cmp",
+
+            "open",
+
+            "high",
+
+            "low",
+
+            "close",
+
+            "volume",
+
+            # -------------------------------------------------
+            # Trade Setup
+            # -------------------------------------------------
+
+            "entry",
+
+            "target",
+
+            "stop_loss",
+
+            # -------------------------------------------------
+            # Expected Trade
+            # -------------------------------------------------
+
+            "expected_return_pct",
+
+            "expected_return_points",
+
+            "risk_pct",
+
+            "risk_points",
+
+            "risk_reward",
+
+            # -------------------------------------------------
+            # Holding Analysis
+            # -------------------------------------------------
+
+            "target_hold_days",
+
+            "days_since_signal",
+
+            "days_remaining",
+
+            "holding_progress_pct",
+
+            # -------------------------------------------------
+            # Live Performance
+            # -------------------------------------------------
+
+            "current_return_pct",
+
+            "target_progress_pct",
+
+            "distance_to_target_pct",
+
+            "distance_to_stop_pct",
+
+            # -------------------------------------------------
+            # Status
+            # -------------------------------------------------
+
+            "trade_status",
+
+        ]
+
+        columns = [
+
+            column
+
+            for column in columns
+
+            if column in monitor.columns
+
+        ]
+
+        monitor = monitor[
+            columns
+        ].copy()
+
+        logger.info(
+            "Daily monitor generated with %d rows.",
+            len(
+                monitor,
+            ),
+        )
+
+        return monitor
+    
     
     def _export_excel(
         self,
@@ -1690,7 +2486,22 @@ class ReportService:
             ).to_excel(
                 writer,
                 sheet_name="Holdings",
+                index=False,
             )
+
+            # =====================================================
+            # Daily Monitor
+            # =====================================================
+
+            if "daily_monitor" in result.metadata:
+
+                self._remove_timezone(
+                    result.metadata["daily_monitor"],
+                ).to_excel(
+                    writer,
+                    sheet_name="Daily Monitor",
+                    index=False,
+                )
 
             # =====================================================
             # Risk Summary
@@ -1802,16 +2613,26 @@ class ReportService:
             # Metadata
             # =====================================================
 
+            metadata_rows = []
+
+            for key, value in result.metadata.items():
+
+                if isinstance(
+                    value,
+                    pd.DataFrame,
+                ):
+                    continue
+
+                metadata_rows.append(
+
+                    {
+                        "Key": key,
+                        "Value": str(value),
+                    }
+                )
+
             metadata = pd.DataFrame(
-                {
-                    "Key": list(
-                        result.metadata.keys()
-                    ),
-                    "Value": [
-                        str(v)
-                        for v in result.metadata.values()
-                    ],
-                }
+                metadata_rows,
             )
 
             self._remove_timezone(
@@ -1883,6 +2704,14 @@ class ReportService:
 
         }
 
+        if "daily_monitor" in result.metadata:
+
+            reports[
+                "daily_monitor_latest.csv"
+            ] = result.metadata[
+                "daily_monitor"
+            ]
+
         # -----------------------------------------------------
         # Optional Reports
         # -----------------------------------------------------
@@ -1915,6 +2744,29 @@ class ReportService:
         # Export
         # -----------------------------------------------------
 
+        latest_dir, history_dir = (
+            self._prepare_directories()
+        )
+
+        history_map = {
+
+            "holdings.csv":
+                "portfolio_history.csv",
+
+            "risk_summary.csv":
+                "risk_history.csv",
+
+            "execution_summary.csv":
+                "execution_history.csv",
+
+            "performance_summary.csv":
+                "performance_history.csv",
+
+            "orders.csv":
+                "execution_history.csv",
+
+        }
+
         for filename, dataframe in reports.items():
 
             if (
@@ -1922,11 +2774,6 @@ class ReportService:
                 or dataframe.empty
             ):
                 continue
-
-            latest_dir, history_dir = (
-                self._prepare_directories()
-            )
-
 
             # -------------------------------
             # Latest snapshot
@@ -1938,44 +2785,24 @@ class ReportService:
                 filename
             )
 
-
             dataframe.to_csv(
                 latest_file,
                 index=False,
             )
 
-
             exported.append(
                 latest_file,
             )
-
 
             # -------------------------------
             # History append
             # -------------------------------
 
-            history_map = {
-
-                "portfolio_summary.csv":
-                    "portfolio_history.csv",
-
-                "holdings.csv":
-                    "portfolio_history.csv",
-
-                "risk_summary.csv":
-                    "risk_history.csv",
-
-                "execution_summary.csv":
-                    "execution_history.csv",
-
-                "performance_summary.csv":
-                    "performance_history.csv",
-
-                "orders.csv":
-                    "execution_history.csv",
-
-            }
-
+            if filename in {
+                "portfolio_summary.csv",
+                "daily_monitor_latest.csv",
+            }:
+                continue
 
             history_filename = (
                 history_map.get(
@@ -2026,51 +2853,98 @@ class ReportService:
             f"{self.config.report_name}.json"
         )
 
+
+        import json
+
+        def json_ready(
+            df: pd.DataFrame,
+        ) -> list[dict]:
+            """
+            Convert DataFrame into JSON-safe records.
+            """
+
+            if df.empty:
+
+                return []
+
+            cleaned = (
+                df.replace(
+                    {
+                        np.nan: None,
+                    }
+                )
+            )
+
+            return cleaned.to_dict(
+                orient="records",
+            )
+
+        # -----------------------------------------------------
+        # Metadata
+        # -----------------------------------------------------
+
+        metadata = {
+
+            "report_name": self.config.report_name,
+
+            "generated_at": result.metadata.get(
+                    "generated_at",
+                    datetime.now(
+                        ZoneInfo("Asia/Kolkata")
+                    ),
+                ),
+
+            "version": "1.0",
+
+        }
+
+        for key, value in result.metadata.items():
+
+            if isinstance(
+                value,
+                pd.DataFrame,
+            ):
+                continue
+
+            metadata[key] = str(
+                value,
+            )
+
         report = {
 
-            # -----------------------------------------------------
-            # Metadata
-            # -----------------------------------------------------
-
-            "metadata": {
-
-                "report_name": self.config.report_name,
-
-                "generated_at": datetime.now(ZoneInfo("Asia/Kolkata")).isoformat(),
-
-                "version": "1.0",
-
-                **{
-                    k: str(v)
-                    for k, v in result.metadata.items()
-                },
-
-            },
+            "metadata": metadata,
 
             # -----------------------------------------------------
             # Core Reports
             # -----------------------------------------------------
 
             "portfolio_summary":
-                result.portfolio_summary.to_dict(
-                    orient="records",
+                json_ready(
+                    result.portfolio_summary,
                 ),
 
             "holdings":
-                result.holdings.to_dict(
-                    orient="records",
+                json_ready(
+                    result.holdings,
                 ),
 
             "risk_summary":
-                result.risk_summary.to_dict(
-                    orient="records",
+                json_ready(
+                    result.risk_summary,
                 ),
 
             "execution_summary":
-                result.execution_summary.to_dict(
-                    orient="records",
+                json_ready(
+                    result.execution_summary,
                 ),
 
+            "daily_monitor":
+                json_ready(
+                    result.metadata.get(
+                        "daily_monitor",
+                        pd.DataFrame(),
+                    ),
+                ),
         }
 
         # -----------------------------------------------------
@@ -2084,8 +2958,8 @@ class ReportService:
 
             report[
                 "performance_summary"
-            ] = result.performance_summary.to_dict(
-                orient="records",
+            ] = json_ready(
+                result.performance_summary,
             )
 
         if hasattr(
@@ -2095,8 +2969,8 @@ class ReportService:
 
             report[
                 "risk_violations"
-            ] = result.risk_violations.to_dict(
-                orient="records",
+            ] = json_ready(
+                result.risk_violations,
             )
 
         if hasattr(
@@ -2106,8 +2980,8 @@ class ReportService:
 
             report[
                 "sector_exposure"
-            ] = result.sector_exposure.to_dict(
-                orient="records",
+            ] = json_ready(
+                result.sector_exposure,
             )
 
         if hasattr(
@@ -2117,10 +2991,10 @@ class ReportService:
 
             report[
                 "orders"
-            ] = result.orders.to_dict(
-                orient="records",
+            ] = json_ready(
+                result.orders,
             )
-
+            
         # -----------------------------------------------------
         # Write JSON
         # -----------------------------------------------------
@@ -2159,8 +3033,12 @@ class ReportService:
             HTML report path.
         """
 
+        latest_dir, _ = (
+            self._prepare_directories()
+        )
+
         output_file = (
-            self.config.output_directory
+            latest_dir
             / f"{self.config.report_name}.html"
         )
 
@@ -2170,10 +3048,20 @@ class ReportService:
         # Header
         # =====================================================
 
+        generated_at = datetime.now(
+            ZoneInfo("Asia/Kolkata")
+        )
+
+        daily_stats = result.metadata.get(
+            "daily_monitor_statistics",
+            {},
+        )
+
         html.append(
-            """
+            f"""
 <!DOCTYPE html>
 <html>
+
 <head>
 
 <meta charset="utf-8">
@@ -2182,42 +3070,70 @@ class ReportService:
 
 <style>
 
-body{
+body{{
     font-family:Arial,Helvetica,sans-serif;
     margin:30px;
     background:#fafafa;
-}
+    color:#222;
+}}
 
-h1{
+h1{{
     color:#1f2937;
-}
+    margin-bottom:5px;
+}}
 
-h2{
+h2{{
     margin-top:40px;
     border-bottom:2px solid #cccccc;
     padding-bottom:6px;
-}
+}}
 
-table{
+table{{
     border-collapse:collapse;
     width:100%;
     margin-top:10px;
-}
+}}
 
-th,td{
+th,td{{
     border:1px solid #d0d0d0;
     padding:8px;
     text-align:left;
-}
+}}
 
-th{
-    background:#f0f0f0;
-}
+th{{
+    background:#f3f4f6;
+}}
 
-.small{
+.summary{{
+    display:flex;
+    flex-wrap:wrap;
+    gap:15px;
+    margin:20px 0;
+}}
+
+.card{{
+    background:white;
+    border:1px solid #d9d9d9;
+    border-radius:8px;
+    padding:12px 16px;
+    min-width:170px;
+}}
+
+.card-title{{
+    color:#666;
+    font-size:12px;
+}}
+
+.card-value{{
+    font-size:22px;
+    font-weight:bold;
+    margin-top:6px;
+}}
+
+.small{{
     color:#666;
     font-size:13px;
-}
+}}
 
 </style>
 
@@ -2228,13 +3144,58 @@ th{
 <h1>Institutional Portfolio Report</h1>
 
 <p class="small">
-Generated:
+Generated :
+{generated_at:%d-%b-%Y %I:%M:%S %p IST}
+</p>
+
+<div class="summary">
+
+<div class="card">
+<div class="card-title">Active Trades</div>
+<div class="card-value">
+{daily_stats.get("active_trades","-")}
+</div>
+</div>
+
+<div class="card">
+<div class="card-title">Target Hits</div>
+<div class="card-value">
+{daily_stats.get("target_hits","-")}
+</div>
+</div>
+
+<div class="card">
+<div class="card-title">Stop Losses</div>
+<div class="card-value">
+{daily_stats.get("stop_losses","-")}
+</div>
+</div>
+
+<div class="card">
+<div class="card-title">Time Exits</div>
+<div class="card-value">
+{daily_stats.get("time_exits","-")}
+</div>
+</div>
+
+<div class="card">
+<div class="card-title">Avg Expected Return</div>
+<div class="card-value">
+{daily_stats.get("average_expected_return_pct",0):.2f}%
+</div>
+</div>
+
+<div class="card">
+<div class="card-title">Avg Current Return</div>
+<div class="card-value">
+{daily_stats.get("average_current_return_pct",0):.2f}%
+</div>
+</div>
+
+</div>
+
 """
         )
-
-        html.append(str(datetime.now(ZoneInfo("Asia/Kolkata"))))
-
-        html.append("</p>")
 
         # =====================================================
         # Portfolio Summary

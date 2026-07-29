@@ -1,8 +1,9 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-07-29 13:28:35.797761+05:30",
-        "version": "1.0"
+        "generated_at": "2026-07-29 15:48:57.488302+05:30",
+        "version": "1.0",
+        "daily_monitor_statistics": "{'active_trades': 1, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 1, 'average_expected_return_pct': 10.0, 'average_current_return_pct': 0.0, 'average_risk_reward': 1.9902938090241342}"
     },
     "portfolio_summary": [
         {
@@ -51,15 +52,15 @@
         },
         {
             "Metric": "Expected Return",
-            "Value": NaN
+            "Value": null
         },
         {
             "Metric": "Portfolio Beta",
-            "Value": NaN
+            "Value": null
         },
         {
             "Metric": "Portfolio Volatility",
-            "Value": NaN
+            "Value": null
         }
     ],
     "holdings": [
@@ -86,7 +87,7 @@
             "exp_per_day_%": 0.248,
             "cut_exits": 0,
             "trail_exits": 116,
-            "total_return_sum_%": 1385.36,
+            "total_return_sum_%": 1385.37,
             "profit_factor": 2.03,
             "reward_risk_ratio": 2.0,
             "cagr_%": -14.17,
@@ -128,7 +129,7 @@
             "atr": 38.12,
             "atr_points": 38.12,
             "entry_ref": 1517.4,
-            "limit_price": NaN,
+            "limit_price": null,
             "plan_entry": 1517.4,
             "stop_price": 1441.16,
             "stop_%": -5.02,
@@ -158,8 +159,8 @@
             "weight_change": 1.0,
             "rebalance_action": "BUY",
             "turnover": 1.0,
-            "run_id": "20260729_132835",
-            "timestamp": "2026-07-29 13:28:35.778985+05:30"
+            "run_id": "20260729_154857",
+            "timestamp": "2026-07-29 15:48:57.453624+05:30"
         }
     ],
     "risk_summary": [
@@ -177,11 +178,11 @@
         },
         {
             "Metric": "Portfolio Volatility",
-            "Value": 0.02068046435822286
+            "Value": 0.02068046658116714
         },
         {
             "Metric": "Annualized Volatility",
-            "Value": 0.32829219413515603
+            "Value": 0.3282922294233025
         },
         {
             "Metric": "HHI",
@@ -201,15 +202,15 @@
         },
         {
             "Metric": "Value at Risk",
-            "Value": 0.029150340119169452
+            "Value": 0.029150339744617684
         },
         {
             "Metric": "Expected Shortfall",
-            "Value": 0.04360851743837789
+            "Value": 0.04360852615164358
         },
         {
             "Metric": "Maximum Drawdown",
-            "Value": 0.18694939343476144
+            "Value": 0.1869493934347614
         },
         {
             "Metric": "Risk Violations",
@@ -284,6 +285,41 @@
         {
             "Metric": "Fill Rate",
             "Value": 1.0
+        }
+    ],
+    "daily_monitor": [
+        {
+            "scan_date": "2026-07-29",
+            "signal_date": "2026-06-30 00:00:00",
+            "expected_exit_date": "2026-07-20 00:00:00",
+            "ticker": "LAURUSLABS",
+            "sector": "Healthcare",
+            "strategy": "Swing Scanner",
+            "confidence": 11.92,
+            "regime_today": "UPTREND",
+            "cmp": 1517.4,
+            "open": 1500.3,
+            "high": 1522.4,
+            "low": 1485.0,
+            "close": 1517.4,
+            "volume": 3274608,
+            "entry": 1517.4,
+            "target": 1669.14,
+            "stop_loss": 1441.16,
+            "expected_return_pct": 10.0,
+            "expected_return_points": 151.74,
+            "risk_pct": 5.0243838144194015,
+            "risk_points": 76.24000000000001,
+            "risk_reward": 1.9902938090241342,
+            "target_hold_days": 20,
+            "days_since_signal": 29,
+            "days_remaining": 0,
+            "holding_progress_pct": 145.0,
+            "current_return_pct": 0.0,
+            "target_progress_pct": 0.0,
+            "distance_to_target_pct": 10.0,
+            "distance_to_stop_pct": 5.0243838144194015,
+            "trade_status": "TIME EXIT"
         }
     ]
 }

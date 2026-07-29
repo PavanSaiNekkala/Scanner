@@ -297,17 +297,19 @@ class ExecutionService:
 
         if not risk.violations.empty:
 
-            critical = risk.violations[
+            critical = risk.violations.loc[
                 risk.violations["severity"] == "Critical"
             ]
 
-            print("Violations:")
-            print(risk.violations)
+            logger.warning(
+                "Detected %d total risk violation(s), %d critical.",
+                len(risk.violations),
+                len(critical),
+            )
 
-            print("\nCritical:")
-            print(critical)
-
-            print("\nRows:", len(critical))
+            # -----------------------------------------------------
+            # Critical Risk Enforcement
+            # -----------------------------------------------------
 
             if not critical.empty:
 
@@ -320,12 +322,12 @@ class ExecutionService:
 
                     logger.error(message)
 
-                    print("\nCritical:")
-                    print(critical)
-
-                    raise RuntimeError(
-                        "Portfolio contains critical risk violations."
+                    logger.error(
+                        "\n%s",
+                        critical.to_string(index=False),
                     )
+
+                    raise RuntimeError(message)
 
                 logger.warning(
                     "%s Continuing because strict risk "
@@ -333,9 +335,26 @@ class ExecutionService:
                     message,
                 )
 
-                print("\nCritical (Ignored):")
-                print(critical)
+                logger.warning(
+                    "\n%s",
+                    critical.to_string(index=False),
+                )
 
+            # -----------------------------------------------------
+            # Non-Critical Violations
+            # -----------------------------------------------------
+
+            else:
+
+                logger.info(
+                    "No critical risk violations detected."
+                )
+
+                logger.info(
+                    "\n%s",
+                    risk.violations.to_string(index=False),
+                )
+                
         # ---------------------------------------------------------
         # Normalize Execution Price
         # ---------------------------------------------------------

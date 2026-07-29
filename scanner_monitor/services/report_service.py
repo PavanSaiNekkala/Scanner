@@ -569,12 +569,841 @@ class ReportService:
             "Daily monitor history updated."
         )
 
+
+    # =============================================================================
+    # Scan History
+    # =============================================================================
+
+    def _append_scan_history(
+        self,
+        scan: pd.DataFrame,
+        history_dir: Path,
+    ) -> None:
+        """
+        Append complete scanner history.
+
+        Every scanner execution appends one immutable
+        snapshot for every scanned security.
+
+        Duplicate protection is applied only on
+
+            run_id
+            ticker
+
+        allowing the same stock to appear across
+        multiple scanner runs.
+        """
+        # =====================================================
+        # Canonical Schema
+        # =====================================================
+
+        schema = [
+
+            # -------------------------------------------------
+            # Metadata
+            # -------------------------------------------------
+
+            "schema_version",
+
+            "run_id",
+
+            "scan_date",
+
+            "scan_time",
+
+            "scan_timestamp",
+
+            # -------------------------------------------------
+            # Identification
+            # -------------------------------------------------
+
+            "ticker",
+
+            "company",
+
+            "sector",
+
+            "subsector",
+
+            "exchange",
+
+            # -------------------------------------------------
+            # Scanner
+            # -------------------------------------------------
+
+            "strategy",
+
+            "recommendation",
+
+            "signals_today",
+
+            "confidence",
+
+            "rank_score",
+
+            "portfolio_rank",
+
+            "regime_today",
+
+            # -------------------------------------------------
+            # Market
+            # -------------------------------------------------
+
+            "open",
+
+            "high",
+
+            "low",
+
+            "close",
+
+            "cmp",
+
+            "volume",
+
+            # -------------------------------------------------
+            # Trade
+            # -------------------------------------------------
+
+            "entry",
+
+            "target",
+
+            "stop_loss",
+
+            "target_hold_days",
+
+            # -------------------------------------------------
+            # Risk
+            # -------------------------------------------------
+
+            "expected_return_pct",
+
+            "expected_return_points",
+
+            "risk_pct",
+
+            "risk_points",
+
+            "risk_reward",
+
+            # -------------------------------------------------
+            # Technicals
+            # -------------------------------------------------
+
+            "atr_pct",
+
+            "rsi",
+
+            "roc",
+
+            "volume_ratio",
+
+            "above_50dma",
+
+            "above_200dma",
+
+            # -------------------------------------------------
+            # Status
+            # -------------------------------------------------
+
+            "trade_status",
+
+            "remarks",
+
+        ]
+
+        if scan.empty:
+
+            logger.info(
+                "Scan history skipped (empty dataframe).",
+            )
+
+            return
+
+        file = (
+            history_dir
+            / "scan_history.csv"
+        )
+
+        history = scan.copy()
+
+        # =====================================================
+        # Validate Required Columns
+        # =====================================================
+
+        required_columns = [
+
+            "ticker",
+
+            "run_id",
+
+        ]
+
+        missing_columns = [
+
+            column
+
+            for column in required_columns
+
+            if column not in history.columns
+
+        ]
+
+        if missing_columns:
+
+            raise ValueError(
+
+                "Scan history missing required columns: "
+
+                + ", ".join(
+                    missing_columns,
+                )
+
+            )
+
+        # =====================================================
+        # Metadata
+        # =====================================================
+
+        now = (
+            pd.Timestamp.now(
+                tz="Asia/Kolkata",
+            )
+            .tz_localize(None)
+            .floor("s")
+        )
+
+        if "schema_version" not in history.columns:
+
+            history.insert(
+                0,
+                "schema_version",
+                "1.0.0",
+            )
+
+        if "run_id" not in history.columns:
+
+            history.insert(
+                1,
+                "run_id",
+                now.strftime(
+                    "%Y%m%d_%H%M%S",
+                ),
+            )
+
+        if "scan_date" not in history.columns:
+
+            history.insert(
+                2,
+                "scan_date",
+                now.date(),
+            )
+
+        if "scan_time" not in history.columns:
+
+            history.insert(
+                3,
+                "scan_time",
+                now.strftime(
+                    "%H:%M:%S",
+                ),
+            )
+
+        if "scan_timestamp" not in history.columns:
+
+            history.insert(
+                4,
+                "scan_timestamp",
+                now,
+            )
+
+        # =====================================================
+        # Normalize Data Types
+        # =====================================================
+
+        if "scan_timestamp" in history.columns:
+
+            history["scan_timestamp"] = pd.to_datetime(
+
+                history["scan_timestamp"],
+
+                errors="coerce",
+
+            )
+
+        numeric_columns = [
+
+            "cmp",
+
+            "entry",
+
+            "target",
+
+            "stop_loss",
+
+            "volume",
+
+            "confidence",
+
+            "rank_score",
+
+            "portfolio_rank",
+
+            "expected_return_pct",
+
+            "risk_pct",
+
+            "risk_reward",
+
+        ]
+
+        for column in numeric_columns:
+
+            if column in history.columns:
+
+                history[column] = pd.to_numeric(
+
+                    history[column],
+
+                    errors="coerce",
+
+                )
+
+        # =====================================================
+        # History File
+        # =====================================================
+
+        if file.exists():
+
+            existing = pd.read_csv(
+                file,
+                low_memory=False,
+            )
+
+        else:
+
+            existing = pd.DataFrame()
+
+
+        # =====================================================
+        # Preserve Future Columns
+        # =====================================================
+
+        extra_columns = [
+
+            column
+
+            for column in history.columns
+
+            if column not in schema
+
+        ]
+
+        for column in existing.columns:
+
+            if (
+                column not in schema
+                and column not in extra_columns
+            ):
+
+                extra_columns.append(
+                    column,
+                )
+
+        schema.extend(
+            extra_columns,
+        )
+
+        # =====================================================
+        # Reorder Columns
+        # =====================================================
+
+        history = history.reindex(
+            columns=schema,
+        )
+
+        existing = existing.reindex(
+            columns=schema,
+        )
+
+        # =====================================================
+        # Remove Invalid Records
+        # =====================================================
+
+        history = history.dropna(
+
+            subset=[
+
+                "ticker",
+
+            ]
+
+        )
+
+        history = history.loc[
+
+            history["ticker"]
+
+            .astype(str)
+
+            .str.strip()
+
+            != ""
+
+        ]
+
+        if history.empty:
+
+            logger.warning(
+
+                "No valid scan history rows found.",
+
+            )
+
+            return
+
+        # =====================================================
+        # Comparison Columns
+        # =====================================================
+
+        ignore_columns = {
+
+            "run_id",
+
+            "scan_date",
+
+            "scan_time",
+
+            "scan_timestamp",
+
+        }
+
+        compare_columns = [
+
+            column
+
+            for column in history.columns
+
+            if column not in ignore_columns
+
+        ]
+        
+        # =====================================================
+        # Append Only Changed Records
+        # =====================================================
+
+        rows_to_append = []
+
+        for _, new_row in history.iterrows():
+
+            ticker = new_row["ticker"]
+
+            previous_rows = existing.loc[
+
+                existing["ticker"] == ticker
+
+            ]
+
+            # --------------------------------------------
+            # First occurrence
+            # --------------------------------------------
+
+            if previous_rows.empty:
+
+                rows_to_append.append(
+                    new_row,
+                )
+
+                continue
+
+            previous = (
+
+                previous_rows
+
+                .sort_values(
+                    "scan_timestamp",
+                )
+
+                .iloc[-1]
+
+            )
+
+            changed = False
+
+            for column in compare_columns:
+
+                old_value = previous.get(
+                    column,
+                )
+
+                new_value = new_row.get(
+                    column,
+                )
+
+                # ----------------------------------------
+                # Both missing
+                # ----------------------------------------
+
+                if (
+
+                    pd.isna(old_value)
+
+                    and
+
+                    pd.isna(new_value)
+
+                ):
+
+                    continue
+
+                # ----------------------------------------
+                # Float comparison
+                # ----------------------------------------
+
+                if (
+
+                    isinstance(
+                        old_value,
+                        (
+                            float,
+                            np.floating,
+                        ),
+                    )
+
+                    or
+
+                    isinstance(
+                        new_value,
+                        (
+                            float,
+                            np.floating,
+                        ),
+                    )
+
+                ):
+
+                    if not np.isclose(
+
+                        old_value,
+
+                        new_value,
+
+                        rtol=1e-9,
+
+                        atol=1e-12,
+
+                        equal_nan=True,
+
+                    ):
+
+                        changed = True
+
+                        break
+
+                    continue
+
+                # ----------------------------------------
+                # Datetime comparison
+                # ----------------------------------------
+
+                if (
+
+                    isinstance(
+                        old_value,
+                        (
+                            pd.Timestamp,
+                            datetime,
+                        ),
+                    )
+
+                    or
+
+                    isinstance(
+                        new_value,
+                        (
+                            pd.Timestamp,
+                            datetime,
+                        ),
+                    )
+
+                ):
+
+                    old_ts = pd.Timestamp(
+                        old_value,
+                    )
+
+                    new_ts = pd.Timestamp(
+                        new_value,
+                    )
+
+                    if old_ts != new_ts:
+
+                        changed = True
+
+                        break
+
+                    continue
+
+                # ----------------------------------------
+                # Everything else
+                # ----------------------------------------
+
+                if old_value != new_value:
+
+                    changed = True
+
+                    break
+
+            if changed:
+
+                rows_to_append.append(
+                    new_row,
+                )
+
+        if rows_to_append:
+
+            combined = pd.concat(
+
+                [
+
+                    existing,
+
+                    pd.DataFrame(
+                        rows_to_append,
+                    ),
+
+                ],
+
+                ignore_index=True,
+
+                sort=False,
+
+            )
+
+        else:
+
+            combined = existing.copy()
+            
+        # =====================================================
+        # Preserve Canonical Order
+        # =====================================================
+
+        combined = combined.reindex(
+            columns=schema,
+        )
+
+        duplicates_before = (
+            len(combined)
+        )
+
+        # =====================================================
+        # Duplicate Protection
+        # =====================================================
+
+        if {
+
+            "run_id",
+            "ticker",
+
+        }.issubset(
+            combined.columns
+        ):
+
+            combined = (
+                combined
+                .drop_duplicates(
+                    subset=[
+                        "run_id",
+                        "ticker",
+                    ],
+                    keep="last",
+                )
+            )
+
+        duplicates_removed = (
+            duplicates_before
+            - len(combined)
+        )
+
+        # =====================================================
+        # Sort History
+        # =====================================================
+
+        if "scan_timestamp" in combined.columns:
+
+            combined["scan_timestamp"] = pd.to_datetime(
+                combined["scan_timestamp"],
+                errors="coerce",
+            )
+
+            combined = combined.sort_values(
+                by=[
+                    "scan_timestamp",
+                    "ticker",
+                ],
+                ascending=[
+                    True,
+                    True,
+                ],
+                na_position="last",
+            ).reset_index(
+                drop=True,
+            )
+        # =====================================================
+        # History Integrity Validation
+        # =====================================================
+
+        duplicate_keys = [
+
+            "run_id",
+
+            "ticker",
+
+        ]
+
+        duplicate_count = int(
+
+            combined.duplicated(
+                subset=duplicate_keys,
+                keep=False,
+            ).sum()
+
+        )
+
+        if duplicate_count:
+
+            raise ValueError(
+
+                f"Scan history contains "
+
+                f"{duplicate_count} duplicate "
+
+                f"(run_id, ticker) records."
+
+            )
+
+        if "ticker" in combined.columns:
+
+            invalid = (
+
+                combined["ticker"]
+
+                .astype(str)
+
+                .str.strip()
+
+                .eq("")
+
+                .sum()
+
+            )
+
+            if invalid:
+
+                raise ValueError(
+
+                    f"Found {invalid} blank tickers "
+
+                    "in scan history."
+
+                )
+
+        if "scan_timestamp" in combined.columns:
+
+            invalid = int(
+
+                combined[
+                    "scan_timestamp"
+                ].isna().sum()
+
+            )
+
+            if invalid:
+
+                logger.warning(
+
+                    "%d rows contain invalid "
+
+                    "scan_timestamp values.",
+
+                    invalid,
+
+                )
+
+        # =====================================================
+        # Atomic Write
+        # =====================================================
+
+        temp_file = (
+            file.with_suffix(
+                ".tmp",
+            )
+        )
+
+        combined.to_csv(
+            temp_file,
+            index=False,
+        )
+
+        temp_file.replace(
+            file,
+        )
+
+        # =====================================================
+        # Save
+        # =====================================================
+
+        try:
+
+            temp_file = (
+                file.with_suffix(
+                    ".tmp",
+                )
+            )
+
+            combined.to_csv(
+                temp_file,
+                index=False,
+            )
+
+            temp_file.replace(
+                file,
+            )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to update scan history.",
+            )
+
+            raise
+
+        logger.info(
+
+            (
+                "Scan history updated | "
+                "Appended=%d | "
+                "Total=%d | "
+                "DuplicatesRemoved=%d"
+            ),
+
+            len(history),
+
+            len(combined),
+
+            duplicates_removed,
+
+        )
+
+
     # =========================================================
     # Public API
     # =========================================================
 
     def generate(
         self,
+        scanner: pd.DataFrame,
         portfolio: PortfolioResult,
         risk: RiskResult,
         execution: ExecutionResult,
@@ -624,6 +1453,44 @@ class ReportService:
         holdings["run_id"] = run_id
 
         holdings["timestamp"] = run_time
+
+        # -----------------------------------------------------
+        # Complete Scanner Universe Snapshot
+        # -----------------------------------------------------
+
+        scan_history = scanner.copy()
+
+        scan_history["run_id"] = run_id
+
+        scan_history["schema_version"] = "1.0.0"
+
+        scan_history["scan_date"] = (
+            run_time.date()
+        )
+
+        scan_history["scan_time"] = (
+            run_time.strftime(
+                "%H:%M:%S",
+            )
+        )
+
+        scan_history["scan_timestamp"] = (
+            run_time.replace(
+                tzinfo=None,
+            )
+        )
+
+
+        logger.info(
+            "Scanner Universe : %d stocks",
+            len(scan_history),
+        )
+
+        logger.info(
+            "Final Portfolio : %d holdings",
+            len(holdings),
+        )
+
 
         # -----------------------------------------------------
         # Signal History Snapshot
@@ -874,6 +1741,10 @@ class ReportService:
 
         if self.config.append_history:
 
+            self._append_scan_history(
+                scan_history,
+                history_dir,
+            )
 
             self._append_history(
                 signal_history,

@@ -409,9 +409,10 @@ class WorkflowService:
         )
 
         report = self.report.generate(
-            portfolio,
-            risk,
-            execution,
+            scanner=batch.summary,
+            portfolio=portfolio,
+            risk=risk,
+            execution=execution,
         )
 
         statistics.stages_completed += 1

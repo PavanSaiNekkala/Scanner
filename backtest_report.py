@@ -27,8 +27,10 @@ warnings.filterwarnings("ignore")
 # ============================================================
 
 CONFIG = {
-    "INPUT_FILE": "Input_backtest_WF_ATR_FT.csv",
-    "OUTPUT_FILE": "Output_backtest_WF_ATR_FT_Report.xlsx",
+    "INPUT_DIR": "inputs",
+    "OUTPUT_DIR": "outputs",
+    "INPUT_PREFIX": "Input_backtest_",
+    "OUTPUT_PREFIX": "Output_backtest_",
     "ROUND": 2,
 }
 
@@ -43,7 +45,7 @@ logging.basicConfig(
 logger = logging.getLogger("StrategyEvaluation")
 
 # ============================================================
-# REQUIRED COLUMNS
+# REQUIRED COLUMNSoutput
 # ============================================================
 
 REQUIRED_COLUMNS = [
@@ -107,15 +109,10 @@ NUMERIC_COLUMNS = [
 # ============================================================
 
 
-def load_data():
-    logger.info("Loading Input File...")
+def load_data(input_file: Path):
+    logger.info(f"Loading {input_file.name}...")
 
-    file = Path(CONFIG["INPUT_FILE"])
-
-    if not file.exists():
-        raise FileNotFoundError(f"{CONFIG['INPUT_FILE']} not found.")
-
-    df = pd.read_csv(file)
+    df = pd.read_csv(input_file)
 
     logger.info(f"Rows Loaded : {len(df):,}")
 
@@ -259,15 +256,14 @@ def input_summary(df):
 # PREPARE DATA
 # ============================================================
 
-
-def prepare_data():
+def prepare_data(input_file: Path):
     logger.info("=" * 80)
 
     logger.info("PART 1 : DATA PREPARATION")
 
     logger.info("=" * 80)
 
-    df = load_data()
+    df = load_data(input_file)
 
     validate_columns(df)
 
@@ -806,7 +802,7 @@ def build_summary(df):
 # ============================================================
 
 
-def export_report(df):
+def export_report(df, output_file):
     logger.info("Generating Excel Report...")
 
     dashboard = build_dashboard(df)
@@ -817,7 +813,7 @@ def export_report(df):
 
     summary = build_summary(df)
 
-    with pd.ExcelWriter(CONFIG["OUTPUT_FILE"], engine="openpyxl") as writer:
+    with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         dashboard.to_excel(writer, sheet_name="Dashboard", index=False)
 
         metrics.to_excel(writer, sheet_name="Metrics", index=False)
@@ -828,7 +824,7 @@ def export_report(df):
 
         df.to_excel(writer, sheet_name="Raw Data", index=False)
 
-    logger.info(f"Workbook Saved : {CONFIG['OUTPUT_FILE']}")
+    logger.info(f"Workbook Saved : {output_file}")
 
 
 # ============================================================
@@ -885,52 +881,79 @@ def final_summary(df):
 # MAIN
 # ============================================================
 
-
 def main():
-    logger.info("=" * 80)
 
+    logger.info("=" * 80)
     logger.info("Strategy Evaluation Engine v5.0")
-
     logger.info("=" * 80)
 
-    # -----------------------------------------
-    # Part 1
-    # -----------------------------------------
+    input_dir = Path(CONFIG["INPUT_DIR"])
+    output_dir = Path(CONFIG["OUTPUT_DIR"])
 
-    df = prepare_data()
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # -----------------------------------------
-    # Part 2
-    # -----------------------------------------
+    input_files = sorted(
+        input_dir.glob(f"{CONFIG['INPUT_PREFIX']}*.csv")
+    )
 
-    df = calculate_metrics(df)
+    if not input_files:
+        raise FileNotFoundError(
+            f"No files found matching "
+            f"{CONFIG['INPUT_PREFIX']}*.csv"
+        )
 
-    metrics_preview(df)
+    for input_file in input_files:
 
-    # -----------------------------------------
-    # Part 3
-    # -----------------------------------------
+        logger.info("=" * 80)
+        logger.info(f"Processing : {input_file.name}")
+        logger.info("=" * 80)
 
-    df = build_scorecard(df)
+        suffix = input_file.stem.replace(
+            CONFIG["INPUT_PREFIX"],
+            "",
+            1,
+        )
 
-    score_preview(df)
+        output_file = (
+            output_dir
+            / f"{CONFIG['OUTPUT_PREFIX']}{suffix}_Report.xlsx"
+        )
 
-    # -----------------------------------------
-    # Part 4
-    # -----------------------------------------
+        # ----------------------------
+        # Part 1
+        # ----------------------------
 
-    export_report(df)
+        df = prepare_data(input_file)
 
-    report_preview(df)
+        # ----------------------------
+        # Part 2
+        # ----------------------------
 
-    final_summary(df)
+        df = calculate_metrics(df)
+
+        metrics_preview(df)
+
+        # ----------------------------
+        # Part 3
+        # ----------------------------
+
+        df = build_scorecard(df)
+
+        score_preview(df)
+
+        # ----------------------------
+        # Part 4
+        # ----------------------------
+
+        export_report(df, output_file)
+
+        report_preview(df)
+
+        final_summary(df)
 
     logger.info("=" * 80)
-
-    logger.info("PROCESS COMPLETED SUCCESSFULLY")
-
+    logger.info("ALL FILES PROCESSED SUCCESSFULLY")
     logger.info("=" * 80)
-
 
 # ============================================================
 # START

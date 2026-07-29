@@ -1,7 +1,7 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-07-29 20:53:57.545259+05:30",
+        "generated_at": "2026-07-29 20:55:51.209039+05:30",
         "version": "1.0",
         "daily_monitor_statistics": "{'active_trades': 1, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 1, 'average_expected_return_pct': 10.0, 'average_current_return_pct': 0.0, 'average_risk_reward': 1.9902938090241342}"
     },
@@ -159,8 +159,8 @@
             "weight_change": 1.0,
             "rebalance_action": "BUY",
             "turnover": 1.0,
-            "run_id": "20260729_205357",
-            "timestamp": "2026-07-29 20:53:57.512589+05:30"
+            "run_id": "20260729_205551",
+            "timestamp": "2026-07-29 20:55:51.181603+05:30"
         }
     ],
     "risk_summary": [
@@ -178,11 +178,11 @@
         },
         {
             "Metric": "Portfolio Volatility",
-            "Value": 0.02068046442235987
+            "Value": 0.020680461812507753
         },
         {
             "Metric": "Annualized Volatility",
-            "Value": 0.3282921951532995
+            "Value": 0.32829215372318155
         },
         {
             "Metric": "HHI",
@@ -206,7 +206,7 @@
         },
         {
             "Metric": "Expected Shortfall",
-            "Value": 0.04360850564902547
+            "Value": 0.04360850780746011
         },
         {
             "Metric": "Maximum Drawdown",
@@ -289,7 +289,7 @@
     ],
     "daily_monitor": [
         {
-            "scan_date": "2026-07-29 20:53:57",
+            "scan_date": "2026-07-29 20:55:51",
             "signal_date": "2026-06-30 00:00:00",
             "expected_exit_date": "2026-07-20 00:00:00",
             "ticker": "LAURUSLABS",

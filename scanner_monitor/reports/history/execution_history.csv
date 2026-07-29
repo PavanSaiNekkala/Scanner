@@ -11,6 +11,7 @@ Rejected Orders,1.0
 Average Order Value,10004665.833
 Average Quantity,6590.0
 Average Fill Price,1518.1587
+<<<<<<< HEAD
 <<<<<<< HEAD,
 Execution Efficiency,0.9989502498750624
 Average Participation Rate,0.0
@@ -89,6 +90,8 @@ Rejected Orders,1.0
 Average Order Value,10004665.833
 Average Quantity,6590.0
 Average Fill Price,1518.1587
+=======
+>>>>>>> b263b0d ("29/07/2026")
 Execution Efficiency,0.9989502498750625
 Average Participation Rate,0.0
 Fill Rate,1.0

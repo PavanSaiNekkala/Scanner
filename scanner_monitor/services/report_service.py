@@ -424,7 +424,7 @@ class ReportService:
 
                 for column in monitor.columns:
 
-                    # Ignore scan timestamp
+                    # Ignore execution timestamp
                     if column == "scan_date":
                         continue
 
@@ -436,11 +436,97 @@ class ReportService:
                         column,
                     )
 
+                    # Both missing
                     if (
                         pd.isna(old_value)
                         and pd.isna(new_value)
                     ):
                         continue
+
+                    # -------------------------------------------------
+                    # Datetime comparison
+                    # -------------------------------------------------
+
+                    if isinstance(
+                        old_value,
+                        (
+                            pd.Timestamp,
+                            datetime,
+                        ),
+                    ) or isinstance(
+                        new_value,
+                        (
+                            pd.Timestamp,
+                            datetime,
+                        ),
+                    ):
+
+                        old_ts = (
+                            pd.Timestamp(
+                                old_value,
+                            )
+                            if not pd.isna(
+                                old_value,
+                            )
+                            else pd.NaT
+                        )
+
+                        new_ts = (
+                            pd.Timestamp(
+                                new_value,
+                            )
+                            if not pd.isna(
+                                new_value,
+                            )
+                            else pd.NaT
+                        )
+
+                        if old_ts != new_ts:
+
+                            changed = True
+
+                            break
+
+                        continue
+
+                    # -------------------------------------------------
+                    # Float comparison
+                    # -------------------------------------------------
+
+                    if (
+                        isinstance(
+                            old_value,
+                            (
+                                float,
+                                np.floating,
+                            ),
+                        )
+                        or isinstance(
+                            new_value,
+                            (
+                                float,
+                                np.floating,
+                            ),
+                        )
+                    ):
+
+                        if not np.isclose(
+                            old_value,
+                            new_value,
+                            rtol=1e-9,
+                            atol=1e-12,
+                            equal_nan=True,
+                        ):
+
+                            changed = True
+
+                            break
+
+                        continue
+
+                    # -------------------------------------------------
+                    # Everything else
+                    # -------------------------------------------------
 
                     if old_value != new_value:
 

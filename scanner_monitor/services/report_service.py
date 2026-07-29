@@ -858,6 +858,8 @@ class ReportService:
 
         ]
 
+        numeric_columns_set = set(numeric_columns)
+
         for column in numeric_columns:
 
             if column in history.columns:
@@ -879,6 +881,7 @@ class ReportService:
             existing = pd.read_csv(
                 file,
                 low_memory=False,
+                parse_dates=["scan_timestamp"],
             )
 
         else:
@@ -1058,47 +1061,30 @@ class ReportService:
                     continue
 
                 # ----------------------------------------
-                # Float comparison
+                # Numeric comparison
                 # ----------------------------------------
 
-                if (
+                if column in numeric_columns_set:
 
-                    isinstance(
+                    old_num = pd.to_numeric(
                         old_value,
-                        (
-                            float,
-                            np.floating,
-                        ),
+                        errors="coerce",
                     )
 
-                    or
-
-                    isinstance(
+                    new_num = pd.to_numeric(
                         new_value,
-                        (
-                            float,
-                            np.floating,
-                        ),
+                        errors="coerce",
                     )
-
-                ):
 
                     if not np.isclose(
-
-                        old_value,
-
-                        new_value,
-
+                        old_num,
+                        new_num,
                         rtol=1e-9,
-
                         atol=1e-12,
-
                         equal_nan=True,
-
                     ):
 
                         changed = True
-
                         break
 
                     continue

@@ -21,6 +21,7 @@ from typing import Any
 class ScanResult:
     ticker: str
     raw_data: pd.DataFrame
+    returns: pd.Series 
     indicators: pd.DataFrame
     trades: pd.DataFrame
     statistics: dict[str, Any]
@@ -886,6 +887,17 @@ def scan_one(
         end,
     )
 
+    # ---------------------------------------------------------
+    # Daily Return Series
+    # ---------------------------------------------------------
+
+    returns = (
+        raw["Close"]
+        .pct_change()
+        .dropna()
+        .rename(ticker)
+    )
+
     df, trades, stats = _run_strategy(
         raw,
         strategy,
@@ -947,6 +959,7 @@ def scan_one(
     return ScanResult(
         ticker=ticker,
         raw_data=raw,
+        returns=returns,
         indicators=df,
         trades=trades,
         statistics=stats,

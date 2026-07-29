@@ -252,6 +252,7 @@ class RiskManager:
     def evaluate(
         self,
         portfolio: PortfolioResult,
+        returns_matrix: pd.DataFrame,
     ) -> RiskResult:
         """
         Perform institutional portfolio risk evaluation.
@@ -315,9 +316,9 @@ class RiskManager:
 
         correlation = (
             self._compute_correlation_matrix(
-                positions,
+                returns_matrix,
             )
-        )
+        )        
 
         # -----------------------------------------------------
         # Covariance
@@ -325,7 +326,7 @@ class RiskManager:
 
         covariance = (
             self._compute_covariance_matrix(
-                positions,
+                returns_matrix,
             )
         )
 
@@ -337,6 +338,7 @@ class RiskManager:
             positions,
             sector_exposure,
             correlation,
+            returns_matrix,
         )
 
         # -----------------------------------------------------
@@ -845,27 +847,14 @@ class RiskManager:
 
     def _compute_correlation_matrix(
         self,
-        portfolio: pd.DataFrame,
+        returns: pd.DataFrame,
     ) -> pd.DataFrame:
         """
-        Compute security correlation matrix.
-
-        Expected Columns
-        ----------------
-        ticker
-        returns
-
-        Returns
-        -------
-        pd.DataFrame
-            Pearson correlation matrix.
+        Compute Pearson correlation matrix from
+        historical daily returns.
         """
 
-        if portfolio.empty:
-
-            return pd.DataFrame()
-
-        if "returns" not in portfolio.columns:
+        if returns.empty:
 
             logger.warning(
                 "No return series available. "
@@ -874,35 +863,19 @@ class RiskManager:
 
             return pd.DataFrame()
 
-        returns = {}
+        numeric_returns = returns.select_dtypes(
+            include=["number"]
+        )
 
-        for _, row in portfolio.iterrows():
-
-            ticker = row["ticker"]
-
-            data = row["returns"]
-
-            if data is None:
-                continue
-
-            series = pd.Series(data).dropna()
-
-            if len(series) < 2:
-                continue
-
-            returns[ticker] = series.reset_index(drop=True)
-
-        if len(returns) < 2:
+        if numeric_returns.empty:
 
             logger.warning(
-                "Insufficient securities for correlation."
+                "No numeric return series available."
             )
 
             return pd.DataFrame()
 
-        returns_df = pd.DataFrame(returns)
-
-        correlation = returns_df.corr(
+        correlation = numeric_returns.corr(
             method="pearson"
         )
 
@@ -913,12 +886,16 @@ class RiskManager:
                 np.nan,
             )
             .fillna(0.0)
+            .copy()
         )
 
-        np.fill_diagonal(
-            correlation.values,
-            1.0,
-        )
+        for column in correlation.columns:
+
+            correlation.loc[
+                column,
+                column,
+            ] = 1.0
+
 
         logger.info(
             "Computed %d x %d correlation matrix.",
@@ -935,6 +912,7 @@ class RiskManager:
         portfolio: pd.DataFrame,
         sector_exposure: pd.DataFrame,
         correlation: pd.DataFrame,
+        returns_matrix: pd.DataFrame,
     ) -> RiskStatistics:
         """
         Compute portfolio-level risk statistics.
@@ -946,6 +924,26 @@ class RiskManager:
             return statistics
 
         weights = portfolio["weight"].to_numpy(dtype=float)
+
+        portfolio_weights = (
+            portfolio
+            .set_index("ticker")["weight"]
+        )
+
+        common = returns_matrix.columns.intersection(
+            portfolio_weights.index
+        )
+
+        portfolio_returns = pd.Series(
+            dtype=float,
+        )
+
+        if len(common):
+
+            portfolio_returns = (
+                returns_matrix[common]
+                @ portfolio_weights.loc[common]
+            )
 
         # -----------------------------------------------------
         # Gross / Net Exposure
@@ -981,25 +979,41 @@ class RiskManager:
             )
 
         # -----------------------------------------------------
-        # Weighted Volatility
+        # Portfolio Volatility
+        # (Covariance Matrix Method)
         # -----------------------------------------------------
 
-        if "volatility" in portfolio.columns:
+        if len(common):
 
-            statistics.volatility = float(
-                np.sum(
-                    portfolio["weight"]
-                    * portfolio["volatility"]
-                )
+            weights = (
+                portfolio_weights
+                .loc[common]
+                .to_numpy()
             )
 
-            statistics.annualized_volatility = (
-                statistics.volatility
-                * math.sqrt(
+            cov = (
+                returns_matrix[common]
+                .cov()
+                .to_numpy()
+            )
+
+            portfolio_vol = np.sqrt(
+                weights.T
+                @ cov
+                @ weights
+            )
+
+            statistics.volatility = float(
+                portfolio_vol
+            )
+
+            statistics.annualized_volatility = float(
+                portfolio_vol
+                * np.sqrt(
                     self.config.trading_days
                 )
             )
-
+            
         # -----------------------------------------------------
         # Herfindahl Index
         # -----------------------------------------------------
@@ -1033,103 +1047,55 @@ class RiskManager:
         # Historical VaR
         # -----------------------------------------------------
 
-        if "returns" in portfolio.columns:
+        if not portfolio_returns.empty:
 
-            returns = []
+            alpha = (
+                1
+                - self.config.confidence_level
+            )
 
-            for _, row in portfolio.iterrows():
-
-                r = row["returns"]
-
-                if r is None:
-                    continue
-
-                series = pd.Series(r).dropna()
-
-                if len(series) == 0:
-                    continue
-
-                returns.append(
-                    series.values
-                    * row["weight"]
+            statistics.value_at_risk = float(
+                -np.quantile(
+                    portfolio_returns,
+                    alpha,
                 )
+            )
 
-            if returns:
-
-                pnl = np.sum(
-                    returns,
-                    axis=0,
+            tail = portfolio_returns[
+                portfolio_returns
+                <= np.quantile(
+                    portfolio_returns,
+                    alpha,
                 )
+            ]
 
-                alpha = (
-                    1
-                    - self.config.confidence_level
+            if len(tail):
+
+                statistics.expected_shortfall = float(
+                    -tail.mean()
                 )
-
-                statistics.value_at_risk = float(
-                    -np.quantile(
-                        pnl,
-                        alpha,
-                    )
-                )
-
-                tail = pnl[
-                    pnl <= np.quantile(
-                        pnl,
-                        alpha,
-                    )
-                ]
-
-                if len(tail):
-
-                    statistics.expected_shortfall = (
-                        float(-tail.mean())
-                    )
 
         # -----------------------------------------------------
         # Maximum Drawdown
         # -----------------------------------------------------
 
-        if "returns" in portfolio.columns:
+        if not portfolio_returns.empty:
 
-            returns = []
+            equity = np.cumprod(
+                1 + portfolio_returns
+            )
 
-            for _, row in portfolio.iterrows():
+            peak = np.maximum.accumulate(
+                equity
+            )
 
-                r = row["returns"]
+            drawdown = (
+                equity - peak
+            ) / peak
 
-                if r is None:
-                    continue
-
-                returns.append(
-                    pd.Series(r)
-                    .fillna(0)
-                    .values
-                    * row["weight"]
-                )
-
-            if returns:
-
-                portfolio_returns = np.sum(
-                    returns,
-                    axis=0,
-                )
-
-                equity = np.cumprod(
-                    1 + portfolio_returns
-                )
-
-                peak = np.maximum.accumulate(
-                    equity
-                )
-
-                drawdown = (
-                    equity - peak
-                ) / peak
-
-                statistics.max_drawdown = float(
-                    abs(drawdown.min())
-                )
+            statistics.max_drawdown = float(
+                abs(drawdown.min())
+            )
 
         logger.info(
             "Computed portfolio statistics."

@@ -362,6 +362,7 @@ class WorkflowService:
 
         risk = self.risk.evaluate(
             portfolio,
+            batch.returns_matrix,
         )
 
         statistics.stages_completed += 1

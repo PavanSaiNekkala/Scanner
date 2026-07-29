@@ -42,16 +42,13 @@ from .scanner_service import (
 
 @dataclass
 class BatchScanResult:
-    """
-    Result returned after scanning
-    an entire watchlist.
-    """
-
     scans: list[ScanResult]
 
     summary: pd.DataFrame
 
     market: dict[str, Any]
+
+    returns_matrix: pd.DataFrame
 
 
 # =============================================================================
@@ -164,6 +161,29 @@ class BatchScanner:
 
         summary = pd.DataFrame(rows)
 
+        # ---------------------------------------------------------
+        # Historical Returns Matrix
+        # ---------------------------------------------------------
+
+        return_series = [
+            scan.returns
+            for scan in scans
+            if scan.returns is not None
+            and not scan.returns.empty
+        ]
+
+        if return_series:
+
+            returns_matrix = pd.concat(
+                return_series,
+                axis=1,
+                join="inner",
+            ).sort_index()
+
+        else:
+
+            returns_matrix = pd.DataFrame()
+
         if not summary.empty:
 
             sort_col = next(
@@ -234,6 +254,7 @@ class BatchScanner:
             "regime": regime,
             "segments": segments,
             "composite": composite,
+            "returns_matrix": returns_matrix,
         }
 
         # ---------------------------------------------------------
@@ -244,6 +265,7 @@ class BatchScanner:
             scans=scans,
             summary=summary,
             market=market,
+            returns_matrix=returns_matrix,
         )
 
 # =============================================================================

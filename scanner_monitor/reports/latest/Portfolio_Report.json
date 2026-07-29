@@ -1,7 +1,7 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-07-29 05:52:51.417144",
+        "generated_at": "2026-07-29 06:30:33.462636",
         "version": "1.0"
     },
     "portfolio_summary": [
@@ -132,8 +132,8 @@
             "weight_change": 1.0,
             "rebalance_action": "BUY",
             "turnover": 1.0,
-            "run_id": "20260729_055251",
-            "timestamp": "2026-07-29 05:52:51.400993"
+            "run_id": "20260729_063033",
+            "timestamp": "2026-07-29 06:30:33.444855"
         }
     ],
     "risk_summary": [
@@ -151,11 +151,11 @@
         },
         {
             "Metric": "Portfolio Volatility",
-            "Value": 0.2
+            "Value": 0.02068046442235987
         },
         {
             "Metric": "Annualized Volatility",
-            "Value": 3.174901573277509
+            "Value": 0.3282921951532995
         },
         {
             "Metric": "HHI",
@@ -175,15 +175,15 @@
         },
         {
             "Metric": "Value at Risk",
-            "Value": 0.0
+            "Value": 0.029150339744617684
         },
         {
             "Metric": "Expected Shortfall",
-            "Value": 0.0
+            "Value": 0.04360850564902547
         },
         {
             "Metric": "Maximum Drawdown",
-            "Value": 0.0
+            "Value": 0.18694929796454632
         },
         {
             "Metric": "Risk Violations",
@@ -191,7 +191,7 @@
         },
         {
             "Metric": "Overall Risk Score",
-            "Value": 25.0
+            "Value": 38.74
         },
         {
             "Metric": "Risk Rating",

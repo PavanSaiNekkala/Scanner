@@ -66,7 +66,7 @@ engine = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(engine)
 
 # --- Fundamental "no-trade" gate ---
-from fundamental_screen import (
+from scanner_monitor.fundamental_screen import (
     screen_universe as fs_screen_universe,
     summarize_results as fs_summarize,
     rejects_to_dataframe as fs_rejects_df,
@@ -74,7 +74,7 @@ from fundamental_screen import (
 )
 
 # --- Universe loader: chained live sources + 24h disk cache (no CSV maintenance) ---
-from universe_loader import load_full_universe as _ul_load
+from scanner_monitor.universe_loader import load_full_universe as _ul_load
 
 try:
     import yfinance as yf

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from services.workflow_service import WorkflowService
+from scanner_monitor.services.workflow_service import WorkflowService
 
 
 # ==========================================================

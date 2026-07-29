@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
-from backtest.position_manager import Position
+from scanner_monitor.backtest.position_manager import Position
 
 import logging
 import pandas as pd

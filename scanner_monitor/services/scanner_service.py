@@ -13,7 +13,7 @@ import yfinance as yf
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import swing_screener_app as engine
+import scanner_monitor.swing_screener_app as engine
 
 from typing import Any
 

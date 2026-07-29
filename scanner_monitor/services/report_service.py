@@ -1903,15 +1903,23 @@ class ReportService:
                     inplace=True,
                 )
 
-        today = datetime.now(
-            ZoneInfo("Asia/Kolkata")
-        ).date()
+        # =====================================================
+        # Run Timestamp (IST)
+        # =====================================================
+
+        run_timestamp = (
+            pd.Timestamp.now(
+                tz="Asia/Kolkata",
+            )
+            .tz_localize(None)
+            .floor("s")
+        )
 
         # =====================================================
         # Scan Date
         # =====================================================
 
-        monitor["scan_date"] = today
+        monitor["scan_date"] = run_timestamp
 
         # =====================================================
         # Signal Date
@@ -1919,17 +1927,23 @@ class ReportService:
 
         if "signal_date" not in monitor.columns:
 
-            monitor["signal_date"] = today
+            monitor["signal_date"] = run_timestamp
 
-        monitor["signal_date"] = pd.to_datetime(
-            monitor["signal_date"],
-            errors="coerce",
+        monitor["signal_date"] = (
+            pd.to_datetime(
+                monitor["signal_date"],
+                errors="coerce",
+            )
+            .dt.floor("s")
         )
 
-        today = pd.Timestamp.now(
-            tz="Asia/Kolkata"        
-        ).normalize().tz_localize(None)
-        
+        # =====================================================
+        # Today's Date (Midnight)
+        # Used only for holding period calculations
+        # =====================================================
+
+        today = run_timestamp.normalize()
+
         # =====================================================
         # Days Since Signal
         # =====================================================
@@ -1956,41 +1970,36 @@ class ReportService:
             )
 
         monitor["days_remaining"] = (
-
             monitor["target_hold_days"]
-
             - monitor["days_since_signal"]
-
         ).clip(
             lower=0,
         )
 
+        # =====================================================
+        # Expected Exit Date
+        # =====================================================
+
         monitor["expected_exit_date"] = (
-
             monitor["signal_date"]
-
-            +
-
-            pd.to_timedelta(
+            + pd.to_timedelta(
                 monitor["target_hold_days"],
                 unit="D",
             )
+        ).dt.floor("s")
 
-        )
+        # =====================================================
+        # Holding Progress
+        # =====================================================
 
         monitor["holding_progress_pct"] = np.where(
-
             monitor["target_hold_days"] > 0,
-
             (
                 monitor["days_since_signal"]
-                /
-                monitor["target_hold_days"]
-
+                / monitor["target_hold_days"]
             ) * 100,
             np.nan,
         )
-
                 
         # =====================================================
         # Expected Return %

@@ -1,2 +1,6 @@
 ticker,regime_today,day_chg_%,above_50dma,run_id,timestamp,date
+<<<<<<< HEAD
 LAURUSLABS,UPTREND,1.14,True,20260729_201524,2026-07-29 20:15:24.042426+05:30,2026-07-29
+=======
+LAURUSLABS,UPTREND,1.14,True,20260729_202953,2026-07-29 20:29:53.384250+05:30,2026-07-29
+>>>>>>> e306bf1 ("29/07/2026")

@@ -2,25 +2,15 @@ Metric,Value
 Gross Exposure,1.0
 Net Exposure,1.0
 Portfolio Beta,1.0
-<<<<<<< HEAD
-Portfolio Volatility,0.020680463563533827
-Annualized Volatility,0.32829218151985873
-=======
-Portfolio Volatility,0.02068046348003846
-Annualized Volatility,0.32829218019441087
->>>>>>> b263b0d ("29/07/2026")
+Portfolio Volatility,0.02068046442235987
+Annualized Volatility,0.3282921951532995
 HHI,1.0
 Effective Positions,1.0
 Largest Position,1.0
 Sector Count,1.0
 Value at Risk,0.029150339744617684
-<<<<<<< HEAD
-Expected Shortfall,0.04360850339553153
-Maximum Drawdown,0.18694929796454626
-=======
-Expected Shortfall,0.043608506801795226
-Maximum Drawdown,0.1869493934347616
->>>>>>> b263b0d ("29/07/2026")
+Expected Shortfall,0.04360850564902547
+Maximum Drawdown,0.18694929796454632
 Risk Violations,5.0
 Overall Risk Score,38.74
 Risk Rating,Critical

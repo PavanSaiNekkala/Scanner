@@ -1,11 +1,7 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-<<<<<<< HEAD
-        "generated_at": "2026-07-29 20:46:05.293850+05:30",
-=======
-        "generated_at": "2026-07-29 20:50:19.416283+05:30",
->>>>>>> b263b0d ("29/07/2026")
+        "generated_at": "2026-07-29 20:53:57.545259+05:30",
         "version": "1.0",
         "daily_monitor_statistics": "{'active_trades': 1, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 1, 'average_expected_return_pct': 10.0, 'average_current_return_pct': 0.0, 'average_risk_reward': 1.9902938090241342}"
     },
@@ -91,7 +87,7 @@
             "exp_per_day_%": 0.248,
             "cut_exits": 0,
             "trail_exits": 116,
-            "total_return_sum_%": 1385.36,
+            "total_return_sum_%": 1385.37,
             "profit_factor": 2.03,
             "reward_risk_ratio": 2.0,
             "cagr_%": -14.17,
@@ -163,13 +159,8 @@
             "weight_change": 1.0,
             "rebalance_action": "BUY",
             "turnover": 1.0,
-<<<<<<< HEAD
-            "run_id": "20260729_204605",
-            "timestamp": "2026-07-29 20:46:05.262889+05:30"
-=======
-            "run_id": "20260729_205019",
-            "timestamp": "2026-07-29 20:50:19.391892+05:30"
->>>>>>> b263b0d ("29/07/2026")
+            "run_id": "20260729_205357",
+            "timestamp": "2026-07-29 20:53:57.512589+05:30"
         }
     ],
     "risk_summary": [
@@ -187,19 +178,11 @@
         },
         {
             "Metric": "Portfolio Volatility",
-<<<<<<< HEAD
-            "Value": 0.020680463563533827
+            "Value": 0.02068046442235987
         },
         {
             "Metric": "Annualized Volatility",
-            "Value": 0.32829218151985873
-=======
-            "Value": 0.02068046348003846
-        },
-        {
-            "Metric": "Annualized Volatility",
-            "Value": 0.32829218019441087
->>>>>>> b263b0d ("29/07/2026")
+            "Value": 0.3282921951532995
         },
         {
             "Metric": "HHI",
@@ -223,19 +206,11 @@
         },
         {
             "Metric": "Expected Shortfall",
-<<<<<<< HEAD
-            "Value": 0.04360850339553153
+            "Value": 0.04360850564902547
         },
         {
             "Metric": "Maximum Drawdown",
-            "Value": 0.18694929796454626
-=======
-            "Value": 0.043608506801795226
-        },
-        {
-            "Metric": "Maximum Drawdown",
-            "Value": 0.1869493934347616
->>>>>>> b263b0d ("29/07/2026")
+            "Value": 0.18694929796454632
         },
         {
             "Metric": "Risk Violations",
@@ -314,11 +289,7 @@
     ],
     "daily_monitor": [
         {
-<<<<<<< HEAD
-            "scan_date": "2026-07-29 20:46:05",
-=======
-            "scan_date": "2026-07-29 20:50:19",
->>>>>>> b263b0d ("29/07/2026")
+            "scan_date": "2026-07-29 20:53:57",
             "signal_date": "2026-06-30 00:00:00",
             "expected_exit_date": "2026-07-20 00:00:00",
             "ticker": "LAURUSLABS",

@@ -128,8 +128,15 @@ BENCH_TICKERS = ["^CRSLDX", "^NSEI"] # Nifty 500 (broad), fallback Nifty 50
 # Segment indices: your universe lives here, not in the IT mega-caps that can lift the headline.
 # Several candidates each — Yahoo's coverage of Indian segment indices is inconsistent.
 SEGMENT_TICKERS = {
-    "MidCap":   ["^NSEMDCP50", "NIFTY_MIDCAP_100.NS", "^CNXMIDCAP"],
-    "SmallCap": ["^CNXSC", "NIFTYSMLCAP250.NS", "^CNXSMCAP"],
+    "MidCap": [
+        "^NSEMDCP50",
+        "NIFTY_MIDCAP_100.NS",
+        "^CNXMIDCAP",
+    ],
+    "SmallCap": [
+        "NIFTYSMLCAP250.NS",
+        "^CNXSMCAP",
+    ],
 }
 
 

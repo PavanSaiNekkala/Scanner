@@ -10,7 +10,7 @@ from scanner_monitor.services.workflow_service import WorkflowService
 # ==========================================================
 
 universe = pd.read_csv(
-    "backtest/data/universe.csv"
+    "scanner_monitor/backtest/data/universe.csv"
 )
 
 

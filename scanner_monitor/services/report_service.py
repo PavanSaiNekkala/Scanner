@@ -52,7 +52,7 @@ class ReportConfig:
     Institutional reporting configuration.
     """
 
-    output_directory: Path = Path("reports")
+    output_directory: Path = Path("scanner_monitor/reports")
 
     latest_directory: str = "latest"
 

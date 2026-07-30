@@ -895,35 +895,6 @@ class ReportService:
 
 
         # =====================================================
-        # Preserve Future Columns
-        # =====================================================
-
-        extra_columns = [
-
-            column
-
-            for column in history.columns
-
-            if column not in schema
-
-        ]
-
-        for column in existing.columns:
-
-            if (
-                column not in schema
-                and column not in extra_columns
-            ):
-
-                extra_columns.append(
-                    column,
-                )
-
-        schema.extend(
-            extra_columns,
-        )
-
-        # =====================================================
         # Reorder Columns
         # =====================================================
 

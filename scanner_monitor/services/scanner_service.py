@@ -831,15 +831,15 @@ def _build_market(
         "pct_from_50dma": pct_from_50dma,
         "pct_from_200dma": pct_from_200dma,
         "rsi": (
-            round(float(last["rsi"]), 2)
-            if "rsi" in last.index
-            and pd.notna(last["rsi"])
+            round(float(last["rsi14"]), 2)
+            if "rsi14" in last.index
+            and pd.notna(last["rsi14"])
             else np.nan
         ),
         "roc": (
-            round(float(last["roc"]), 2)
-            if "roc" in last.index
-            and pd.notna(last["roc"])
+            round(float(last["roc10"]), 2)
+            if "roc10" in last.index
+            and pd.notna(last["roc10"])
             else np.nan
         ),
 

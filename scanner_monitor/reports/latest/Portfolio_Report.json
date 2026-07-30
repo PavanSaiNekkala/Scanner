@@ -1,7 +1,7 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-07-30 11:55:43.650039+05:30",
+        "generated_at": "2026-07-30 12:24:03.571134+05:30",
         "version": "1.0",
         "daily_monitor_statistics": "{'active_trades': 1, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 1, 'average_expected_return_pct': 10.0, 'average_current_return_pct': 0.0, 'average_risk_reward': 1.9902938090241342}"
     },
@@ -77,7 +77,7 @@
             "company": "",
             "exchange": "NSE",
             "subsector": "",
-            "strategy": "",
+            "strategy": "PASS_combined",
             "recommendation": "BUY",
             "trade_status": "NEW",
             "signals_today": true,
@@ -114,7 +114,7 @@
             "entry": 1517.4,
             "target": 1669.14,
             "stop_loss": 1441.16,
-            "entry_ref": 1517.4,
+            "entry_ref": 1517.4000244140625,
             "limit_price": null,
             "target_hold_days": 15.0,
             "expected_return_pct": 10.0,
@@ -149,7 +149,7 @@
             "avg_loss_%": -4.38,
             "avg_days": 9.0,
             "exp_per_day_%": 0.248,
-            "total_return_sum_%": 1385.37,
+            "total_return_sum_%": 1385.36,
             "cagr_%": -14.17,
             "profit_factor": 2.03,
             "reward_risk_ratio": 2.0,
@@ -174,8 +174,8 @@
             "weight_change": 1.0,
             "rebalance_action": "BUY",
             "turnover": 1.0,
-            "run_id": "20260730_115543",
-            "timestamp": "2026-07-30 11:55:43.623362+05:30"
+            "run_id": "20260730_122403",
+            "timestamp": "2026-07-30 12:24:03.526365+05:30"
         }
     ],
     "risk_summary": [
@@ -193,11 +193,11 @@
         },
         {
             "Metric": "Portfolio Volatility",
-            "Value": 0.02068046308914574
+            "Value": 0.020680463367333837
         },
         {
             "Metric": "Annualized Volatility",
-            "Value": 0.3282921739891813
+            "Value": 0.3282921784052804
         },
         {
             "Metric": "HHI",
@@ -221,11 +221,11 @@
         },
         {
             "Metric": "Expected Shortfall",
-            "Value": 0.043608502167409205
+            "Value": 0.04360850932432027
         },
         {
             "Metric": "Maximum Drawdown",
-            "Value": 0.18694929796454637
+            "Value": 0.1869493934347615
         },
         {
             "Metric": "Risk Violations",
@@ -304,14 +304,14 @@
     ],
     "daily_monitor": [
         {
-            "scan_date": "2026-07-30 11:55:43",
+            "scan_date": "2026-07-30 12:24:03",
             "signal_date": "2026-06-30 00:00:00",
             "expected_exit_date": "2026-07-15 00:00:00",
             "ticker": "LAURUSLABS",
             "company": "",
             "sector": "Healthcare",
             "subsector": "",
-            "strategy": "",
+            "strategy": "PASS_combined",
             "confidence": 11.92,
             "regime_today": "UPTREND",
             "cmp": 1517.4,

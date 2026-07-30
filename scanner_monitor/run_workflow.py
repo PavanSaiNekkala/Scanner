@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 
 from scanner_monitor.services.workflow_service import WorkflowService
-
 from scanner_monitor.universe_loader import (
     get_buckets_and_sectors,
 )
@@ -27,7 +28,6 @@ print(
 # ==========================================================
 
 workflow = WorkflowService()
-
 
 # ==========================================================
 # Execute Pipeline
@@ -62,9 +62,20 @@ result = workflow.run(
     sector_map=sector_map,
 )
 
+# ==========================================================
+# Report Directories
+# ==========================================================
+
+latest_dir = Path(
+    "scanner_monitor/reports/latest"
+)
+
+history_dir = Path(
+    "scanner_monitor/reports/history"
+)
 
 # ==========================================================
-# Execution Summary
+# Workflow Summary
 # ==========================================================
 
 print(
@@ -76,33 +87,189 @@ print(
 )
 
 print(
-    "STATUS:",
-    result.statistics.status,
+    "=============================="
 )
 
 print(
-    "DURATION:",
-    result.statistics.total_duration,
+    f"Status   : {result.statistics.status}"
 )
 
+print(
+    f"Duration : {result.statistics.total_duration:.2f} seconds"
+)
 
 # ==========================================================
-# Reports
+# Risk Violations
 # ==========================================================
 
-if result.report:
+risk = result.risk
+
+print(
+    "\nRISK VIOLATIONS"
+)
+
+print(
+    "---------------"
+)
+
+if risk.violations.empty:
 
     print(
-        "\nREPORTS GENERATED:"
+        "No risk violations detected."
     )
 
-    for file in result.report.exported_files:
+else:
 
-        print(
-            file
+    total = len(
+        risk.violations
+    )
+
+    critical = 0
+
+    if "severity" in risk.violations.columns:
+
+        critical = int(
+            (
+                risk.violations["severity"]
+                .astype(str)
+                .str.upper()
+                == "CRITICAL"
+            ).sum()
         )
 
+    print(
+        f"Detected {total} total risk violation(s), "
+        f"{critical} critical.\n"
+    )
+
+    columns = [
+        column
+        for column in [
+            "ticker",
+            "rule",
+            "severity",
+            "value",
+            "limit",
+            "message",
+        ]
+        if column in risk.violations.columns
+    ]
+
+    if columns:
+
+        print(
+            risk.violations[columns]
+            .to_string(index=False)
+        )
+
+    else:
+
+        print(
+            risk.violations.to_string(
+                index=False,
+            )
+        )
+
+# ==========================================================
+# Latest Reports
+# ==========================================================
 
 print(
-    "==============================\n"
+    "\nLATEST REPORTS"
+)
+
+print(
+    "--------------"
+)
+
+if latest_dir.exists():
+
+    latest_files = sorted(
+        file
+        for file in latest_dir.iterdir()
+        if file.is_file()
+    )
+
+    if latest_files:
+
+        for file in latest_files:
+
+            print(
+                f"✓ {file.name}"
+            )
+
+    else:
+
+        print(
+            "No latest reports found."
+        )
+
+else:
+
+    print(
+        "Latest report directory not found."
+    )
+
+# ==========================================================
+# History Files
+# ==========================================================
+
+print(
+    "\nHISTORY FILES"
+)
+
+print(
+    "-------------"
+)
+
+if history_dir.exists():
+
+    history_files = sorted(
+        file
+        for file in history_dir.iterdir()
+        if file.is_file()
+    )
+
+    if history_files:
+
+        for file in history_files:
+
+            print(
+                f"✓ {file.name}"
+            )
+
+    else:
+
+        print(
+            "No history files found."
+        )
+
+else:
+
+    print(
+        "History directory not found."
+    )
+
+# ==========================================================
+# Output Locations
+# ==========================================================
+
+print(
+    "\nREPORT DIRECTORIES"
+)
+
+print(
+    "------------------"
+)
+
+print(
+    f"Latest  : {latest_dir}"
+)
+
+print(
+    f"History : {history_dir}"
+)
+
+print(
+    "\n==============================\n"
 )

@@ -265,17 +265,19 @@ class ExecutionService:
                 "Portfolio is empty."
             )
 
-            empty = pd.DataFrame()
+            orders = pd.DataFrame()
 
-            execution_status = (
-                "COMPLETED_WITH_WARNINGS"
-                if (
-                    not risk.violations.empty
-                    and not critical.empty
-                    and not self.config.strict_risk_enforcement
+            statistics = ExecutionStatistics()
+
+            execution_status = "SUCCESS"
+
+            if (
+                not risk.violations.empty
+                and not self.config.strict_risk_enforcement
+            ):
+                execution_status = (
+                    "COMPLETED_WITH_WARNINGS"
                 )
-                else "SUCCESS"
-            )
 
             return ExecutionResult(
                 portfolio=positions,
@@ -286,8 +288,12 @@ class ExecutionService:
                     "generated_at": datetime.now(
                         ZoneInfo("Asia/Kolkata")
                     ),
-                    "algorithm": self.config.execution_algorithm,
-                    "currency": self.config.currency,
+                    "algorithm": (
+                        self.config.execution_algorithm
+                    ),
+                    "currency": (
+                        self.config.currency
+                    ),
                 },
             )
 

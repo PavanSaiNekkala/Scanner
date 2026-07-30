@@ -490,29 +490,34 @@ class ReportService:
                         continue
 
                     # -------------------------------------------------
-                    # Float comparison
+                    # Numeric comparison
                     # -------------------------------------------------
 
-                    if (
-                        isinstance(
-                            old_value,
-                            (
-                                float,
-                                np.floating,
-                            ),
-                        )
-                        or isinstance(
-                            new_value,
-                            (
-                                float,
-                                np.floating,
-                            ),
-                        )
-                    ):
+                    old_numeric = isinstance(
+                        old_value,
+                        (
+                            int,
+                            float,
+                            np.integer,
+                            np.floating,
+                        ),
+                    )
+
+                    new_numeric = isinstance(
+                        new_value,
+                        (
+                            int,
+                            float,
+                            np.integer,
+                            np.floating,
+                        ),
+                    )
+
+                    if old_numeric and new_numeric:
 
                         if not np.isclose(
-                            old_value,
-                            new_value,
+                            float(old_value),
+                            float(new_value),
                             rtol=1e-9,
                             atol=1e-12,
                             equal_nan=True,

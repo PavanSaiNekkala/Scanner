@@ -1,48 +1,53 @@
 name: Institutional Scanner Workflow
 
 on:
-  # --------------------------------------------------
-  # Manual execution
-  # --------------------------------------------------
   workflow_dispatch:
 
-  # --------------------------------------------------
-  # Scheduled execution
-  # --------------------------------------------------
   schedule:
     - cron: "*/30 * * * *"
-# --------------------------------------------------
-# Required to allow pushing commits back to repository
-# --------------------------------------------------
+
 permissions:
   contents: write
 
+concurrency:
+  group: institutional-scanner
+  cancel-in-progress: false
+
 jobs:
   scanner:
-    name: Run Market Scanner
+
+    name: Institutional Market Scanner
+
     runs-on: ubuntu-latest
 
+    env:
+      PYTHONUNBUFFERED: "1"
+
     steps:
-      # --------------------------------------------------
+
+      # ==================================================
       # Checkout Repository
-      # --------------------------------------------------
+      # ==================================================
+
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: true
 
-      # --------------------------------------------------
+      # ==================================================
       # Setup Python
-      # --------------------------------------------------
+      # ==================================================
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # --------------------------------------------------
-      # Cache pip packages
-      # --------------------------------------------------
+      # ==================================================
+      # Cache pip
+      # ==================================================
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -51,63 +56,96 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # --------------------------------------------------
+      # ==================================================
       # Install Dependencies
-      # --------------------------------------------------
+      # ==================================================
+
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # --------------------------------------------------
+      # ==================================================
       # Execute Scanner
-      # --------------------------------------------------
+      # ==================================================
+
       - name: Execute Scanner Workflow
         run: |
           python -m scanner_monitor.run_workflow
 
-      # --------------------------------------------------
-      # Show Git Status (Debug)
-      # --------------------------------------------------
-      - name: Git Status
+      # ==================================================
+      # Display Generated Reports
+      # ==================================================
+
+      - name: Display Generated Reports
+        if: always()
         run: |
-          echo "Repository Status:"
-          git status
           echo
-          echo "Modified Files:"
+          echo "=============================="
+          echo "LATEST REPORTS"
+          echo "=============================="
+          ls -lah scanner_monitor/reports/latest || true
+
+          echo
+          echo "=============================="
+          echo "HISTORY REPORTS"
+          echo "=============================="
+          ls -lah scanner_monitor/reports/history || true
+
+      # ==================================================
+      # Git Status
+      # ==================================================
+
+      - name: Git Status
+        if: always()
+        run: |
+          echo
+          echo "=============================="
+          echo "GIT STATUS"
+          echo "=============================="
+
+          git status
+
+          echo
+          echo "Modified Files"
+
           git diff --name-only || true
 
-      # --------------------------------------------------
-      # Commit Updated Files
-      # --------------------------------------------------
+      # ==================================================
+      # Commit Updated Reports
+      # ==================================================
+
       - name: Commit Changes
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add -A
 
           if git diff --cached --quiet; then
-            echo "No changes detected."
-            exit 0
+              echo "No report changes detected."
+              exit 0
           fi
 
-          git commit -m "Auto update scanner reports"
+          git commit -m "Auto update scanner reports ($(date -u '+%Y-%m-%d %H:%M UTC'))"
 
-      # --------------------------------------------------
-      # Push Changes
-      # --------------------------------------------------
+      # ==================================================
+      # Push
+      # ==================================================
+
       - name: Push Changes
         run: |
           git push origin HEAD:${{ github.ref_name }}
 
-      # --------------------------------------------------
+      # ==================================================
       # Upload Reports
-      # --------------------------------------------------
-      - name: Upload Scanner Results
+      # ==================================================
+
+      - name: Upload Scanner Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: scanner-results
-          path: scanner_monitor/reports/
+          path: scanner_monitor/reports
           retention-days: 30

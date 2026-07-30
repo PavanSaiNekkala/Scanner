@@ -34,7 +34,7 @@ class TradePlan:
     stop_pct: float
     target_price: float
     days_to_target: float  
-    days_to_target: str
+    days_to_achieve_target: str
 
 class ScannerService:
     """
@@ -656,6 +656,7 @@ def _compute_trade_levels(
         stop_pct=stop_pct,
         target_price=target_price,
         days_to_target=days_numeric,
+        days_to_achieve_target=days_display,
     )
 
 
@@ -707,6 +708,7 @@ def _build_identification(
 
 def _build_scanner(
     *,
+    strategy: str,
     signals_today: bool,
     confidence: float,
     rank_score: float,
@@ -718,7 +720,7 @@ def _build_scanner(
 
     return {
 
-        "strategy": "",
+        "strategy": strategy,
         "recommendation": (
             "BUY"
             if signals_today
@@ -880,7 +882,7 @@ def _build_trade(
         "entry": entry_price,
         "target": target_price,
         "stop_loss": stop_price,
-        "entry_ref": last_close,
+        "entry_ref": trade.entry_ref,
         "limit_price": trade.limit_price,
         "target_hold_days": trade.days_to_target,
 
@@ -1108,6 +1110,7 @@ def _build_performance(
 
 def _build_summary(
     *,
+    strategy: str,
     ticker: str,
     sector_map: dict | None,
     raw: pd.DataFrame,
@@ -1389,6 +1392,7 @@ def _build_summary(
     )
 
     scanner = _build_scanner(
+        strategy=strategy,
         signals_today=signals_today,
         confidence=confidence,
         rank_score=rank_score,
@@ -1521,6 +1525,7 @@ def scan_one(
     )
 
     summary = _build_summary(
+        strategy=strategy,
         ticker=ticker,
         sector_map=sector_map,
         raw=raw,

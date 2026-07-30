@@ -1,7 +1,7 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-07-30 13:54:16.453111+05:30",
+        "generated_at": "2026-07-30 17:32:54.948815+05:30",
         "version": "1.0",
         "daily_monitor_statistics": "{'active_trades': 1, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 1, 'average_expected_return_pct': 10.0, 'average_current_return_pct': 0.0, 'average_risk_reward': 1.9902938090241342}"
     },
@@ -136,7 +136,7 @@
             "avg_loss_%": -4.38,
             "avg_days": 9.0,
             "exp_per_day_%": 0.248,
-            "total_return_sum_%": 1385.36,
+            "total_return_sum_%": 1385.37,
             "cagr_%": -14.17,
             "profit_factor": 2.03,
             "reward_risk_ratio": 2.0,
@@ -160,8 +160,8 @@
             "weight_change": 1.0,
             "rebalance_action": "BUY",
             "turnover": 1.0,
-            "run_id": "20260730_135416",
-            "timestamp": "2026-07-30 13:54:16.430696+05:30"
+            "run_id": "20260730_173254",
+            "timestamp": "2026-07-30 17:32:54.919934+05:30"
         }
     ],
     "risk_summary": [
@@ -179,11 +179,11 @@
         },
         {
             "Metric": "Portfolio Volatility",
-            "Value": 0.02068046435822286
+            "Value": 0.02068046106278525
         },
         {
             "Metric": "Annualized Volatility",
-            "Value": 0.32829219413515603
+            "Value": 0.32829214182170574
         },
         {
             "Metric": "HHI",
@@ -203,15 +203,15 @@
         },
         {
             "Metric": "Value at Risk",
-            "Value": 0.029150340119169452
+            "Value": 0.029150314601814647
         },
         {
             "Metric": "Expected Shortfall",
-            "Value": 0.04360851743837789
+            "Value": 0.04360849350454595
         },
         {
             "Metric": "Maximum Drawdown",
-            "Value": 0.18694939343476144
+            "Value": 0.1869492979645464
         },
         {
             "Metric": "Risk Violations",
@@ -258,7 +258,7 @@
     ],
     "daily_monitor": [
         {
-            "scan_date": "2026-07-30 13:54:16",
+            "scan_date": "2026-07-30 17:32:54",
             "signal_date": "2026-06-30 00:00:00",
             "expected_exit_date": "2026-07-15 00:00:00",
             "ticker": "LAURUSLABS",

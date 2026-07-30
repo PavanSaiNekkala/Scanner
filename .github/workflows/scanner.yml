@@ -4,7 +4,15 @@ on:
   workflow_dispatch:
 
   schedule:
+<<<<<<< HEAD
     - cron: "*/10 * * * *"
+=======
+    # Before market opens (08:45 IST)
+    - cron: "15 3 * * 1-5"
+
+    # After market closes (15:45 IST)
+    - cron: "15 10 * * 1-5"
+>>>>>>> b8f41b0 ("30/07/2026")
 
 permissions:
   contents: write

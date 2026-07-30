@@ -805,7 +805,6 @@ def _build_market(
         "low": low_price,
         "close": close_price,
         "cmp": cmp,
-        "last_close": last_close,
         "volume": volume,
         "avg20_volume": avg20_volume,
         "volume_ratio": volume_ratio,
@@ -826,7 +825,6 @@ def _build_market(
         "atr": atr,
         "atr_points": atr,
         "atr_pct": atr_pct,
-        "last_atr_pct": atr_pct,
         "above_50dma": above_50dma,
         "above_200dma": above_200dma,
         "pct_from_20dma": pct_from_20dma,
@@ -850,7 +848,6 @@ def _build_market(
         # =====================================================
 
         "relative_strength": rel_strength,
-        "rel_strength": rel_strength,
 
     }
 
@@ -954,19 +951,6 @@ def _build_trade(
             "time_loss",
             0,
         ),
-
-        # =====================================================
-        # Compatibility Aliases
-        # =====================================================
-
-        "entry_price": entry_price,
-        "plan_entry": entry_price,
-        "target_price": target_price,
-        "stop_price": stop_price,
-        "stop_%": stop_pct,
-        "stop_loss_%": stop_pct,
-        "reward_points": reward_points,
-        "target_%": target_return_pct,
     }
 
 
@@ -996,17 +980,7 @@ def _build_performance(
             0.0,
         ),
 
-        "win_%": stats.get(
-            "profitable_%",
-            0.0,
-        ),
-
         "expectancy": stats.get(
-            "expectancy_%",
-            0.0,
-        ),
-
-        "expectancy_%": stats.get(
             "expectancy_%",
             0.0,
         ),
@@ -1098,13 +1072,6 @@ def _build_performance(
         # =====================================================
 
         "remarks": remark,
-
-        # -----------------------------------------------------
-        # Compatibility
-        # -----------------------------------------------------
-
-        "remark": remark,
-
     }
 
 

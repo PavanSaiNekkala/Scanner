@@ -11,7 +11,7 @@ on:
   # --------------------------------------------------
   schedule:
     # Monday-Friday, 8:45 AM IST (03:15 UTC)
-    - cron: "40 10 * * 1-5"
+    - cron: "13 5 * * 1-5"
 
     # Monday-Friday, 3:45 PM IST (10:15 UTC)
     - cron: "15 5 * * 1-5"

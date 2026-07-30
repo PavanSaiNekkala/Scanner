@@ -146,6 +146,7 @@ class BatchScanner:
                 scans=[],
                 summary=pd.DataFrame(),
                 market={},
+                returns_matrix=pd.DataFrame(),
             )
 
         # Remaining implementation continues in Part 2...

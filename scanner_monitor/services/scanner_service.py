@@ -33,6 +33,7 @@ class TradePlan:
     stop_price: float
     stop_pct: float
     target_price: float
+    days_to_target: float  
     days_to_target: str
 
 class ScannerService:
@@ -633,13 +634,19 @@ def _compute_trade_levels(
     )
 
     if np.isnan(med_days):
-        days_to_target = "n/a"
+
+        days_numeric = np.nan
+        days_display = "n/a"
 
     elif n_win < 5:
-        days_to_target = f"{med_days:.0f}d ⚠ thin"
+
+        days_numeric = float(med_days)
+        days_display = f"{med_days:.0f}d ⚠ thin"
 
     else:
-        days_to_target = f"{med_days:.0f}d"
+
+        days_numeric = float(med_days)
+        days_display = f"{med_days:.0f}d"
 
     return TradePlan(
         entry_ref=entry_ref,
@@ -648,7 +655,7 @@ def _compute_trade_levels(
         stop_price=stop_price,
         stop_pct=stop_pct,
         target_price=target_price,
-        days_to_target=days_to_target,
+        days_to_target=days_numeric,
     )
 
 
@@ -681,16 +688,13 @@ def _build_metadata(
 
     }
 
+
 def _build_identification(
     *,
     sector: str,
-    confidence: float,
-    rank_score: float,
-    regime_today: str,
-    signals_today: bool,
 ) -> dict:
     """
-    Build identification section.
+    Build asset identification section.
     """
 
     return {
@@ -698,22 +702,6 @@ def _build_identification(
         "company": "",
         "exchange": "NSE",
         "subsector": "",
-        "strategy": "",
-        "recommendation": (
-            "BUY"
-            if signals_today
-            else "WATCH"
-        ),
-        "trade_status": (
-            "NEW"
-            if signals_today
-            else "WATCH"
-        ),
-        "signals_today": signals_today,
-        "confidence": confidence,
-        "rank_score": rank_score,
-        "portfolio_rank": np.nan,
-        "regime_today": regime_today,
     }
 
 
@@ -729,6 +717,7 @@ def _build_scanner(
     """
 
     return {
+
         "strategy": "",
         "recommendation": (
             "BUY"
@@ -740,11 +729,13 @@ def _build_scanner(
             if signals_today
             else "WATCH"
         ),
+
         "signals_today": signals_today,
         "confidence": confidence,
         "rank_score": rank_score,
         "portfolio_rank": np.nan,
         "regime_today": regime_today,
+
     }
 
 
@@ -891,7 +882,6 @@ def _build_trade(
         "stop_loss": stop_price,
         "entry_ref": last_close,
         "limit_price": trade.limit_price,
-        "exp_days_to_target": trade.days_to_target,
         "target_hold_days": trade.days_to_target,
 
         # =====================================================
@@ -1457,7 +1447,7 @@ def _build_summary(
     summary.update(market)
     summary.update(trade_summary)
     summary.update(performance)
-    
+
     return summary
 
 

@@ -1019,11 +1019,16 @@ def _weighted_score(
         1e-12,
     )
 
-    if clip:
+    score = (
+        score
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0.0)
+    )
 
+    if clip:
         score = score.clip(
-            lower=0,
-            upper=100,
+            lower=0.0,
+            upper=100.0,
         )
 
     return score.round(2)

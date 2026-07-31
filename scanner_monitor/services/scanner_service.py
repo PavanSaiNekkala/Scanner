@@ -505,21 +505,40 @@ def _compute_confidence(
 
 
 
-def _compute_relative_strength(
+def _compute_rank_score(
     df: pd.DataFrame,
+    stats: dict,
     confidence: float,
     idx_ret_window: float,
 ) -> tuple[float, float, pd.Series]:
+    """
+    Compute institutional rank score.
+
+    Returns
+    -------
+    (
+        relative_strength,
+        rank_score,
+        close_series,
+    )
+    """
 
     c_ser = df["Close"]
 
+    # =====================================================
+    # Relative Strength
+    # =====================================================
+
     if len(c_ser) > RS_WINDOW:
+
         stock_ret_window = (
             c_ser.iloc[-1]
             / c_ser.iloc[-(RS_WINDOW + 1)]
             - 1
         ) * 100
+
     else:
+
         stock_ret_window = (
             c_ser.iloc[-1]
             / c_ser.iloc[0]
@@ -527,17 +546,142 @@ def _compute_relative_strength(
         ) * 100
 
     rel_strength = round(
-        float(stock_ret_window - idx_ret_window),
+        float(
+            stock_ret_window
+            - idx_ret_window
+        ),
         2,
     )
 
-    rs_norm = max(
-        min(rel_strength / 30.0, 0.5),
-        -0.5,
+    # =====================================================
+    # Read Historical Metrics
+    # =====================================================
+
+    expectancy = stats.get(
+        "expectancy_%",
+        0.0,
+    )
+
+    profit_factor = stats.get(
+        "profit_factor",
+        1.0,
+    )
+
+    reward_risk = stats.get(
+        "reward_risk_ratio",
+        0.0,
+    )
+
+    win_rate = stats.get(
+        "profitable_%",
+        0.0,
+    )
+
+    trades = stats.get(
+        "trades",
+        0,
+    )
+
+    recovery = stats.get(
+        "recovery_factor",
+        0.0,
+    )
+
+    max_dd = abs(
+        stats.get(
+            "max_drawdown_%",
+            0.0,
+        )
+    )
+
+    above_200 = bool(
+        df["Close"].iloc[-1]
+        > df["sma200"].iloc[-1]
+    )
+
+    # =====================================================
+    # Normalize Scores (0-1)
+    # =====================================================
+
+    expectancy_score = np.clip(
+        expectancy / 5.0,
+        0,
+        1,
+    )
+
+    pf_score = np.clip(
+        (profit_factor - 1.0) / 2.0,
+        0,
+        1,
+    )
+
+    rr_score = np.clip(
+        reward_risk / 3.0,
+        0,
+        1,
+    )
+
+    win_score = np.clip(
+        win_rate / 70.0,
+        0,
+        1,
+    )
+
+    rs_score = np.clip(
+        (rel_strength + 20) / 40,
+        0,
+        1,
+    )
+
+    conf_score = np.clip(
+        confidence / 10.0,
+        0,
+        1,
+    )
+
+    trade_score = np.clip(
+        trades / 100.0,
+        0,
+        1,
+    )
+
+    recovery_score = np.clip(
+        recovery / 5.0,
+        0,
+        1,
+    )
+
+    dd_score = np.clip(
+        1 - max_dd / 50.0,
+        0,
+        1,
+    )
+
+    trend_score = (
+        1.0
+        if above_200
+        else 0.0
+    )
+
+    # =====================================================
+    # Institutional Composite Score
+    # =====================================================
+
+    rank_score = (
+        expectancy_score * 20
+        + pf_score * 15
+        + rr_score * 10
+        + win_score * 10
+        + rs_score * 15
+        + conf_score * 10
+        + trade_score * 5
+        + recovery_score * 10
+        + dd_score * 5
+        + trend_score * 5
     )
 
     rank_score = round(
-        confidence * (1 + rs_norm),
+        rank_score,
         2,
     )
 
@@ -1498,10 +1642,11 @@ def scan_one(
     confidence = _compute_confidence(stats)
 
     rel_strength, rank_score, c_ser = (
-        _compute_relative_strength(
-            df,
-            confidence,
-            idx_ret_window,
+        _compute_rank_score(
+            df=df,
+            stats=stats,
+            confidence=confidence,
+            idx_ret_window=idx_ret_window,
         )
     )
 

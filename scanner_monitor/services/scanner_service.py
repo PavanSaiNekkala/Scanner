@@ -893,7 +893,6 @@ def _build_trade(
     reward_points: float,
     risk_points: float,
     risk_pct: float,
-    risk_reward: float,
     target_return_pct: float,
 ) -> dict:
     """
@@ -925,7 +924,10 @@ def _build_trade(
 
         "risk_pct": risk_pct,
         "risk_points": risk_points,
-        "risk_reward": risk_reward,
+        "risk_reward": stats.get(
+            "reward_risk_ratio",
+            np.nan,
+        ),
 
         # =====================================================
         # Exit Statistics
@@ -1253,16 +1255,6 @@ def _build_summary(
         2,
     )
 
-    risk_reward = (
-        round(
-            reward_points
-            / risk_points,
-            2,
-        )
-        if risk_points > 0
-        else np.nan
-    )
-
     target_return_pct = round(
         reward_points
         / entry_price
@@ -1430,7 +1422,6 @@ def _build_summary(
         reward_points=reward_points,
         risk_points=risk_points,
         risk_pct=risk_pct,
-        risk_reward=risk_reward,
         target_return_pct=target_return_pct,
     )
 

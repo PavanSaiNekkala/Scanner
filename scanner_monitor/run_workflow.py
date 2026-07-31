@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import datetime as dt
 
 from scanner_monitor.services.workflow_service import WorkflowService
 from scanner_monitor.universe_loader import (
@@ -55,9 +56,9 @@ result = workflow.run(
         "stop_method": "ATR",
     },
 
-    start_date="2018-01-01",
+    start_date=dt.date(2018, 1, 1),
 
-    end_date="2026-07-01",
+    end_date=dt.date.today() + dt.timedelta(days=1),
 
     sector_map=sector_map,
 )

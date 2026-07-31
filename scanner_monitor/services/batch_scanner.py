@@ -25,6 +25,8 @@ from typing import Any
 
 import pandas as pd
 
+from .metrics_service import MetricsService
+
 from .scanner_service import (
     ScanResult,
     ScannerService,
@@ -68,12 +70,19 @@ class BatchScanner:
     def __init__(
         self,
         scanner: ScannerService | None = None,
+        metrics: MetricsService | None = None,
     ) -> None:
 
         self.scanner = (
             scanner
             if scanner is not None
             else ScannerService()
+        )
+
+        self.metrics = (
+            metrics
+            if metrics is not None
+            else MetricsService()
         )
 
     def run(
@@ -193,6 +202,12 @@ class BatchScanner:
             summary = apply_universe_ranking(
                 summary,
             )
+            
+            metrics_result = self.metrics.calculate(
+                summary,
+            )
+
+            summary = metrics_result.dataframe
 
         # ---------------------------------------------------------
         # Market Breadth

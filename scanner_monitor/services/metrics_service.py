@@ -2075,7 +2075,7 @@ class MetricsService:
         # Momentum Quality
         # -------------------------------------------------------------
 
-        df["momentum_quality"] = _round(
+        df[MetricColumns.MOMENTUM_QUALITY] = _round(
             _safe_divide(
                 df[
                     "momentum_efficiency"
@@ -2106,7 +2106,7 @@ class MetricsService:
                     0.20,
                 ),
                 "quality": (
-                    df["momentum_quality"],
+                    df[MetricColumns.MOMENTUM_QUALITY],
                     0.20,
                 ),
                 "acceleration": (
@@ -2450,7 +2450,7 @@ class MetricsService:
         # Risk Quality
         # -------------------------------------------------------------
 
-        df["risk_quality"] = _normalize(
+        df[MetricColumns.RISK_QUALITY] = _normalize(
             df[
                 ScannerColumns.RISK_REWARD
             ],
@@ -2460,7 +2460,7 @@ class MetricsService:
         # Trend Quality
         # -------------------------------------------------------------
 
-        df["trend_quality"] = _round(
+        df[MetricColumns.TREND_QUALITY] = _round(
             (
                 df[MetricColumns.TREND_SCORE]
                 +
@@ -2474,7 +2474,7 @@ class MetricsService:
         # Liquidity Quality
         # -------------------------------------------------------------
 
-        df["liquidity_quality"] = _round(
+        df[MetricColumns.LIQUIDITY_QUALITY] = _round(
             (
                 df[MetricColumns.VOLUME_SCORE]
                 +
@@ -2488,7 +2488,7 @@ class MetricsService:
         # Stability Quality
         # -------------------------------------------------------------
 
-        df["stability_quality"] = _round(
+        df[MetricColumns.STABILITY_QUALITY] = _round(
             _safe_divide(
                 df[MetricColumns.TREND_SCORE],
                 (
@@ -2506,7 +2506,7 @@ class MetricsService:
         # Consistency Quality
         # -------------------------------------------------------------
 
-        df["consistency_quality"] = _round(
+        df[MetricColumns.CONSISTENCY_QUALITY] = _round(
             (
                 df[MetricColumns.CONFIDENCE_QUALITY]
                 * 0.50
@@ -2549,23 +2549,23 @@ class MetricsService:
                     0.15,
                 ),
                 "risk": (
-                    df["risk_quality"],
+                    df[MetricColumns.RISK_QUALITY],
                     0.20,
                 ),
                 "trend": (
-                    df["trend_quality"],
+                    df[MetricColumns.TREND_QUALITY],
                     0.15,
                 ),
                 "liquidity": (
-                    df["liquidity_quality"],
+                    df[MetricColumns.LIQUIDITY_QUALITY],
                     0.10,
                 ),
                 "stability": (
-                    df["stability_quality"],
+                    df[MetricColumns.STABILITY_QUALITY],
                     0.10,
                 ),
                 "consistency": (
-                    df["consistency_quality"],
+                    df[MetricColumns.CONSISTENCY_QUALITY],
                     0.05,
                 ),
                 "opportunity": (

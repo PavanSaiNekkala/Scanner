@@ -69,6 +69,25 @@ jobs:
           pip install -r requirements.txt
 
       # ==================================================
+      # Prepare Report Directories
+      # ==================================================
+
+      - name: Prepare Report Directories
+        run: |
+          echo "Preparing report directories..."
+
+          mkdir -p scanner_monitor/reports
+          mkdir -p scanner_monitor/reports/latest
+          mkdir -p scanner_monitor/reports/history
+
+          touch scanner_monitor/reports/latest/.gitkeep
+          touch scanner_monitor/reports/history/.gitkeep
+
+          echo
+          echo "Directory Structure"
+          find scanner_monitor/reports -maxdepth 2 -type d
+
+      # ==================================================
       # Execute Scanner
       # ==================================================
 
@@ -83,6 +102,9 @@ jobs:
       - name: Display Generated Reports
         if: always()
         run: |
+          mkdir -p scanner_monitor/reports/latest
+          mkdir -p scanner_monitor/reports/history
+
           echo
           echo "=============================="
           echo "LATEST REPORTS"
@@ -123,6 +145,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          mkdir -p scanner_monitor/reports
+          mkdir -p scanner_monitor/reports/latest
+          mkdir -p scanner_monitor/reports/history
+
+          touch scanner_monitor/reports/latest/.gitkeep
+          touch scanner_monitor/reports/history/.gitkeep
+
           git add -A
 
           if git diff --cached --quiet; then
@@ -138,18 +167,58 @@ jobs:
 
       - name: Push Changes
         run: |
+          set -e
+
+          mkdir -p scanner_monitor/reports
+          mkdir -p scanner_monitor/reports/latest
+          mkdir -p scanner_monitor/reports/history
+
+          touch scanner_monitor/reports/latest/.gitkeep
+          touch scanner_monitor/reports/history/.gitkeep
+
           for i in 1 2 3; do
-            git pull --rebase origin ${{ github.ref_name }}
+
+            echo
+            echo "=============================="
+            echo "Push Attempt $i"
+            echo "=============================="
+
+            git fetch origin
+
+            if ! git pull --rebase origin "${{ github.ref_name }}"; then
+
+              echo
+              echo "Rebase conflict detected."
+
+              git rebase --abort || true
+
+              mkdir -p scanner_monitor/reports/latest
+              mkdir -p scanner_monitor/reports/history
+
+              touch scanner_monitor/reports/latest/.gitkeep
+              touch scanner_monitor/reports/history/.gitkeep
+
+              git add -A
+
+              if ! git diff --cached --quiet; then
+                git commit --amend --no-edit || true
+              fi
+
+            fi
 
             if git push origin HEAD:${{ github.ref_name }}; then
+              echo
               echo "Push successful."
               exit 0
             fi
 
+            echo
             echo "Push failed. Retrying in 5 seconds..."
             sleep 5
+
           done
 
+          echo
           echo "Failed to push after 3 attempts."
           exit 1
 

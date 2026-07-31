@@ -1,0 +1,99 @@
+{
+    "metadata": {
+        "report_name": "Portfolio_Report",
+        "generated_at": "2026-07-31 12:25:25.755826+05:30",
+        "version": "1.0",
+        "daily_monitor_statistics": "{'active_trades': 0, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 0, 'average_expected_return_pct': nan, 'average_current_return_pct': nan, 'average_risk_reward': nan}"
+    },
+    "portfolio_summary": [],
+    "holdings": [],
+    "risk_summary": [
+        {
+            "Metric": "Gross Exposure",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Net Exposure",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Portfolio Beta",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Portfolio Volatility",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Annualized Volatility",
+            "Value": 0.0
+        },
+        {
+            "Metric": "HHI",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Effective Positions",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Largest Position",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Sector Count",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Value at Risk",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Expected Shortfall",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Maximum Drawdown",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Risk Violations",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Overall Risk Score",
+            "Value": null
+        }
+    ],
+    "execution_summary": [
+        {
+            "Metric": "Total Orders",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Buy Orders",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Sell Orders",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Executed Value",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Portfolio Turnover",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Estimated Cost",
+            "Value": 0.0
+        },
+        {
+            "Metric": "Slippage Cost",
+            "Value": 0.0
+        }
+    ],
+    "daily_monitor": []
+}

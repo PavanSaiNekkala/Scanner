@@ -573,55 +573,81 @@ def _compute_trade_levels(
         or 8.0
     )
 
-    tgt_pct = bt_kwargs.get(
-        "target_pct",
-        10.0,
-    )
+        reward_multiple = bt_kwargs.get(
+            "reward_multiple",
+            2.0,
+        )
 
-    entry_mode = bt_kwargs.get(
-        "entry_mode",
-        "Market open",
-    )
+        entry_mode = bt_kwargs.get(
+            "entry_mode",
+            "Market open",
+        )
 
-    limit_pct = bt_kwargs.get(
-        "limit_pct",
-        0.0,
-    )
+        limit_pct = bt_kwargs.get(
+            "limit_pct",
+            0.0,
+        )
 
-    if entry_mode == "Limit":
+        if entry_mode == "Limit":
 
-        limit_price = round(
-            entry_ref * (1 - limit_pct / 100),
+            limit_price = round(
+                entry_ref * (1 - limit_pct / 100),
+                2,
+            )
+
+            plan_entry = limit_price
+
+        else:
+
+            limit_price = np.nan
+            plan_entry = entry_ref
+
+        # =====================================================
+        # Stop Loss
+        # =====================================================
+
+        stop_price = plan_entry - stop_mult * atr_now
+
+        floor = plan_entry * (
+            1 - max_stop_pct / 100
+        )
+
+        stop_price = max(
+            stop_price,
+            floor,
+        )
+
+        stop_pct = round(
+            (stop_price / plan_entry - 1) * 100,
             2,
         )
 
-        plan_entry = limit_price
+        # =====================================================
+        # Dynamic Target
+        # =====================================================
 
-    else:
+        risk_points = max(
+            plan_entry - stop_price,
+            atr_now,
+        )
 
-        limit_price = np.nan
-        plan_entry = entry_ref
+        atr_target = (
+            plan_entry
+            + 3.0 * atr_now
+        )
 
-    stop_price = plan_entry - stop_mult * atr_now
+        rr_target = (
+            plan_entry
+            + reward_multiple * risk_points
+        )
 
-    floor = plan_entry * (
-        1 - max_stop_pct / 100
-    )
-
-    stop_price = max(
-        stop_price,
-        floor,
-    )
-
-    stop_pct = round(
-        (stop_price / plan_entry - 1) * 100,
-        2,
-    )
-
-    target_price = round(
-        plan_entry * (1 + tgt_pct / 100),
-        2,
-    )
+        target_price = round(
+            max(
+                atr_target,
+                rr_target,
+            ),
+            2,
+        )
 
     med_days = stats.get(
         "med_days_to_target",

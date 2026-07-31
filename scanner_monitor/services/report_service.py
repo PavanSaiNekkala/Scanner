@@ -1353,109 +1353,108 @@ class ReportService:
             duplicates_removed,
         )
         
+    def _append_scan_history_metrics(
+        self,
+        metrics: pd.DataFrame,
+        history_dir: Path,
+    ) -> None:
+        """
+        Append scanner metrics history.
 
-        def _append_scan_history_metrics(
-            self,
-            metrics: pd.DataFrame,
-            history_dir: Path,
-        ) -> None:
-            """
-            Append scanner metrics history.
+        Stores the complete MetricsService output for every
+        scanner execution.
+        """
 
-            Stores the complete MetricsService output for every
-            scanner execution.
-            """
-
-            if metrics.empty:
-
-                logger.info(
-                    "Scan metrics history skipped (empty dataframe).",
-                )
-
-                return
-
-            file = (
-                history_dir
-                / "scan_history_metrics.csv"
-            )
-
-            history = metrics.copy()
-
-            if file.exists():
-
-                existing = pd.read_csv(
-                    file,
-                    low_memory=False,
-                    parse_dates=[
-                        "scan_timestamp",
-                    ],
-                )
-
-            else:
-
-                existing = pd.DataFrame()
-
-            combined = pd.concat(
-                [
-                    existing,
-                    history,
-                ],
-                ignore_index=True,
-                sort=False,
-            )
-
-            if {
-                "run_id",
-                "ticker",
-            }.issubset(combined.columns):
-
-                combined = (
-                    combined
-                    .drop_duplicates(
-                        subset=[
-                            "run_id",
-                            "ticker",
-                        ],
-                        keep="last",
-                    )
-                )
-
-            if "scan_timestamp" in combined.columns:
-
-                combined["scan_timestamp"] = pd.to_datetime(
-                    combined["scan_timestamp"],
-                    errors="coerce",
-                )
-
-                combined = combined.sort_values(
-                    by=[
-                        "scan_timestamp",
-                        "ticker",
-                    ],
-                )
-
-            # -----------------------------------------------------
-            # Preserve all MetricsService columns
-            # -----------------------------------------------------
-
-            combined = combined.reindex(
-                columns=sorted(combined.columns),
-            )
-
-            temp_file = file.with_suffix(".tmp")
-
-            combined.to_csv(
-                temp_file,
-                index=False,
-            )
-
-            temp_file.replace(file)
+        if metrics.empty:
 
             logger.info(
-                "Scan metrics history updated | Total=%d",
-                len(combined),
+                "Scan metrics history skipped (empty dataframe).",
             )
 
+            return
+
+        file = (
+            history_dir
+            / "scan_history_metrics.csv"
+        )
+
+        history = metrics.copy()
+
+        if file.exists():
+
+            existing = pd.read_csv(
+                file,
+                low_memory=False,
+                parse_dates=[
+                    "scan_timestamp",
+                ],
+            )
+
+        else:
+
+            existing = pd.DataFrame()
+
+        combined = pd.concat(
+            [
+                existing,
+                history,
+            ],
+            ignore_index=True,
+            sort=False,
+        )
+
+        if {
+            "run_id",
+            "ticker",
+        }.issubset(combined.columns):
+
+            combined = (
+                combined
+                .drop_duplicates(
+                    subset=[
+                        "run_id",
+                        "ticker",
+                    ],
+                    keep="last",
+                )
+            )
+
+        if "scan_timestamp" in combined.columns:
+
+            combined["scan_timestamp"] = pd.to_datetime(
+                combined["scan_timestamp"],
+                errors="coerce",
+            )
+
+            combined = combined.sort_values(
+                by=[
+                    "scan_timestamp",
+                    "ticker",
+                ],
+            )
+
+        # -----------------------------------------------------
+        # Preserve all MetricsService columns
+        # -----------------------------------------------------
+
+        combined = combined.reindex(
+            columns=sorted(combined.columns),
+        )
+
+        temp_file = file.with_suffix(".tmp")
+
+        combined.to_csv(
+            temp_file,
+            index=False,
+        )
+
+        temp_file.replace(file)
+
+        logger.info(
+            "Scan metrics history updated | Total=%d",
+            len(combined),
+        )
+        
     # =========================================================
     # Public API
     # =========================================================

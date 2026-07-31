@@ -1422,6 +1422,58 @@ class ReportService:
 
         scan_history = scanner.copy()
 
+        # -----------------------------------------------------
+        # Merge Portfolio Rank
+        # -----------------------------------------------------
+
+        if (
+            "ticker" in scan_history.columns
+            and "ticker" in portfolio.portfolio.columns
+            and "portfolio_rank"
+            in portfolio.portfolio.columns
+        ):
+
+            scan_history = scan_history.merge(
+
+                portfolio.portfolio[
+                    [
+                        "ticker",
+                        "portfolio_rank",
+                    ]
+                ],
+
+                on="ticker",
+
+                how="left",
+
+                suffixes=(
+                    "",
+                    "_portfolio",
+                ),
+
+            )
+
+            if (
+                "portfolio_rank_portfolio"
+                in scan_history.columns
+            ):
+
+                scan_history[
+                    "portfolio_rank"
+                ] = scan_history[
+                    "portfolio_rank_portfolio"
+                ]
+
+                scan_history.drop(
+
+                    columns=[
+                        "portfolio_rank_portfolio",
+                    ],
+
+                    inplace=True,
+
+                )                
+
         scan_history["run_id"] = run_id
 
         scan_history["schema_version"] = "1.0.0"

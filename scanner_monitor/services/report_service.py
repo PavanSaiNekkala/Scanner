@@ -1434,13 +1434,117 @@ class ReportService:
             )
 
         # -----------------------------------------------------
-        # Preserve all MetricsService columns
+        # Preserve MetricsService schema
         # -----------------------------------------------------
 
-        combined = combined.reindex(
-            columns=sorted(combined.columns),
-        )
+        preferred_columns = [
 
+            # -------------------------------------------------
+            # Metadata
+            # -------------------------------------------------
+
+            "schema_version",
+            "run_id",
+            "scan_date",
+            "scan_time",
+            "scan_timestamp",
+
+            # -------------------------------------------------
+            # Identification
+            # -------------------------------------------------
+
+            "ticker",
+            "company",
+            "sector",
+            "subsector",
+            "exchange",
+
+            # -------------------------------------------------
+            # Scanner
+            # -------------------------------------------------
+
+            "strategy",
+            "recommendation",
+            "signals_today",
+            "confidence",
+            "rank_score",
+            "portfolio_rank",
+            "regime_today",
+
+            # -------------------------------------------------
+            # Market
+            # -------------------------------------------------
+
+            "open",
+            "high",
+            "low",
+            "close",
+            "cmp",
+            "volume",
+
+            # -------------------------------------------------
+            # Opportunity
+            # -------------------------------------------------
+
+            "opportunity_score",
+
+            # -------------------------------------------------
+            # Risk
+            # -------------------------------------------------
+
+            "risk_score",
+
+            # -------------------------------------------------
+            # Trend
+            # -------------------------------------------------
+
+            "trend_score",
+
+            # -------------------------------------------------
+            # Momentum
+            # -------------------------------------------------
+
+            "momentum_score",
+
+            # -------------------------------------------------
+            # Volume
+            # -------------------------------------------------
+
+            "volume_score",
+
+            # -------------------------------------------------
+            # Quality
+            # -------------------------------------------------
+
+            "quality_score",
+
+            # -------------------------------------------------
+            # Composite
+            # -------------------------------------------------
+
+            "institutional_score",
+            "alpha_score",
+            "execution_score",
+            "portfolio_fit_score",
+            "composite_score",
+            "recommendation_score",
+        ]
+
+        remaining_columns = [
+
+            column
+
+            for column in combined.columns
+
+            if column not in preferred_columns
+
+        ]
+
+        combined = combined.reindex(
+
+            columns=preferred_columns + sorted(remaining_columns),
+
+        )
         temp_file = file.with_suffix(".tmp")
 
         combined.to_csv(
@@ -1594,7 +1698,9 @@ class ReportService:
         # Metrics History Snapshot
         # -----------------------------------------------------
 
-        scan_history_metrics = scan_history.copy()
+        scan_history_metrics = scan_history.copy(
+            deep=True,
+        )
 
 
         logger.info(
@@ -4578,6 +4684,7 @@ _REPORT_SERVICE = ReportService()
 
 
 def generate_report(
+    scanner: pd.DataFrame,
     portfolio: PortfolioResult,
     risk: RiskResult,
     execution: ExecutionResult,
@@ -4587,6 +4694,7 @@ def generate_report(
     """
 
     return _REPORT_SERVICE.generate(
+        scanner,
         portfolio,
         risk,
         execution,

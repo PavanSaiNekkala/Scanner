@@ -2959,15 +2959,31 @@ class MetricsService:
             MetricColumns.RECOMMENDATION_SCORE
         ]
 
+        strong_buy = recommendation_score.quantile(
+            0.95,
+        )
+
+        buy = recommendation_score.quantile(
+            0.80,
+        )
+
+        watch = recommendation_score.quantile(
+            0.60,
+        )
+
+        hold = recommendation_score.quantile(
+            0.40,
+        )
+
         df[
             ScannerColumns.RECOMMENDATION
         ] = np.select(
 
             [
-                recommendation_score >= 90,
-                recommendation_score >= 75,
-                recommendation_score >= 60,
-                recommendation_score >= 45,
+                recommendation_score >= strong_buy,
+                recommendation_score >= buy,
+                recommendation_score >= watch,
+                recommendation_score >= hold,
             ],
 
             [
@@ -2975,13 +2991,12 @@ class MetricsService:
                 "BUY",
                 "WATCH",
                 "HOLD",
-
             ],
 
             default="AVOID",
 
         )
-
+        
         # -------------------------------------------------------------
         # Top Decile Flag
         # -------------------------------------------------------------

@@ -2583,7 +2583,7 @@ class MetricsService:
                     0.05,
                 ),
             },
-            normalize=False,
+            normalize=True,
         )
 
         # -------------------------------------------------------------
@@ -2684,7 +2684,7 @@ class MetricsService:
                     self.config.ranking_weight,
                 ),
             },
-            normalize=False,
+            normalize=True,
         )
 
         # -------------------------------------------------------------
@@ -2714,7 +2714,7 @@ class MetricsService:
                     0.25,
                 ),
             },
-            normalize=False,
+            normalize=True,
         )
 
         # -------------------------------------------------------------
@@ -2750,7 +2750,7 @@ class MetricsService:
                     0.15,
                 ),
             },
-            normalize=False,
+            normalize=True,
         )
 
         # -------------------------------------------------------------
@@ -2780,7 +2780,7 @@ class MetricsService:
                     0.30,
                 ),
             },
-            normalize=False,
+            normalize=True,
         )
 
         # -------------------------------------------------------------
@@ -2816,7 +2816,7 @@ class MetricsService:
                     self.config.portfolio_weight,
                 ),
             },
-            normalize=False,
+            normalize=True,
         )
 
         # -------------------------------------------------------------

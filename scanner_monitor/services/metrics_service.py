@@ -1067,6 +1067,11 @@ def _quintile(
     Integer 1-5.
     """
 
+    values = pd.to_numeric(
+        values,
+        errors="coerce",
+    )
+
     ranked = values.rank(
         pct=True,
         method="average",
@@ -1077,7 +1082,7 @@ def _quintile(
             ranked * 5
         )
         .clip(1, 5)
-        .astype(int)
+        .astype("Int64")
     )
 
 
@@ -1098,7 +1103,7 @@ def _decile(
             ranked * 10
         )
         .clip(1, 10)
-        .astype(int)
+        .astype("Int64")
     )
 
 
@@ -2823,7 +2828,7 @@ class MetricsService:
                 ascending=False,
                 method="dense",
             )
-            .astype(int)
+            .astype("Int64")
         )
 
         # -------------------------------------------------------------

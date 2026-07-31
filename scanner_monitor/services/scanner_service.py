@@ -594,6 +594,21 @@ def _compute_rank_score(
         )
     )
 
+    cagr = stats.get(
+        "cagr_%",
+        0.0,
+    )
+
+    volume_ratio = float(
+        df["Volume"].iloc[-1]
+        / max(
+            df["Volume"]
+            .tail(20)
+            .mean(),
+            1,
+        )
+    )
+
     above_200 = bool(
         df["Close"].iloc[-1]
         > df["sma200"].iloc[-1]
@@ -640,13 +655,19 @@ def _compute_rank_score(
     )
 
     trade_score = np.clip(
-        trades / 100.0,
+        trades / 75.0,
         0,
         1,
     )
 
     recovery_score = np.clip(
         recovery / 5.0,
+        0,
+        1,
+    )
+
+    cagr_score = np.clip(
+        cagr / 25.0,
         0,
         1,
     )
@@ -663,32 +684,137 @@ def _compute_rank_score(
         else 0.0
     )
 
+    liquidity_score = np.clip(
+        volume_ratio / 2.0,
+        0,
+        1,
+    )
+
+    # =====================================================
+    # Institutional Quality Gates
+    # =====================================================
+
+    penalty = 1.0
+
+    if trades < 15:
+
+        penalty *= 0.70
+
+    elif trades < 30:
+
+        penalty *= 0.85
+
+    if profit_factor < 1.20:
+
+        penalty *= 0.80
+
+    if expectancy < 0:
+
+        penalty *= 0.60
+
+    if max_dd > 40:
+
+        penalty *= 0.85
+
+    if not above_200:
+
+        penalty *= 0.95
+
     # =====================================================
     # Institutional Composite Score
     # =====================================================
 
     rank_score = (
-        expectancy_score * 20
+        expectancy_score * 18
         + pf_score * 15
         + rr_score * 10
-        + win_score * 10
-        + rs_score * 15
-        + conf_score * 10
-        + trade_score * 5
-        + recovery_score * 10
-        + dd_score * 5
-        + trend_score * 5
+        + win_score * 8
+        + rs_score * 12
+        + conf_score * 7
+        + trade_score * 8
+        + recovery_score * 8
+        + cagr_score * 7
+        + dd_score * 4
+        + trend_score * 2
+        + liquidity_score * 1
     )
+
+    rank_score *= penalty
 
     rank_score = round(
         rank_score,
         2,
     )
 
+    score_breakdown = {
+
+        "expectancy_score": round(
+            expectancy_score * 100,
+            1,
+        ),
+
+        "profit_factor_score": round(
+            pf_score * 100,
+            1,
+        ),
+
+        "reward_risk_score": round(
+            rr_score * 100,
+            1,
+        ),
+
+        "win_rate_score": round(
+            win_score * 100,
+            1,
+        ),
+
+        "relative_strength_score": round(
+            rs_score * 100,
+            1,
+        ),
+
+        "confidence_score": round(
+            conf_score * 100,
+            1,
+        ),
+
+        "trade_history_score": round(
+            trade_score * 100,
+            1,
+        ),
+
+        "recovery_score": round(
+            recovery_score * 100,
+            1,
+        ),
+
+        "cagr_score": round(
+            cagr_score * 100,
+            1,
+        ),
+
+        "drawdown_score": round(
+            dd_score * 100,
+            1,
+        ),
+
+        "trend_score": round(
+            trend_score * 100,
+            1,
+        ),
+
+        "liquidity_score": round(
+            liquidity_score * 100,
+            1,
+        ),
+
+    }
+
     return (
         rel_strength,
         rank_score,
         c_ser,
+        score_breakdown,
     )
 
 
@@ -1261,6 +1387,7 @@ def _build_summary(
     confidence: float,
     rel_strength: float,
     rank_score: float,
+    score_breakdown: dict,
     c_ser: pd.Series,
     trade: TradePlan,
     signals_today: bool,
@@ -1582,6 +1709,7 @@ def _build_summary(
     summary.update(market)
     summary.update(trade_summary)
     summary.update(performance)
+    summary.update(score_breakdown)
 
     return summary
 
@@ -1641,13 +1769,16 @@ def scan_one(
 
     confidence = _compute_confidence(stats)
 
-    rel_strength, rank_score, c_ser = (
-        _compute_rank_score(
-            df=df,
-            stats=stats,
-            confidence=confidence,
-            idx_ret_window=idx_ret_window,
-        )
+    (
+        rel_strength,
+        rank_score,
+        c_ser,
+        score_breakdown,
+    ) = _compute_rank_score(
+        df=df,
+        stats=stats,
+        confidence=confidence,
+        idx_ret_window=idx_ret_window,
     )
 
     trade = _compute_trade_levels(
@@ -1666,6 +1797,7 @@ def scan_one(
         confidence=confidence,
         rel_strength=rel_strength,
         rank_score=rank_score,
+        score_breakdown=score_breakdown,
         c_ser=c_ser,
         trade=trade,
         signals_today=signals_today,
@@ -1734,3 +1866,119 @@ def run_batch(
         sector_map=sector_map,
         max_workers=max_workers,
     )
+
+def apply_universe_ranking(
+    scanner_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Compute percentile-based institutional ranking across the
+    scanned universe.
+    """
+
+    if scanner_df.empty:
+        return scanner_df.copy()
+
+    df = scanner_df.copy()
+
+    # =====================================================
+    # Higher is Better
+    # =====================================================
+
+    higher_is_better = [
+        "expectancy",
+        "profit_factor",
+        "reward_risk_ratio",
+        "win_rate",
+        "relative_strength",
+        "confidence",
+        "recovery_factor",
+        "cagr_%",
+    ]
+
+    # =====================================================
+    # Lower is Better
+    # =====================================================
+
+    lower_is_better = [
+        "max_drawdown_%",
+    ]
+
+    # =====================================================
+    # Percentile Scores
+    # =====================================================
+
+    for col in higher_is_better:
+
+        if col in df.columns:
+
+            df[f"{col}_pct"] = (
+                df[col]
+                .rank(
+                    pct=True,
+                    method="average",
+                )
+                * 100
+            )
+
+    for col in lower_is_better:
+
+        if col in df.columns:
+
+            df[f"{col}_pct"] = (
+                (
+                    -df[col]
+                )
+                .rank(
+                    pct=True,
+                    method="average",
+                )
+                * 100
+            )
+
+    # =====================================================
+    # Composite Institutional Rank
+    # =====================================================
+
+    df["institutional_rank"] = (
+
+        df["expectancy_pct"] * 0.20
+
+        + df["profit_factor_pct"] * 0.15
+
+        + df["reward_risk_ratio_pct"] * 0.10
+
+        + df["win_rate_pct"] * 0.10
+
+        + df["relative_strength_pct"] * 0.15
+
+        + df["confidence_pct"] * 0.10
+
+        + df["recovery_factor_pct"] * 0.10
+
+        + df["cagr_%_pct"] * 0.05
+
+        + df["max_drawdown_%_pct"] * 0.05
+
+    )
+
+    df["institutional_rank"] = (
+        df["institutional_rank"]
+        .round(2)
+    )
+
+    df["portfolio_rank"] = (
+        df["institutional_rank"]
+        .rank(
+            ascending=False,
+            method="first",
+        )
+        .astype(int)
+    )
+
+    df = df.sort_values(
+        "portfolio_rank"
+    ).reset_index(
+        drop=True,
+    )
+
+    return df

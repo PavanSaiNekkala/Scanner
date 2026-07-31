@@ -28,6 +28,7 @@ import pandas as pd
 from .scanner_service import (
     ScanResult,
     ScannerService,
+    apply_universe_ranking,
     compute_breadth,
     compute_regime,
     composite_gate,
@@ -149,8 +150,6 @@ class BatchScanner:
                 returns_matrix=pd.DataFrame(),
             )
 
-        # Remaining implementation continues in Part 2...
-
         # ---------------------------------------------------------
         # Build summary DataFrame
         # ---------------------------------------------------------
@@ -185,27 +184,15 @@ class BatchScanner:
 
             returns_matrix = pd.DataFrame()
 
+        # ---------------------------------------------------------
+        # Institutional Universe Ranking
+        # ---------------------------------------------------------
+
         if not summary.empty:
 
-            sort_col = next(
-                (
-                    col
-                    for col in (
-                        "rank_score",
-                        "confidence",
-                    )
-                    if col in summary.columns
-                ),
-                None,
+            summary = apply_universe_ranking(
+                summary,
             )
-
-            if sort_col:
-
-                summary = summary.sort_values(
-                    by=sort_col,
-                    ascending=False,
-                    ignore_index=True,
-                )
 
         # ---------------------------------------------------------
         # Market Breadth

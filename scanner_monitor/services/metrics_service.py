@@ -426,10 +426,41 @@ def _safe_divide(
 
     if isinstance(result, pd.Series):
 
-        result = result.mask(
-            np.abs(denominator) <= epsilon,
-            fill_value,
-        )
+        if np.isscalar(denominator):
+
+            if abs(float(denominator)) <= epsilon:
+
+                result = pd.Series(
+                    fill_value,
+                    index=result.index,
+                    dtype=float,
+                )
+
+        else:
+
+            if isinstance(
+                denominator,
+                pd.Series,
+            ):
+
+                mask = denominator.reindex(
+                    result.index,
+                ).abs() <= epsilon
+
+            else:
+
+                mask = (
+                    pd.Series(
+                        denominator,
+                        index=result.index,
+                    ).abs()
+                    <= epsilon
+                )
+
+            result = result.mask(
+                mask,
+                fill_value,
+            )
 
         result = result.replace(
             [
@@ -440,12 +471,6 @@ def _safe_divide(
         )
 
         return result
-
-    if not np.isfinite(result):
-
-        return fill_value
-
-    return result
 
 
 def _safe_percentage(

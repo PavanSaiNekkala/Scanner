@@ -1,68 +1,229 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-07-31 12:25:25.755826+05:30",
+        "generated_at": "2026-07-31 12:31:32.008568+05:30",
         "version": "1.0",
-        "daily_monitor_statistics": "{'active_trades': 0, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 0, 'average_expected_return_pct': nan, 'average_current_return_pct': nan, 'average_risk_reward': nan}"
+        "daily_monitor_statistics": "{'active_trades': 1, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 0, 'average_expected_return_pct': 10.198843293858447, 'average_current_return_pct': 0.0, 'average_risk_reward': 2.0000000000000027}"
     },
-    "portfolio_summary": [],
-    "holdings": [],
-    "risk_summary": [
+    "portfolio_summary": [
         {
-            "Metric": "Gross Exposure",
-            "Value": 0.0
+            "Metric": "Portfolio Holdings",
+            "Value": 1
         },
         {
-            "Metric": "Net Exposure",
-            "Value": 0.0
+            "Metric": "Total Weight",
+            "Value": 1.0
         },
         {
-            "Metric": "Portfolio Beta",
-            "Value": 0.0
+            "Metric": "Invested Weight",
+            "Value": 1.0
         },
         {
-            "Metric": "Portfolio Volatility",
-            "Value": 0.0
-        },
-        {
-            "Metric": "Annualized Volatility",
-            "Value": 0.0
-        },
-        {
-            "Metric": "HHI",
-            "Value": 0.0
-        },
-        {
-            "Metric": "Effective Positions",
+            "Metric": "Cash Weight",
             "Value": 0.0
         },
         {
             "Metric": "Largest Position",
-            "Value": 0.0
+            "Value": 1.0
+        },
+        {
+            "Metric": "Smallest Position",
+            "Value": 1.0
+        },
+        {
+            "Metric": "Average Position",
+            "Value": 1.0
+        },
+        {
+            "Metric": "Median Position",
+            "Value": 1.0
         },
         {
             "Metric": "Sector Count",
-            "Value": 0.0
+            "Value": 1
+        },
+        {
+            "Metric": "Largest Sector",
+            "Value": "Healthcare"
+        },
+        {
+            "Metric": "Largest Sector Weight",
+            "Value": 1.0
+        },
+        {
+            "Metric": "Expected Return",
+            "Value": null
+        },
+        {
+            "Metric": "Portfolio Beta",
+            "Value": null
+        },
+        {
+            "Metric": "Portfolio Volatility",
+            "Value": null
+        }
+    ],
+    "holdings": [
+        {
+            "ticker": "LAURUSLABS",
+            "yahoo": "LAURUSLABS",
+            "status": "ok",
+            "scan_date": "2026-07-31",
+            "signal_date": "2026-07-31",
+            "bt_from": "2018-01-01",
+            "bt_to": "2026-07-31",
+            "years": 8.6,
+            "sector": "Healthcare",
+            "company": "",
+            "exchange": "NSE",
+            "subsector": "",
+            "strategy": "PASS_combined",
+            "recommendation": "BUY",
+            "trade_status": "NEW",
+            "signals_today": true,
+            "confidence": 13.03,
+            "rank_score": 19.54,
+            "portfolio_rank": 1,
+            "regime_today": "UPTREND",
+            "open": 1785.0,
+            "high": 1826.6,
+            "low": 1785.0,
+            "close": 1815.5,
+            "cmp": 1815.5,
+            "volume": 1758227,
+            "avg20_volume": 2272854,
+            "volume_ratio": 0.77,
+            "day_chg_%": 1.92,
+            "gap_%": 0.21,
+            "candle_range": 41.6,
+            "candle_range_%": 2.29,
+            "atr": 46.29,
+            "atr_points": 46.29,
+            "atr_pct": 2.55,
+            "above_50dma": true,
+            "above_200dma": true,
+            "pct_from_20dma": 14.21,
+            "pct_from_50dma": 22.24,
+            "pct_from_200dma": 57.17,
+            "rsi": 81.68,
+            "roc": 16.56,
+            "relative_strength": 55.8,
+            "entry": 1815.5,
+            "target": 2000.66,
+            "stop_loss": 1722.92,
+            "entry_ref": 1815.5,
+            "limit_price": null,
+            "target_hold_days": 14.0,
+            "expected_return_pct": 10.2,
+            "expected_return_points": 185.16,
+            "risk_pct": 5.1,
+            "risk_points": 92.58,
+            "risk_reward": 2.0,
+            "target_hits": 214,
+            "target_hit_pct": 33.4,
+            "stop_hits": 310,
+            "stop_hit_pct": 48.4,
+            "trail_exits": 116,
+            "trail_pct": 18.1,
+            "time_exits": 0,
+            "time_pct": 0.0,
+            "time_win": 0,
+            "time_loss": 0,
+            "hist_trades": 640,
+            "win_rate": 50.9,
+            "expectancy": 2.41,
+            "avg_win_%": 8.92,
+            "avg_loss_%": -4.35,
+            "avg_days": 9.0,
+            "exp_per_day_%": 0.268,
+            "total_return_sum_%": 1541.98,
+            "cagr_%": -12.93,
+            "profit_factor": 2.13,
+            "reward_risk_ratio": 2.05,
+            "recovery_factor": -0.84,
+            "max_drawdown_%": -80.69,
+            "max_consecutive_losses": 8,
+            "seq_trades": 131,
+            "cut_exits": 0,
+            "remarks": "limited history: 8.6y (<10y) - lower confidence",
+            "confidence_norm": 1.0,
+            "rank_score_norm": 1.0,
+            "relative_strength_norm": 1.0,
+            "expectancy_norm": 1.0,
+            "win_rate_norm": 1.0,
+            "portfolio_score": 0.9999999999999999,
+            "weight": 1.0,
+            "weight_pct": 100.0,
+            "capital_fraction": 1.0,
+            "current_weight": 0.0,
+            "target_weight": 1.0,
+            "weight_change": 1.0,
+            "rebalance_action": "BUY",
+            "turnover": 1.0,
+            "run_id": "20260731_123131",
+            "timestamp": "2026-07-31 12:31:31.977845+05:30"
+        }
+    ],
+    "risk_summary": [
+        {
+            "Metric": "Gross Exposure",
+            "Value": 1.0
+        },
+        {
+            "Metric": "Net Exposure",
+            "Value": 1.0
+        },
+        {
+            "Metric": "Portfolio Beta",
+            "Value": 1.0
+        },
+        {
+            "Metric": "Portfolio Volatility",
+            "Value": 0.02072077631158337
+        },
+        {
+            "Metric": "Annualized Volatility",
+            "Value": 0.3289321265558869
+        },
+        {
+            "Metric": "HHI",
+            "Value": 1.0
+        },
+        {
+            "Metric": "Effective Positions",
+            "Value": 1.0
+        },
+        {
+            "Metric": "Largest Position",
+            "Value": 1.0
+        },
+        {
+            "Metric": "Sector Count",
+            "Value": 1.0
         },
         {
             "Metric": "Value at Risk",
-            "Value": 0.0
+            "Value": 0.029124547228563606
         },
         {
             "Metric": "Expected Shortfall",
-            "Value": 0.0
+            "Value": 0.043313516449006904
         },
         {
             "Metric": "Maximum Drawdown",
-            "Value": 0.0
+            "Value": 0.18694939343476163
         },
         {
             "Metric": "Risk Violations",
-            "Value": 0.0
+            "Value": 5.0
         },
         {
             "Metric": "Overall Risk Score",
-            "Value": null
+            "Value": 38.69
+        },
+        {
+            "Metric": "Risk Rating",
+            "Value": "Critical"
         }
     ],
     "execution_summary": [
@@ -95,5 +256,41 @@
             "Value": 0.0
         }
     ],
-    "daily_monitor": []
+    "daily_monitor": [
+        {
+            "scan_date": "2026-07-31 12:31:31",
+            "signal_date": "2026-07-31 00:00:00",
+            "expected_exit_date": "2026-08-14 00:00:00",
+            "ticker": "LAURUSLABS",
+            "company": "",
+            "sector": "Healthcare",
+            "subsector": "",
+            "strategy": "PASS_combined",
+            "confidence": 13.03,
+            "regime_today": "UPTREND",
+            "cmp": 1815.5,
+            "open": 1785.0,
+            "high": 1826.6,
+            "low": 1785.0,
+            "close": 1815.5,
+            "volume": 1758227,
+            "entry": 1815.5,
+            "target": 2000.66,
+            "stop_loss": 1722.92,
+            "expected_return_pct": 10.198843293858447,
+            "expected_return_points": 185.16000000000008,
+            "risk_pct": 5.099421646929216,
+            "risk_points": 92.57999999999993,
+            "risk_reward": 2.0000000000000027,
+            "target_hold_days": 14.0,
+            "days_since_signal": 0,
+            "days_remaining": 14.0,
+            "holding_progress_pct": 0.0,
+            "current_return_pct": 0.0,
+            "target_progress_pct": 0.0,
+            "distance_to_target_pct": 10.198843293858447,
+            "distance_to_stop_pct": 5.099421646929216,
+            "trade_status": "ACTIVE"
+        }
+    ]
 }

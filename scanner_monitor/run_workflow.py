@@ -15,7 +15,7 @@ from scanner_monitor.universe_loader import (
 # ==========================================================
 
 universe = pd.read_csv(
-    "scanner_monitor/backtest/data/universe.csv"
+    "scanner_monitor/backtest/data/ind_nifty500list" #universe.csv"
 )
 
 _, sector_map, _ = get_buckets_and_sectors()

@@ -49,7 +49,7 @@ result = workflow.run(
     },
 
     bt_kwargs={
-        "reward_multiple": 2.0,
+        "target_pct": 10,
         "stop_value": 2,
         "max_stop_pct": 8,
         "max_hold": 60,

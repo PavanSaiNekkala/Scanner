@@ -1,2 +1,2 @@
 ticker,signals_today,confidence,rank_score,portfolio_rank,regime_today,run_id,timestamp,date
-LAURUSLABS,True,13.03,50.33,1,UPTREND,20260731_132934,2026-07-31 13:29:34.312221+05:30,2026-07-31
+LAURUSLABS,True,13.06,50.37,1,UPTREND,20260731_140529,2026-07-31 14:05:29.572052+05:30,2026-07-31

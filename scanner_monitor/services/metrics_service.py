@@ -2942,6 +2942,37 @@ class MetricsService:
         )
 
         # -------------------------------------------------------------
+        # Institutional Recommendation
+        # -------------------------------------------------------------
+
+        recommendation_score = df[
+            MetricColumns.RECOMMENDATION_SCORE
+        ]
+
+        df[
+            ScannerColumns.RECOMMENDATION
+        ] = np.select(
+
+            [
+                recommendation_score >= 90,
+                recommendation_score >= 75,
+                recommendation_score >= 60,
+                recommendation_score >= 45,
+            ],
+
+            [
+                "STRONG BUY",
+                "BUY",
+                "WATCH",
+                "HOLD",
+
+            ],
+
+            default="AVOID",
+
+        )
+
+        # -------------------------------------------------------------
         # Top Decile Flag
         # -------------------------------------------------------------
 

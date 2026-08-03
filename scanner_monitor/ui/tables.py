@@ -1,54 +1,193 @@
 """
-ui.tables
-=========
+ui/tables.py
+============
 
-Reusable institutional table components.
+Reusable institutional table
+components for the
+Scanner Monitor.
 
-Features
---------
-- Responsive tables
-- Search
-- Column selector
-- CSV export
-- Dataset statistics
-- Validation
+Provides standardized:
+
+- DataFrame rendering
+- Searching
+- Filtering
+- Downloads
+- Statistics
+- Data quality
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 import inspect
+
 import pandas as pd
 import streamlit as st
 
 # =============================================================================
-# Helpers
+# Configuration
+# =============================================================================
+
+
+@dataclass(slots=True, frozen=True)
+class TableConfig:
+    """
+    Shared table configuration.
+    """
+
+    default_height: int = 600
+
+    preview_rows: int = 20
+
+    max_export_rows: int = 1_000_000
+
+    hide_index: bool = True
+
+    use_container_width: bool = True
+
+    searchable: bool = True
+
+    downloadable: bool = True
+
+    selectable_columns: bool = True
+
+
+CONFIG = TableConfig()
+
+# =============================================================================
+# Validation
 # =============================================================================
 
 
 def dataframe_exists(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
 ) -> bool:
     """
-    Return True when dataframe has rows.
+    Return True when a dataframe
+    exists and contains rows.
     """
 
     return (
-        isinstance(df, pd.DataFrame)
-        and not df.empty
+
+        isinstance(
+
+            dataframe,
+
+            pd.DataFrame,
+
+        )
+
+        and
+
+        not dataframe.empty
+
     )
 
 
-def dataframe_statistics(
-    df: pd.DataFrame,
-) -> dict[str, int]:
+def require_dataframe(
+    dataframe: pd.DataFrame,
+    *,
+    message: str = (
+        "No records available."
+    ),
+) -> bool:
     """
-    Basic dataframe statistics.
+    Validate dataframe before
+    rendering.
     """
 
-    if df.empty:
+    if dataframe_exists(
+        dataframe,
+    ):
+
+        return True
+
+    st.info(
+        message,
+    )
+
+    return False
+
+
+def column_exists(
+    dataframe: pd.DataFrame,
+    column: str,
+) -> bool:
+    """
+    Check whether a column exists.
+    """
+
+    return (
+
+        dataframe_exists(
+            dataframe,
+        )
+
+        and
+
+        column in dataframe.columns
+
+    )
+
+
+# =============================================================================
+# Shared Renderer
+# =============================================================================
+
+
+def render_dataframe(
+    dataframe: pd.DataFrame,
+    *,
+    height: int | None = None,
+) -> None:
+    """
+    Standard dataframe renderer.
+    """
+
+    st.dataframe(
+
+        dataframe,
+
+        use_container_width=(
+            CONFIG.use_container_width
+        ),
+
+        hide_index=(
+            CONFIG.hide_index
+        ),
+
+        height=(
+
+            height
+
+            or
+
+            CONFIG.default_height
+
+        ),
+
+    )
+
+
+# =============================================================================
+# Statistics Engine
+# =============================================================================
+
+
+def dataframe_statistics(
+    dataframe: pd.DataFrame,
+) -> dict[str, Any]:
+    """
+    Calculate dataframe statistics.
+    """
+
+    if not dataframe_exists(
+        dataframe,
+    ):
 
         return {
 
@@ -60,66 +199,233 @@ def dataframe_statistics(
 
             "Duplicates": 0,
 
+            "Memory (KB)": 0.0,
+
         }
 
     return {
 
-        "Rows": len(df),
+        "Rows":
 
-        "Columns": len(df.columns),
+            len(
+                dataframe,
+            ),
 
-        "Missing": int(
-            df.isna().sum().sum()
-        ),
+        "Columns":
 
-        "Duplicates": int(
-            df.duplicated().sum()
-        ),
+            len(
+                dataframe.columns,
+            ),
+
+        "Missing":
+
+            int(
+
+                dataframe
+
+                .isna()
+
+                .sum()
+
+                .sum()
+
+            ),
+
+        "Duplicates":
+
+            int(
+
+                dataframe
+
+                .duplicated()
+
+                .sum()
+
+            ),
+
+        "Memory (KB)":
+
+            round(
+
+                dataframe
+
+                .memory_usage(
+                    deep=True,
+                )
+
+                .sum()
+
+                / 1024,
+
+                2,
+
+            ),
 
     }
 
 
 # =============================================================================
-# Search
+# Statistics Row
+# =============================================================================
+
+
+def statistics_row(
+    dataframe: pd.DataFrame,
+) -> None:
+    """
+    Display dataframe statistics.
+    """
+
+    statistics = (
+
+        dataframe_statistics(
+
+            dataframe,
+
+        )
+
+    )
+
+    columns = st.columns(
+
+        len(
+            statistics,
+        )
+
+    )
+
+    for column, item in zip(
+
+        columns,
+
+        statistics.items(),
+
+    ):
+
+        title, value = item
+
+        with column:
+
+            st.metric(
+
+                title,
+
+                value,
+
+            )
+
+# =============================================================================
+# Search Engine
 # =============================================================================
 
 
 def search_dataframe(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     query: str,
 ) -> pd.DataFrame:
     """
-    Search entire dataframe.
+    Search across every column.
+
+    Parameters
+    ----------
+    dataframe
+        Source dataframe.
+
+    query
+        Search text.
+
+    Returns
+    -------
+    pd.DataFrame
     """
 
-    if not query:
+    if (
 
-        return df
-
-    mask = df.astype(
-        str,
-    ).apply(
-        lambda column:
-        column.str.contains(
-            query,
-            case=False,
-            na=False,
+        not dataframe_exists(
+            dataframe,
         )
-    ).any(
-        axis=1,
+
+        or
+
+        not query
+
+    ):
+
+        return dataframe
+
+    mask = (
+
+        dataframe
+
+        .astype(str)
+
+        .apply(
+
+            lambda column:
+
+            column.str.contains(
+
+                query,
+
+                case=False,
+
+                na=False,
+
+            )
+
+        )
+
+        .any(
+
+            axis=1,
+
+        )
+
     )
 
-    return df.loc[
-        mask
+    return dataframe.loc[
+
+        mask,
+
     ]
+
+
+def search_box(
+    dataframe: pd.DataFrame,
+    *,
+    key: str,
+    label: str = "Search",
+) -> pd.DataFrame:
+    """
+    Display search box.
+    """
+
+    query = st.text_input(
+
+        label,
+
+        placeholder="Search all columns...",
+
+        key=f"{key}_search",
+
+    )
+
+    return search_dataframe(
+
+        dataframe,
+
+        query,
+
+    )
 
 
 # =============================================================================
 # Column Selector
 # =============================================================================
 
+
 def column_selector(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     *,
     key: str,
 ) -> pd.DataFrame:
@@ -127,52 +433,92 @@ def column_selector(
     Interactive column selector.
     """
 
-    columns = st.multiselect(
+    if not dataframe_exists(
+        dataframe,
+    ):
+
+        return dataframe
+
+    selected = st.multiselect(
+
         "Columns",
-        options=df.columns.tolist(),
-        default=df.columns.tolist(),
-        key=key,          # <-- changed
+
+        options=list(
+
+            dataframe.columns,
+
+        ),
+
+        default=list(
+
+            dataframe.columns,
+
+        ),
+
+        key=f"{key}_columns",
+
     )
 
-    if not columns:
-        return df
+    if not selected:
 
-    return df[columns]
+        return dataframe
+
+    return dataframe[
+
+        selected
+
+    ]
+
 
 # =============================================================================
-# Download
+# Export Engine
 # =============================================================================
 
 
 def csv_bytes(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
 ) -> bytes:
     """
-    Convert dataframe to CSV bytes.
+    Convert dataframe to CSV.
     """
 
-    return df.to_csv(
-        index=False,
-    ).encode(
-        "utf-8",
+    return (
+
+        dataframe
+
+        .to_csv(
+
+            index=False,
+
+        )
+
+        .encode(
+
+            "utf-8",
+
+        )
+
     )
 
 
 def excel_bytes(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
 ) -> bytes:
     """
-    Convert dataframe to Excel bytes.
+    Convert dataframe to Excel.
     """
 
     output = BytesIO()
 
     with pd.ExcelWriter(
+
         output,
+
         engine="openpyxl",
+
     ) as writer:
 
-        df.to_excel(
+        dataframe.to_excel(
 
             writer,
 
@@ -184,116 +530,118 @@ def excel_bytes(
 
 
 def download_buttons(
-    data,
+    dataframe: pd.DataFrame,
+    *,
     filename: str,
-    label: str = "Download CSV",
-    key: str | None = None,
+    key: str,
 ) -> None:
     """
-    Render a download button for DataFrames or raw bytes.
+    Display export buttons.
     """
 
-    if data is None:
-        st.info("Nothing available to download.")
-        return
-
-    # Convert DataFrame -> CSV bytes
-    if isinstance(data, pd.DataFrame):
-        payload = data.to_csv(index=False).encode("utf-8")
-        mime = "text/csv"
-        if not filename.endswith(".csv"):
-            filename = f"{filename}.csv"
-
-    # Already bytes
-    elif isinstance(data, bytes):
-        payload = data
-        mime = "application/octet-stream"
-
-    # String
-    elif isinstance(data, str):
-        payload = data.encode("utf-8")
-        mime = "text/plain"
-
-    else:
-        raise TypeError(
-            f"Unsupported download type: {type(data)}"
-        )
-
-    st.download_button(
-        label=label,
-        data=payload,
-        file_name=filename,
-        mime=mime,
-        key=key or f"download_{filename}",
-        use_container_width=True,
-    )
-
-# =============================================================================
-# Statistics
-# =============================================================================
-
-
-def statistics_row(
-    df: pd.DataFrame,
-) -> None:
-    """
-    Dataset statistics.
-    """
-
-    stats = dataframe_statistics(
-        df,
-    )
-
-    cols = st.columns(
-        len(stats),
-    )
-
-    for col, item in zip(
-        cols,
-        stats.items(),
+    if not dataframe_exists(
+        dataframe,
     ):
 
-        key, value = item
+        return
 
-        with col:
+    left, right = st.columns(2)
 
-            st.metric(
+    with left:
 
-                key,
+        st.download_button(
 
-                value,
+            "Download CSV",
 
-            )
+            data=csv_bytes(
 
+                dataframe,
+
+            ),
+
+            file_name=f"{filename}.csv",
+
+            mime="text/csv",
+
+            key=f"{key}_csv",
+
+            use_container_width=True,
+
+        )
+
+    with right:
+
+        st.download_button(
+
+            "Download Excel",
+
+            data=excel_bytes(
+
+                dataframe,
+
+            ),
+
+            file_name=f"{filename}.xlsx",
+
+            mime=(
+                "application/"
+                "vnd.openxmlformats-"
+                "officedocument."
+                "spreadsheetml.sheet"
+            ),
+
+            key=f"{key}_excel",
+
+            use_container_width=True,
+
+        )
 
 # =============================================================================
-# Generic Table
+# Generic Table Engine
 # =============================================================================
+
 
 def dataframe_table(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     *,
     title: str | None = None,
     key: str = "table",
-    searchable: bool = True,
-    selectable_columns: bool = True,
-    downloadable: bool = True,
-    height: int = 600,
+    searchable: bool = CONFIG.searchable,
+    selectable_columns: bool = (
+        CONFIG.selectable_columns
+    ),
+    downloadable: bool = (
+        CONFIG.downloadable
+    ),
+    height: int | None = None,
 ) -> None:
     """
     Institutional dataframe viewer.
     """
 
     if title:
-        st.subheader(title)
 
-    if not dataframe_exists(df):
-        st.info("No records available.")
+        st.subheader(
+
+            title,
+
+        )
+
+    if not require_dataframe(
+
+        dataframe,
+
+    ):
+
         return
 
-    statistics_row(df)
+    statistics_row(
 
-    working = df.copy()
+        dataframe,
+
+    )
+
+    working = dataframe.copy()
 
     # ==========================================================
     # Search
@@ -301,15 +649,12 @@ def dataframe_table(
 
     if searchable:
 
-        query = st.text_input(
-            "Search",
-            key=f"{key}_search",
-            placeholder="Search all columns...",
-        )
+        working = search_box(
 
-        working = search_dataframe(
             working,
-            query,
+
+            key=key,
+
         )
 
     # ==========================================================
@@ -319,32 +664,33 @@ def dataframe_table(
     if selectable_columns:
 
         working = column_selector(
+
             working,
-            key=f"{key}_columns",
+
+            key=key,
+
         )
 
-    # ==========================================================
-    # Display
-    # ==========================================================
+    render_dataframe(
 
-    st.dataframe(
         working,
-        use_container_width=True,
-        hide_index=True,
-        height=height,
-    )
 
-    # ==========================================================
-    # Download
-    # ==========================================================
+        height=height,
+
+    )
 
     if downloadable:
 
         download_buttons(
+
             working,
+
             filename=key,
-            key=f"{key}_download",
+
+            key=key,
+
         )
+
 
 # =============================================================================
 # Sorting
@@ -352,33 +698,41 @@ def dataframe_table(
 
 
 def sortable_dataframe(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     *,
     key: str,
 ) -> pd.DataFrame:
     """
-    Interactive dataframe sorting.
+    Interactive sorting.
     """
 
-    if df.empty:
+    if not dataframe_exists(
 
-        return df
+        dataframe,
 
-    col1, col2 = st.columns(2)
+    ):
 
-    with col1:
+        return dataframe
+
+    left, right = st.columns(
+
+        2,
+
+    )
+
+    with left:
 
         column = st.selectbox(
 
             "Sort By",
 
-            options=df.columns,
+            dataframe.columns,
 
             key=f"{key}_sort",
 
         )
 
-    with col2:
+    with right:
 
         ascending = st.checkbox(
 
@@ -390,7 +744,7 @@ def sortable_dataframe(
 
         )
 
-    return df.sort_values(
+    return dataframe.sort_values(
 
         by=column,
 
@@ -405,7 +759,7 @@ def sortable_dataframe(
 
 
 def numeric_filter(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     *,
     column: str,
     key: str,
@@ -414,25 +768,37 @@ def numeric_filter(
     Numeric range filter.
     """
 
-    if column not in df.columns:
+    if not column_exists(
 
-        return df
+        dataframe,
 
-    if not pd.api.types.is_numeric_dtype(
-        df[column],
+        column,
+
     ):
 
-        return df
+        return dataframe
+
+    if not pd.api.types.is_numeric_dtype(
+
+        dataframe[column],
+
+    ):
+
+        return dataframe
 
     minimum = float(
-        df[column].min(),
+
+        dataframe[column].min(),
+
     )
 
     maximum = float(
-        df[column].max(),
+
+        dataframe[column].max(),
+
     )
 
-    values = st.slider(
+    selected = st.slider(
 
         column,
 
@@ -440,17 +806,28 @@ def numeric_filter(
 
         max_value=maximum,
 
-        value=(minimum, maximum),
+        value=(
 
-        key=key,
+            minimum,
+
+            maximum,
+
+        ),
+
+        key=f"{key}_range",
 
     )
 
-    return df.loc[
-        df[column].between(
-            values[0],
-            values[1],
+    return dataframe.loc[
+
+        dataframe[column].between(
+
+            selected[0],
+
+            selected[1],
+
         )
+
     ]
 
 
@@ -460,22 +837,28 @@ def numeric_filter(
 
 
 def category_filter(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     *,
     column: str,
     key: str,
 ) -> pd.DataFrame:
     """
-    Category multiselect filter.
+    Category filter.
     """
 
-    if column not in df.columns:
+    if not column_exists(
 
-        return df
+        dataframe,
+
+        column,
+
+    ):
+
+        return dataframe
 
     values = sorted(
 
-        df[column]
+        dataframe[column]
 
         .dropna()
 
@@ -491,22 +874,30 @@ def category_filter(
 
         column,
 
-        values,
+        options=values,
 
         default=values,
 
-        key=key,
+        key=f"{key}_category",
 
     )
 
     if not selected:
 
-        return df
+        return dataframe
 
-    return df.loc[
-        df[column].astype(str).isin(
+    return dataframe.loc[
+
+        dataframe[column]
+
+        .astype(str)
+
+        .isin(
+
             selected,
+
         )
+
     ]
 
 
@@ -516,54 +907,84 @@ def category_filter(
 
 
 def date_filter(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     *,
     column: str,
+    key: str,
 ) -> pd.DataFrame:
     """
-    Filter date range.
+    Date range filter.
     """
 
-    if column not in df.columns:
+    if not column_exists(
 
-        return df
+        dataframe,
+
+        column,
+
+    ):
+
+        return dataframe
 
     try:
 
         dates = pd.to_datetime(
-            df[column],
+
+            dataframe[column],
+
+            errors="coerce",
+
         )
 
     except Exception:
 
-        return df
+        return dataframe
 
-    start = dates.min().date()
+    dates = dates.dropna()
 
-    end = dates.max().date()
+    if dates.empty:
+
+        return dataframe
 
     selected = st.date_input(
 
         "Date Range",
 
-        value=(start, end),
+        value=(
+
+            dates.min().date(),
+
+            dates.max().date(),
+
+        ),
+
+        key=f"{key}_date",
 
     )
 
     if len(selected) != 2:
 
-        return df
+        return dataframe
 
-    return df.loc[
-        dates.dt.date.between(
+    mask = pd.to_datetime(
 
-            selected[0],
+        dataframe[column],
 
-            selected[1],
+        errors="coerce",
 
-        )
+    ).dt.date.between(
+
+        selected[0],
+
+        selected[1],
+
+    )
+
+    return dataframe.loc[
+
+        mask,
+
     ]
-
 
 # =============================================================================
 # Conditional Styling
@@ -571,55 +992,97 @@ def date_filter(
 
 
 def style_returns(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
 ) -> pd.io.formats.style.Styler:
     """
-    Highlight returns.
+    Apply return highlighting.
     """
 
-    def color(value):
+    if not dataframe_exists(
+
+        dataframe,
+
+    ):
+
+        return dataframe.style
+
+    def color(
+
+        value: object,
+
+    ) -> str:
 
         try:
 
-            value = float(value)
+            number = float(
 
-        except Exception:
+                value,
+
+            )
+
+        except (
+
+            TypeError,
+
+            ValueError,
+
+        ):
 
             return ""
 
-        if value > 0:
+        if number > 0:
 
             return (
+
                 "background-color:#DCFCE7;"
+
                 "color:#166534;"
+
             )
 
-        if value < 0:
+        if number < 0:
 
             return (
+
                 "background-color:#FEE2E2;"
+
                 "color:#991B1B;"
+
             )
 
         return ""
 
     columns = [
 
-        c
+        column
 
-        for c in df.columns
+        for column
 
-        if "return" in c.lower()
+        in dataframe.columns
 
-        or "%" in c
+        if (
+
+            "return"
+
+            in column.lower()
+
+        )
+
+        or (
+
+            "%"
+
+            in column
+
+        )
 
     ]
 
     if not columns:
 
-        return df.style
+        return dataframe.style
 
-    return df.style.applymap(
+    return dataframe.style.map(
 
         color,
 
@@ -629,92 +1092,52 @@ def style_returns(
 
 
 # =============================================================================
-# Holdings Table
+# Specialized Tables
 # =============================================================================
 
+
 def holdings_table(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     *,
     key: str | None = None,
 ) -> None:
+    """
+    Holdings viewer.
+    """
 
     if key is None:
+
         caller = inspect.stack()[1]
-        filename = Path(caller.filename).stem
-        function = caller.function
-        line = caller.lineno
 
-        key = f"{filename}_{function}_{line}"
+        filename = Path(
 
-    dataframe_table(
-        df,
-        title="Current Holdings",
-        key=key,
-    )
+            caller.filename,
 
-# =============================================================================
-# Daily Monitor Table
-# =============================================================================
+        ).stem
 
+        key = (
 
-def daily_monitor_table(
-    df: pd.DataFrame,
-) -> None:
-    """
-    Daily monitor viewer.
-    """
+            f"{filename}_"
 
-    if df.empty:
+            f"{caller.function}_"
 
-        st.info(
-            "No daily monitor available."
+            f"{caller.lineno}"
+
         )
 
-        return
-
     dataframe_table(
 
-        df,
+        dataframe,
 
-        title="Daily Monitor",
+        title="Current Holdings",
 
-        key="daily_monitor",
-
-    )
-
-
-# =============================================================================
-# Risk Table
-# =============================================================================
-
-
-def risk_table(
-    df: pd.DataFrame,
-) -> None:
-    """
-    Risk summary.
-    """
-
-    dataframe_table(
-
-        df,
-
-        title="Risk Summary",
-
-        key="risk",
-
-        searchable=False,
+        key=key,
 
     )
-
-
-# =============================================================================
-# Portfolio Table
-# =============================================================================
 
 
 def portfolio_table(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
 ) -> None:
     """
     Portfolio summary.
@@ -722,7 +1145,7 @@ def portfolio_table(
 
     dataframe_table(
 
-        df,
+        dataframe,
 
         title="Portfolio Summary",
 
@@ -733,13 +1156,46 @@ def portfolio_table(
     )
 
 
-# =============================================================================
-# Execution Table
-# =============================================================================
+def daily_monitor_table(
+    dataframe: pd.DataFrame,
+) -> None:
+    """
+    Daily monitor.
+    """
+
+    dataframe_table(
+
+        dataframe,
+
+        title="Daily Monitor",
+
+        key="daily_monitor",
+
+    )
+
+
+def risk_table(
+    dataframe: pd.DataFrame,
+) -> None:
+    """
+    Risk summary.
+    """
+
+    dataframe_table(
+
+        dataframe,
+
+        title="Risk Summary",
+
+        key="risk",
+
+        searchable=False,
+
+    )
 
 
 def execution_table(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
 ) -> None:
     """
     Execution summary.
@@ -747,7 +1203,7 @@ def execution_table(
 
     dataframe_table(
 
-        df,
+        dataframe,
 
         title="Execution Summary",
 
@@ -758,13 +1214,8 @@ def execution_table(
     )
 
 
-# =============================================================================
-# Performance Table
-# =============================================================================
-
-
 def performance_table(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
 ) -> None:
     """
     Performance summary.
@@ -772,7 +1223,7 @@ def performance_table(
 
     dataframe_table(
 
-        df,
+        dataframe,
 
         title="Performance Summary",
 
@@ -781,13 +1232,8 @@ def performance_table(
     )
 
 
-# =============================================================================
-# History Table
-# =============================================================================
-
-
 def history_table(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     *,
     title: str,
 ) -> None:
@@ -797,13 +1243,24 @@ def history_table(
 
     dataframe_table(
 
-        df,
+        dataframe,
 
         title=title,
 
-        key=title.lower().replace(
-            " ",
-            "_",
+        key=(
+
+            title
+
+            .lower()
+
+            .replace(
+
+                " ",
+
+                "_",
+
+            )
+
         ),
 
     )
@@ -815,32 +1272,35 @@ def history_table(
 
 
 def preview_table(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
     *,
-    rows: int = 10,
+    rows: int = CONFIG.preview_rows,
 ) -> None:
     """
-    Preview first rows.
+    Display preview rows.
     """
 
-    if df.empty:
+    if not require_dataframe(
 
-        st.info(
-            "No preview available."
-        )
+        dataframe,
+
+        message="No preview available.",
+
+    ):
 
         return
 
-    st.dataframe(
+    render_dataframe(
 
-        df.head(rows),
+        dataframe.head(
 
-        use_container_width=True,
+            rows,
 
-        hide_index=True,
+        ),
+
+        height=None,
 
     )
-
 
 # =============================================================================
 # Data Quality
@@ -848,50 +1308,60 @@ def preview_table(
 
 
 def data_quality_report(
-    df: pd.DataFrame,
+    dataframe: pd.DataFrame,
 ) -> None:
     """
-    Display data quality metrics.
+    Display dataset quality metrics.
     """
 
-    stats = dataframe_statistics(
-        df,
-    )
+    if not require_dataframe(
 
-    col1, col2, col3, col4 = st.columns(4)
+        dataframe,
 
-    col1.metric(
-        "Rows",
-        stats["Rows"],
-    )
-
-    col2.metric(
-        "Columns",
-        stats["Columns"],
-    )
-
-    col3.metric(
-        "Missing",
-        stats["Missing"],
-    )
-
-    col4.metric(
-        "Duplicates",
-        stats["Duplicates"],
-    )
-
-
-
-def dataframe_info(df: pd.DataFrame) -> None:
-    """
-    Display basic dataframe diagnostics.
-    """
-
-    if df.empty:
-
-        st.info("No data available.")
+    ):
 
         return
+
+    statistics_row(
+
+        dataframe,
+
+    )
+
+
+# =============================================================================
+# DataFrame Information
+# =============================================================================
+
+
+def dataframe_info(
+    dataframe: pd.DataFrame,
+) -> None:
+    """
+    Display dataframe metadata.
+    """
+
+    if not require_dataframe(
+
+        dataframe,
+
+    ):
+
+        return
+
+    memory = round(
+
+        dataframe.memory_usage(
+
+            deep=True,
+
+        ).sum()
+
+        / 1024,
+
+        2,
+
+    )
 
     summary = pd.DataFrame(
 
@@ -913,21 +1383,41 @@ def dataframe_info(df: pd.DataFrame) -> None:
 
             "Value": [
 
-                len(df),
+                len(
 
-                len(df.columns),
-
-                int(df.isna().sum().sum()),
-
-                int(df.duplicated().sum()),
-
-                round(
-
-                    df.memory_usage(deep=True).sum() / 1024,
-
-                    2,
+                    dataframe,
 
                 ),
+
+                len(
+
+                    dataframe.columns,
+
+                ),
+
+                int(
+
+                    dataframe
+
+                    .isna()
+
+                    .sum()
+
+                    .sum()
+
+                ),
+
+                int(
+
+                    dataframe
+
+                    .duplicated()
+
+                    .sum()
+
+                ),
+
+                memory,
 
             ],
 
@@ -935,13 +1425,247 @@ def dataframe_info(df: pd.DataFrame) -> None:
 
     )
 
-    st.dataframe(
+    render_dataframe(
 
         summary,
 
-        use_container_width=True,
-
-        hide_index=True,
+        height=None,
 
     )
 
+
+# =============================================================================
+# Metadata
+# =============================================================================
+
+
+def dataframe_metadata(
+    dataframe: pd.DataFrame,
+) -> dict[str, Any]:
+    """
+    Return dataframe metadata.
+    """
+
+    if not dataframe_exists(
+
+        dataframe,
+
+    ):
+
+        return {
+
+            "rows": 0,
+
+            "columns": 0,
+
+            "memory_kb": 0.0,
+
+            "missing": 0,
+
+            "duplicates": 0,
+
+        }
+
+    return {
+
+        "rows":
+
+            len(
+
+                dataframe,
+
+            ),
+
+        "columns":
+
+            len(
+
+                dataframe.columns,
+
+            ),
+
+        "memory_kb":
+
+            round(
+
+                dataframe
+
+                .memory_usage(
+
+                    deep=True,
+
+                )
+
+                .sum()
+
+                / 1024,
+
+                2,
+
+            ),
+
+        "missing":
+
+            int(
+
+                dataframe
+
+                .isna()
+
+                .sum()
+
+                .sum()
+
+            ),
+
+        "duplicates":
+
+            int(
+
+                dataframe
+
+                .duplicated()
+
+                .sum()
+
+            ),
+
+    }
+
+
+# =============================================================================
+# Utility Functions
+# =============================================================================
+
+
+def dataframe_shape(
+    dataframe: pd.DataFrame,
+) -> tuple[int, int]:
+    """
+    Return dataframe shape.
+    """
+
+    if not dataframe_exists(
+
+        dataframe,
+
+    ):
+
+        return (
+
+            0,
+
+            0,
+
+        )
+
+    return dataframe.shape
+
+
+def dataframe_memory(
+    dataframe: pd.DataFrame,
+) -> float:
+    """
+    Return dataframe memory
+    in kilobytes.
+    """
+
+    if not dataframe_exists(
+
+        dataframe,
+
+    ):
+
+        return 0.0
+
+    return round(
+
+        dataframe
+
+        .memory_usage(
+
+            deep=True,
+
+        )
+
+        .sum()
+
+        / 1024,
+
+        2,
+
+    )
+
+
+# =============================================================================
+# Public Exports
+# =============================================================================
+
+
+__all__ = [
+
+    "CONFIG",
+
+    "dataframe_exists",
+
+    "require_dataframe",
+
+    "column_exists",
+
+    "render_dataframe",
+
+    "dataframe_statistics",
+
+    "statistics_row",
+
+    "search_dataframe",
+
+    "search_box",
+
+    "column_selector",
+
+    "csv_bytes",
+
+    "excel_bytes",
+
+    "download_buttons",
+
+    "dataframe_table",
+
+    "sortable_dataframe",
+
+    "numeric_filter",
+
+    "category_filter",
+
+    "date_filter",
+
+    "style_returns",
+
+    "holdings_table",
+
+    "portfolio_table",
+
+    "daily_monitor_table",
+
+    "risk_table",
+
+    "execution_table",
+
+    "performance_table",
+
+    "history_table",
+
+    "preview_table",
+
+    "data_quality_report",
+
+    "dataframe_info",
+
+    "dataframe_metadata",
+
+    "dataframe_shape",
+
+    "dataframe_memory",
+
+]

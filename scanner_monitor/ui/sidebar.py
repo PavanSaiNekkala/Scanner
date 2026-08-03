@@ -2,20 +2,22 @@
 ui.sidebar
 ==========
 
-Reusable sidebar for the Institutional Scanner Monitor.
+Reusable sidebar components for the
+Institutional Scanner Monitor.
 
-Features
---------
-- Scanner status
-- Report information
-- Refresh button
-- Auto refresh
-- Report timestamps
-- Navigation helpers
+Foundation Layer
+
+Responsibilities
+----------------
+- Sidebar configuration
+- File system helpers
+- Report metadata
+- Storage utilities
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -27,91 +29,260 @@ from ui.loader import (
     refresh_reports,
 )
 
+
 # =============================================================================
-# Helpers
+# Configuration
 # =============================================================================
 
 
-def _latest_modified() -> str:
+@dataclass(
+    slots=True,
+    frozen=True,
+)
+class SidebarConfig:
     """
-    Return latest modification timestamp.
+    Sidebar application configuration.
     """
 
-    files = list(LATEST_DIR.glob("*"))
-
-    if not files:
-
-        return "N/A"
-
-    latest = max(
-        files,
-        key=lambda file: file.stat().st_mtime,
+    title: str = (
+        "📊 Scanner Monitor"
     )
 
-    return datetime.fromtimestamp(
-        latest.stat().st_mtime,
-    ).strftime(
-        "%Y-%m-%d %H:%M:%S",
+    subtitle: str = (
+        "Institutional Reporting Dashboard"
+    )
+
+    version: str = (
+        "1.0.0"
+    )
+
+    edition: str = (
+        "Institutional Edition"
+    )
+
+    copyright: str = (
+        "© 2026"
+    )
+
+    timestamp_format: str = (
+        "%Y-%m-%d %H:%M:%S"
     )
 
 
-def _directory_size(
+CONFIG = SidebarConfig()
+
+
+# =============================================================================
+# File System Helpers
+# =============================================================================
+
+
+def safe_file_count(
+    directory: Path,
+) -> int:
+    """
+    Return number of files
+    inside a directory.
+    """
+
+    if not directory.exists():
+
+        return 0
+
+    return sum(
+
+        1
+
+        for file in directory.iterdir()
+
+        if file.is_file()
+
+    )
+
+
+def safe_directory_size(
     directory: Path,
 ) -> float:
     """
-    Directory size in MB.
+    Calculate directory size
+    in MB.
     """
 
     if not directory.exists():
 
         return 0.0
 
-    size = sum(
-        file.stat().st_size
-        for file in directory.rglob("*")
-        if file.is_file()
+    total = 0
+
+    for file in directory.rglob("*"):
+
+        if file.is_file():
+
+            total += file.stat().st_size
+
+    return (
+
+        total
+
+        /
+
+        (
+
+            1024 * 1024
+
+        )
+
     )
 
-    return size / (1024 * 1024)
 
-
-# =============================================================================
-# Sidebar
-# =============================================================================
-
-
-def render_sidebar() -> None:
+def latest_modified_time(
+    directory: Path = LATEST_DIR,
+) -> str:
     """
-    Render the application sidebar.
+    Return latest modification
+    timestamp.
+    """
+
+    if not directory.exists():
+
+        return "N/A"
+
+
+    files = [
+
+        file
+
+        for file in directory.iterdir()
+
+        if file.is_file()
+
+    ]
+
+
+    if not files:
+
+        return "N/A"
+
+
+    latest = max(
+
+        files,
+
+        key=lambda item:
+
+            item.stat().st_mtime,
+
+    )
+
+
+    return datetime.fromtimestamp(
+
+        latest.stat().st_mtime,
+
+    ).strftime(
+
+        CONFIG.timestamp_format,
+
+    )
+
+
+# =============================================================================
+# Report Metadata
+# =============================================================================
+
+
+def latest_report_count() -> int:
+    """
+    Count latest reports.
+    """
+
+    return safe_file_count(
+
+        LATEST_DIR,
+
+    )
+
+
+def history_report_count() -> int:
+    """
+    Count historical reports.
+    """
+
+    return safe_file_count(
+
+        HISTORY_DIR,
+
+    )
+
+
+def report_storage_summary() -> dict[str, float]:
+    """
+    Return report storage metrics.
+    """
+
+    return {
+
+        "Latest":
+
+            safe_directory_size(
+
+                LATEST_DIR,
+
+            ),
+
+        "History":
+
+            safe_directory_size(
+
+                HISTORY_DIR,
+
+            ),
+
+    }
+
+
+# =============================================================================
+# Sidebar HTML Helper
+# =============================================================================
+
+
+def sidebar_metric(
+    label: str,
+    value: str | int | float,
+) -> None:
+    """
+    Standard sidebar metric.
+    """
+
+    st.sidebar.metric(
+
+        label,
+
+        value,
+
+    )
+
+# =============================================================================
+# Sidebar Header
+# =============================================================================
+
+
+def sidebar_header() -> None:
+    """
+    Render sidebar title.
     """
 
     st.sidebar.title(
-        "📊 Scanner Monitor",
+
+        CONFIG.title,
+
     )
 
     st.sidebar.caption(
-        "Institutional Reporting Dashboard",
+
+        CONFIG.subtitle,
+
     )
-
-    st.sidebar.divider()
-
-    scanner_status()
-
-    st.sidebar.divider()
-
-    report_information()
-
-    st.sidebar.divider()
-
-    refresh_section()
-
-    st.sidebar.divider()
-
-    storage_information()
-
-    st.sidebar.divider()
-
-    application_information()
 
 
 # =============================================================================
@@ -121,42 +292,60 @@ def render_sidebar() -> None:
 
 def scanner_status() -> None:
     """
-    Scanner health.
+    Display scanner health status.
     """
 
     st.sidebar.subheader(
+
         "Scanner Status",
+
     )
+
+    latest_count = latest_report_count()
+
 
     if not LATEST_DIR.exists():
 
         st.sidebar.error(
-            "Reports Missing",
+
+            "Reports Directory Missing",
+
+        )
+
+        sidebar_metric(
+
+            "Latest Files",
+
+            0,
+
         )
 
         return
 
-    count = len(
-        list(
-            LATEST_DIR.glob("*"),
-        )
-    )
 
-    if count == 0:
+    if latest_count == 0:
 
         st.sidebar.warning(
+
             "No Reports Found",
+
         )
 
     else:
 
         st.sidebar.success(
+
             "Reports Available",
+
         )
 
-    st.sidebar.metric(
+
+    sidebar_metric(
+
         "Latest Files",
-        count,
+
+        latest_count,
+
     )
 
 
@@ -167,67 +356,157 @@ def scanner_status() -> None:
 
 def report_information() -> None:
     """
-    Latest report information.
+    Display report metadata.
     """
 
     st.sidebar.subheader(
+
         "Reports",
+
     )
 
-    st.sidebar.metric(
+
+    sidebar_metric(
 
         "Latest Reports",
 
-        len(
-            list(
-                LATEST_DIR.glob("*"),
-            )
-        ),
+        latest_report_count(),
 
     )
 
-    st.sidebar.metric(
+
+    sidebar_metric(
 
         "History Files",
 
-        len(
-            list(
-                HISTORY_DIR.glob("*"),
-            )
-        ),
+        history_report_count(),
 
     )
 
-    st.sidebar.text(
-        "Last Updated",
-    )
 
     st.sidebar.caption(
-        _latest_modified(),
+
+        "Last Updated",
+
+    )
+
+
+    st.sidebar.info(
+
+        latest_modified_time(),
+
     )
 
 
 # =============================================================================
-# Refresh
+# Storage Information
+# =============================================================================
+
+
+def storage_information() -> None:
+    """
+    Display report storage usage.
+    """
+
+    st.sidebar.subheader(
+
+        "Storage",
+
+    )
+
+
+    storage = report_storage_summary()
+
+
+    sidebar_metric(
+
+        "Latest Folder",
+
+        f"{storage['Latest']:.2f} MB",
+
+    )
+
+
+    sidebar_metric(
+
+        "History Folder",
+
+        f"{storage['History']:.2f} MB",
+
+    )
+
+
+# =============================================================================
+# Application Information
+# =============================================================================
+
+
+def application_information() -> None:
+    """
+    Display application metadata.
+    """
+
+    st.sidebar.subheader(
+
+        "Application",
+
+    )
+
+
+    st.sidebar.caption(
+
+        "Scanner Monitor",
+
+    )
+
+
+    st.sidebar.caption(
+
+        f"Version {CONFIG.version}",
+
+    )
+
+
+    st.sidebar.caption(
+
+        CONFIG.edition,
+
+    )
+
+
+    st.sidebar.caption(
+
+        CONFIG.copyright,
+
+    )
+
+# =============================================================================
+# Refresh Controls
 # =============================================================================
 
 
 def refresh_section() -> None:
     """
-    Cache refresh.
+    Render refresh controls.
     """
 
     st.sidebar.subheader(
+
         "Refresh",
+
     )
 
-    auto = st.sidebar.checkbox(
+
+    auto_refresh = st.sidebar.checkbox(
 
         "Auto Refresh",
 
         value=False,
 
+        key="sidebar_auto_refresh",
+
     )
+
 
     if st.sidebar.button(
 
@@ -235,76 +514,393 @@ def refresh_section() -> None:
 
         use_container_width=True,
 
+        key="refresh_reports_button",
+
     ):
 
         refresh_reports()
 
         st.rerun()
 
-    if auto:
+
+    if auto_refresh:
 
         st.sidebar.info(
-            "Refresh page every minute.",
+
+            "Auto refresh enabled.",
+
         )
 
 
+
 # =============================================================================
-# Storage
+# Navigation Helpers
 # =============================================================================
 
 
-def storage_information() -> None:
+def navigation_information() -> None:
     """
-    Report storage metrics.
-    """
-
-    st.sidebar.subheader(
-        "Storage",
-    )
-
-    st.sidebar.metric(
-
-        "Latest Folder",
-
-        f"{_directory_size(LATEST_DIR):.2f} MB",
-
-    )
-
-    st.sidebar.metric(
-
-        "History Folder",
-
-        f"{_directory_size(HISTORY_DIR):.2f} MB",
-
-    )
-
-
-# =============================================================================
-# Footer
-# =============================================================================
-
-
-def application_information() -> None:
-    """
-    Application footer.
+    Display navigation help.
     """
 
     st.sidebar.subheader(
-        "Application",
+
+        "Navigation",
+
     )
 
     st.sidebar.caption(
-        "Scanner Monitor",
+
+        "Use the pages menu to access:",
+
     )
 
-    st.sidebar.caption(
-        "Version 1.0.0",
+
+    items = [
+
+        "Dashboard",
+
+        "Portfolio",
+
+        "Holdings",
+
+        "Daily Monitor",
+
+        "Risk",
+
+        "Performance",
+
+        "Execution",
+
+        "History",
+
+        "Downloads",
+
+    ]
+
+
+    for item in items:
+
+        st.sidebar.write(
+
+            f"• {item}",
+
+        )
+
+
+
+# =============================================================================
+# Complete Sidebar Renderer
+# =============================================================================
+
+
+def render_sidebar() -> None:
+    """
+    Render complete application sidebar.
+    """
+
+    sidebar_header()
+
+
+    st.sidebar.divider()
+
+
+    scanner_status()
+
+
+    st.sidebar.divider()
+
+
+    report_information()
+
+
+    st.sidebar.divider()
+
+
+    refresh_section()
+
+
+    st.sidebar.divider()
+
+
+    storage_information()
+
+
+    st.sidebar.divider()
+
+
+    navigation_information()
+
+
+    st.sidebar.divider()
+
+
+    application_information()
+
+
+
+# =============================================================================
+# Sidebar Health Summary
+# =============================================================================
+
+
+def sidebar_health() -> dict[str, object]:
+    """
+    Return sidebar health information.
+    """
+
+    return {
+
+        "reports_available":
+
+            LATEST_DIR.exists(),
+
+        "latest_reports":
+
+            latest_report_count(),
+
+        "history_reports":
+
+            history_report_count(),
+
+        "latest_modified":
+
+            latest_modified_time(),
+
+        "storage":
+
+            report_storage_summary(),
+
+    }
+
+# =============================================================================
+# Environment Information
+# =============================================================================
+
+
+def environment_information() -> None:
+    """
+    Display runtime information.
+    """
+
+    st.sidebar.subheader(
+
+        "Environment",
+
     )
 
-    st.sidebar.caption(
-        "Institutional Edition",
-    )
 
     st.sidebar.caption(
-        "© 2026",
+
+        "Streamlit Dashboard",
+
     )
+
+
+    st.sidebar.caption(
+
+        "Report Driven Architecture",
+
+    )
+
+
+    st.sidebar.caption(
+
+        "Production Monitoring",
+
+    )
+
+
+# =============================================================================
+# Diagnostic Panel
+# =============================================================================
+
+
+def diagnostic_panel() -> None:
+    """
+    Display sidebar diagnostics.
+    """
+
+    health = sidebar_health()
+
+
+    st.sidebar.subheader(
+
+        "Health",
+
+    )
+
+
+    if health["reports_available"]:
+
+        st.sidebar.success(
+
+            "Report System Healthy",
+
+        )
+
+    else:
+
+        st.sidebar.error(
+
+            "Report System Offline",
+
+        )
+
+
+    sidebar_metric(
+
+        "Latest Reports",
+
+        health["latest_reports"],
+
+    )
+
+
+    sidebar_metric(
+
+        "History Reports",
+
+        health["history_reports"],
+
+    )
+
+
+
+# =============================================================================
+# Enhanced Application Panel
+# =============================================================================
+
+
+def application_panel() -> None:
+    """
+    Complete application information.
+    """
+
+    application_information()
+
+    environment_information()
+
+
+
+# =============================================================================
+# Complete Enterprise Sidebar
+# =============================================================================
+
+
+def enterprise_sidebar() -> None:
+    """
+    Full institutional sidebar.
+
+    Intended entry point for
+    production dashboard.
+    """
+
+    sidebar_header()
+
+
+    st.sidebar.divider()
+
+
+    scanner_status()
+
+
+    st.sidebar.divider()
+
+
+    report_information()
+
+
+    st.sidebar.divider()
+
+
+    diagnostic_panel()
+
+
+    st.sidebar.divider()
+
+
+    refresh_section()
+
+
+    st.sidebar.divider()
+
+
+    storage_information()
+
+
+    st.sidebar.divider()
+
+
+    navigation_information()
+
+
+    st.sidebar.divider()
+
+
+    application_panel()
+
+
+
+# =============================================================================
+# Public Exports
+# =============================================================================
+
+
+__all__ = [
+
+    # Configuration
+
+    "CONFIG",
+
+
+    # Helpers
+
+    "safe_file_count",
+
+    "safe_directory_size",
+
+    "latest_modified_time",
+
+    "latest_report_count",
+
+    "history_report_count",
+
+    "report_storage_summary",
+
+
+    # Components
+
+    "sidebar_metric",
+
+    "sidebar_header",
+
+    "scanner_status",
+
+    "report_information",
+
+    "storage_information",
+
+    "application_information",
+
+    "environment_information",
+
+    "navigation_information",
+
+    "refresh_section",
+
+
+    # Health
+
+    "sidebar_health",
+
+    "diagnostic_panel",
+
+
+    # Renderers
+
+    "render_sidebar",
+
+    "enterprise_sidebar",
+
+]

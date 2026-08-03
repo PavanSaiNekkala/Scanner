@@ -1,50 +1,69 @@
 """
-08_History.py
-=============
+pages/08_History.py
+===================
 
-Institutional History Dashboard.
+Institutional Scanner Monitor
 
-Provides historical portfolio analytics,
-audit trail, portfolio evolution,
-allocation history,
-historical performance,
-risk evolution,
-and execution history.
+History Dashboard
+
+Displays workflow-generated
+historical portfolio reports.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from core.config import REPORTS_DIR
-from core.helpers import first_existing
-from core.helpers import numeric_series
-from core.theme import apply_theme
+from core.logger import get_logger
+from core.session import (
+    initialize as initialize_session,
+)
+from core.theme import (
+    apply_theme,
+    inject_card_css,
+)
 
-from ui.cards import dashboard_header
-from ui.cards import summary_row
+from ui.cards import (
+    divider,
+    empty_state,
+    section,
+)
 
-from ui.sidebar import render_sidebar
+from ui.loader import (
+    ReportData,
+    load_reports,
+)
 
-from ui.tables import dataframe_info
-from ui.tables import holdings_table
+from ui.metrics import (
+    dataframe_info,
+    history_kpis,
+)
 
-from ui.loader import load_first_available_csv
+from ui.sidebar import (
+    render_sidebar,
+)
 
+from ui.tables import (
+    holdings_table,
+)
 
-# ==========================================================
+LOGGER = get_logger(__name__)
+
+# =============================================================================
 # Configuration
-# ==========================================================
+# =============================================================================
 
-@dataclass(slots=True)
+
+@dataclass(slots=True, frozen=True)
 class HistoryConfig:
+    """
+    History dashboard configuration.
+    """
 
     page_title: str = "History"
 
@@ -52,66 +71,18 @@ class HistoryConfig:
 
     layout: str = "wide"
 
-    portfolio_history: Path = (
-        REPORTS_DIR
-        / "history"
-        / "portfolio_history.csv"
-    )
+    chart_height: int = 420
 
-    holdings_history: Path = (
-        REPORTS_DIR
-        / "history"
-        / "holdings_history.csv"
-    )
+    preview_rows: int = 25
 
-    performance_history: Path = (
-        REPORTS_DIR
-        / "history"
-        / "performance_history.csv"
-    )
-
-    risk_history: Path = (
-        REPORTS_DIR
-        / "history"
-        / "risk_history.csv"
-    )
-
-    execution_history: Path = (
-        REPORTS_DIR
-        / "history"
-        / "execution_history.csv"
-    )
-
-    rebalance_history: Path = (
-        REPORTS_DIR
-        / "history"
-        / "rebalance_history.csv"
-    )
-
-    signal_history: Path = (
-        REPORTS_DIR
-        / "history"
-        / "signal_history.csv"
-    )
-
-    transaction_history: Path = (
-        REPORTS_DIR
-        / "history"
-        / "transactions.csv"
-    )
-
-    audit_history: Path = (
-        REPORTS_DIR
-        / "history"
-        / "audit_log.csv"
-    )
+    max_table_rows: int = 50
 
 
 CONFIG = HistoryConfig()
 
-# ==========================================================
-# Page
-# ==========================================================
+# =============================================================================
+# Streamlit Configuration
+# =============================================================================
 
 st.set_page_config(
 
@@ -125,2270 +96,213 @@ st.set_page_config(
 
 apply_theme()
 
+inject_card_css()
+
 render_sidebar()
 
-dashboard_header()
+initialize_session()
 
-st.title(
-    "📚 Historical Analytics Dashboard"
-)
-
-st.caption(
-    "Institutional historical analytics, audit trail and portfolio evolution."
-)
+# =============================================================================
+# Report Loading
+# =============================================================================
 
 
-# ==========================================================
-# Load Historical Data
-# ==========================================================
+@st.cache_data(show_spinner=False)
+def get_reports() -> ReportData:
+    """
+    Load workflow-generated reports.
+    """
 
-portfolio = load_first_available_csv(
-    CONFIG.portfolio_history,
-)
+    return load_reports()
 
-holdings = load_first_available_csv(
-    CONFIG.holdings_history,
-)
 
-performance = load_first_available_csv(
-    CONFIG.performance_history,
-)
+try:
 
-risk = load_first_available_csv(
-    CONFIG.risk_history,
-)
+    reports = get_reports()
 
-execution = load_first_available_csv(
-    CONFIG.execution_history,
-)
+    latest = reports.latest
 
-rebalance = load_first_available_csv(
-    CONFIG.rebalance_history,
-)
+    history = reports.history
 
-signals = load_first_available_csv(
-    CONFIG.signal_history,
-)
+except Exception:
 
-transactions = load_first_available_csv(
-    CONFIG.transaction_history,
-)
+    LOGGER.exception(
+        "Unable to load history reports."
+    )
 
-audit = load_first_available_csv(
-    CONFIG.audit_history,
-)
-
-# ==========================================================
-# Validation
-# ==========================================================
-
-datasets = [
-
-    portfolio,
-
-    holdings,
-
-    performance,
-
-    risk,
-
-    execution,
-
-    rebalance,
-
-    signals,
-
-    transactions,
-
-]
-
-if all(
-
-    df.empty
-
-    for df in datasets
-
-):
-
-    st.warning(
-
-        "Historical datasets are not available."
-
+    st.error(
+        "Unable to load history reports."
     )
 
     st.stop()
 
-# ==========================================================
-# Column Detection
-# ==========================================================
+# =============================================================================
+# Validation
+# =============================================================================
 
-date_col = first_existing(
 
-    performance,
+def validate_reports(
+    reports: ReportData,
+) -> bool:
+    """
+    Validate required history reports.
+    """
 
-    "Date",
+    required = {
 
-    "Timestamp",
+        "Portfolio History":
 
-)
+            history.get(
+                "portfolio_history",
+                pd.DataFrame(),
+            ),
 
-symbol_col = first_existing(
 
-    holdings,
+        "Performance History":
 
-    "Symbol",
+            history.get(
+                "performance_history",
+                pd.DataFrame(),
+            ),
 
-    "Ticker",
+    }
 
-    "Stock",
+    missing = [
 
-)
+        report
 
-sector_col = first_existing(
+        for report, dataframe
 
-    holdings,
+        in required.items()
 
-    "Sector",
-
-)
-
-return_col = first_existing(
-
-    performance,
-
-    "Return",
-
-    "Daily Return",
-
-)
-
-portfolio_value_col = first_existing(
-
-    performance,
-
-    "Portfolio Value",
-
-    "Equity",
-
-    "NAV",
-
-)
-
-risk_col = first_existing(
-
-    risk,
-
-    "Risk Score",
-
-    "Portfolio Health",
-
-)
-
-# ==========================================================
-# Executive KPIs
-# ==========================================================
-
-history_records = sum(
-
-    len(df)
-
-    for df in datasets
-
-)
-
-date_range = 0
-
-if (
-
-    date_col
-
-    and
-
-    not performance.empty
-
-):
-
-    performance[date_col] = pd.to_datetime(
-
-        performance[date_col],
-
-        errors="coerce",
-
-    )
-
-    date_range = (
-
-        performance[date_col].max()
-
-        -
-
-        performance[date_col].min()
-
-    ).days
-
-portfolio_records = len(portfolio)
-
-performance_records = len(performance)
-
-risk_records = len(risk)
-
-summary_row(
-
-    [
-
-        (
-
-            "Historical Records",
-
-            history_records,
-
-            None,
-
-        ),
-
-        (
-
-            "Tracking Days",
-
-            date_range,
-
-            None,
-
-        ),
-
-        (
-
-            "Performance Records",
-
-            performance_records,
-
-            None,
-
-        ),
-
-        (
-
-            "Risk Records",
-
-            risk_records,
-
-            None,
-
-        ),
+        if dataframe.empty
 
     ]
 
-)
+    if not missing:
 
-# ==========================================================
-# Executive Summary
-# ==========================================================
+        return True
 
-st.divider()
+    empty_state(
 
-st.header(
-    "Historical Summary",
-)
+        "History Reports Missing",
 
-coverage_score = 100
+        (
+            "The following reports "
+            "are unavailable:\n\n"
 
-missing_data = sum(
+            + "\n".join(
+                f"• {report}"
+                for report in missing
+            )
 
-    df.isna().sum().sum()
+            + "\n\nRun the workflow "
+              "to regenerate reports."
 
-    for df in datasets
-
-)
-
-coverage_score -= min(
-
-    missing_data,
-
-    50,
-
-)
-
-coverage_score = max(
-
-    coverage_score,
-
-    0,
-
-)
-
-left, right = st.columns(
-    [2, 1]
-)
-
-with left:
-
-    summary_row(
-
-        [
-
-            (
-
-                "Portfolio History",
-
-                portfolio_records,
-
-                None,
-
-            ),
-
-            (
-
-                "Transactions",
-
-                len(transactions),
-
-                None,
-
-            ),
-
-            (
-
-                "Signals",
-
-                len(signals),
-
-                None,
-
-            ),
-
-            (
-
-                "Coverage",
-
-                f"{coverage_score:.0f}%",
-
-                None,
-
-            ),
-
-        ]
+        ),
 
     )
 
-with right:
+    return False
 
-    if coverage_score >= 90:
 
-        rating = "EXCELLENT"
+if not validate_reports(
+    reports,
+):
 
-        color = "#16A34A"
+    st.stop()
 
-    elif coverage_score >= 75:
+# =============================================================================
+# Working Reports
+# =============================================================================
 
-        rating = "GOOD"
+portfolio_history = history.get(
+    "portfolio_history",
+    pd.DataFrame(),
+)
 
-        color = "#65A30D"
+holdings_history = history.get(
+    "holdings_history",
+    pd.DataFrame(),
+)
 
-    elif coverage_score >= 60:
+performance_history = history.get(
+    "performance_history",
+    pd.DataFrame(),
+)
 
-        rating = "AVERAGE"
+risk_history = history.get(
+    "risk_history",
+    pd.DataFrame(),
+)
 
-        color = "#F59E0B"
+execution_history = history.get(
+    "execution_history",
+    pd.DataFrame(),
+)
 
-    else:
+rebalance_history = history.get(
+    "rebalance_history",
+    pd.DataFrame(),
+)
 
-        rating = "POOR"
+transaction_history = history.get(
+    "transaction_history",
+    pd.DataFrame(),
+)
 
-        color = "#DC2626"
+signal_history = history.get(
+    "signal_history",
+    pd.DataFrame(),
+)
 
-    st.markdown(
+audit_history = history.get(
+    "audit_history",
+    pd.DataFrame(),
+)
 
-        f"""
-<div style="
-background:{color};
-padding:24px;
-border-radius:14px;
-text-align:center;
-color:white;
-">
+# =============================================================================
+# Page Header
+# =============================================================================
 
-<h3>
+section(
 
-History Quality
-
-</h3>
-
-<h1>
-
-{rating}
-
-</h1>
-
-<h2>
-
-{coverage_score:.0f}
-
-</h2>
-
-</div>
-""",
-
-        unsafe_allow_html=True,
-
-    )
-
-# ==========================================================
-# Historical Analytics
-# ==========================================================
-
-st.divider()
-
-st.header(
     "Historical Analytics",
-)
-
-# ----------------------------------------------------------
-# Date Filter
-# ----------------------------------------------------------
-
-if (
-
-    date_col
-
-    and
-
-    not performance.empty
-
-):
-
-    history = performance.copy()
-
-    history[date_col] = pd.to_datetime(
-
-        history[date_col],
-
-        errors="coerce",
-
-    )
-
-    history = history.dropna(
-
-        subset=[date_col]
-
-    )
-
-    min_date = history[date_col].min()
-
-    max_date = history[date_col].max()
-
-    selected_range = st.date_input(
-
-        "Select Date Range",
-
-        value=(
-
-            min_date.date(),
-
-            max_date.date(),
-
-        ),
-
-    )
-
-    if (
-
-        isinstance(
-
-            selected_range,
-
-            tuple,
-
-        )
-
-        and
-
-        len(selected_range) == 2
-
-    ):
-
-        start_date, end_date = selected_range
-
-        history = history.loc[
-
-            (
-
-                history[date_col]
-
-                >= pd.Timestamp(start_date)
-
-            )
-
-            &
-
-            (
-
-                history[date_col]
-
-                <= pd.Timestamp(end_date)
-
-            )
-
-        ]
-
-else:
-
-    history = performance.copy()
-
-# ----------------------------------------------------------
-# Historical Equity Curve
-# ----------------------------------------------------------
-
-st.divider()
-
-st.header(
-    "Historical Equity Curve",
-)
-
-if (
-
-    not history.empty
-
-    and
-
-    portfolio_value_col
-
-):
-
-    fig = px.line(
-
-        history,
-
-        x=date_col,
-
-        y=portfolio_value_col,
-
-        markers=True,
-
-    )
-
-    fig.update_layout(
-
-        height=450,
-
-        xaxis_title="",
-
-        yaxis_title="Portfolio Value",
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-else:
-
-    st.info(
-
-        "Portfolio value history unavailable."
-
-    )
-
-# ----------------------------------------------------------
-# Portfolio Timeline
-# ----------------------------------------------------------
-
-st.divider()
-
-st.header(
-    "Portfolio Timeline",
-)
-
-if (
-
-    not history.empty
-
-    and
-
-    portfolio_value_col
-
-):
-
-    summary_row(
-
-        [
-
-            (
-
-                "Starting Value",
-
-                f"{history[portfolio_value_col].iloc[0]:,.2f}",
-
-                None,
-
-            ),
-
-            (
-
-                "Latest Value",
-
-                f"{history[portfolio_value_col].iloc[-1]:,.2f}",
-
-                None,
-
-            ),
-
-            (
-
-                "Highest Value",
-
-                f"{history[portfolio_value_col].max():,.2f}",
-
-                None,
-
-            ),
-
-            (
-
-                "Lowest Value",
-
-                f"{history[portfolio_value_col].min():,.2f}",
-
-                None,
-
-            ),
-
-        ]
-
-    )
-
-# ----------------------------------------------------------
-# Historical Performance
-# ----------------------------------------------------------
-
-st.divider()
-
-st.header(
-    "Performance Timeline",
-)
-
-if (
-
-    not history.empty
-
-    and
-
-    return_col
-
-):
-
-    fig = px.bar(
-
-        history,
-
-        x=date_col,
-
-        y=return_col,
-
-        color=return_col,
-
-    )
-
-    fig.update_layout(
-
-        height=420,
-
-        xaxis_title="",
-
-        coloraxis_showscale=False,
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ----------------------------------------------------------
-# Cumulative Return
-# ----------------------------------------------------------
-
-if (
-
-    not history.empty
-
-    and
-
-    return_col
-
-):
-
-    cumulative = history.copy()
-
-    cumulative["Cumulative Return"] = (
-
-        (
-
-            1
-
-            +
-
-            cumulative[return_col]
-
-            / 100
-
-        )
-
-        .cumprod()
-
-        - 1
-
-    ) * 100
-
-    fig = px.area(
-
-        cumulative,
-
-        x=date_col,
-
-        y="Cumulative Return",
-
-    )
-
-    fig.update_layout(
-
-        height=420,
-
-        xaxis_title="",
-
-        yaxis_title="Cumulative Return (%)",
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ----------------------------------------------------------
-# Historical Risk Evolution
-# ----------------------------------------------------------
-
-st.divider()
-
-st.header(
-    "Risk Evolution",
-)
-
-if (
-
-    not risk.empty
-
-    and
-
-    risk_col
-
-):
-
-    risk_date = first_existing(
-
-        risk,
-
-        "Date",
-
-        "Timestamp",
-
-    )
-
-    if risk_date:
-
-        risk[risk_date] = pd.to_datetime(
-
-            risk[risk_date],
-
-            errors="coerce",
-
-        )
-
-        fig = px.line(
-
-            risk,
-
-            x=risk_date,
-
-            y=risk_col,
-
-            markers=True,
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            xaxis_title="",
-
-            yaxis_title="Risk Score",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ----------------------------------------------------------
-# Historical Holdings
-# ----------------------------------------------------------
-
-st.divider()
-
-st.header(
-    "Historical Holdings",
-)
-
-if holdings.empty:
-
-    st.info(
-
-        "Historical holdings unavailable."
-
-    )
-
-else:
-
-    holdings_table(
-
-        holdings,
-
-    )
-
-# ----------------------------------------------------------
-# Sector Evolution
-# ----------------------------------------------------------
-
-st.divider()
-
-st.header(
-    "Sector Evolution",
-)
-
-if (
-
-    sector_col
-
-    and
-
-    not holdings.empty
-
-):
-
-    sector_count = (
-
-        holdings
-
-        .groupby(
-
-            sector_col
-
-        )
-
-        .size()
-
-        .reset_index(
-
-            name="Holdings"
-
-        )
-
-        .sort_values(
-
-            "Holdings",
-
-            ascending=False,
-
-        )
-
-    )
-
-    left, right = st.columns(
-
-        [
-
-            1,
-
-            2,
-
-        ]
-
-    )
-
-    with left:
-
-        holdings_table(
-
-            sector_count,
-
-        )
-
-    with right:
-
-        fig = px.bar(
-
-            sector_count,
-
-            x=sector_col,
-
-            y="Holdings",
-
-            color="Holdings",
-
-            text="Holdings",
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            coloraxis_showscale=False,
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ----------------------------------------------------------
-# Allocation History
-# ----------------------------------------------------------
-
-st.divider()
-
-st.header(
-    "Allocation History",
-)
-
-weight_col = first_existing(
-
-    holdings,
-
-    "Weight",
-
-    "Portfolio Weight",
-
-)
-
-if (
-
-    weight_col
-
-    and
-
-    sector_col
-
-):
-
-    allocation = (
-
-        holdings
-
-        .groupby(
-
-            sector_col
-
-        )[
-
-            weight_col
-
-        ]
-
-        .sum()
-
-        .reset_index()
-
-        .sort_values(
-
-            weight_col,
-
-            ascending=False,
-
-        )
-
-    )
-
-    left, right = st.columns(
-
-        [
-
-            1,
-
-            2,
-
-        ]
-
-    )
-
-    with left:
-
-        holdings_table(
-
-            allocation,
-
-        )
-
-    with right:
-
-        fig = px.treemap(
-
-            allocation,
-
-            path=[
-
-                sector_col,
-
-            ],
-
-            values=weight_col,
-
-            color=weight_col,
-
-        )
-
-        fig.update_layout(
-
-            height=450,
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ==========================================================
-# Rolling Performance
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Rolling Performance Analytics",
-)
-
-if (
-
-    not history.empty
-
-    and
-
-    return_col
-
-):
-
-    rolling = history.copy()
-
-    rolling["20D Rolling Return"] = (
-
-        (
-
-            1
-
-            +
-
-            rolling[return_col]
-
-            / 100
-
-        )
-
-        .rolling(20)
-
-        .apply(
-
-            np.prod,
-
-            raw=True,
-
-        )
-
-        - 1
-
-    ) * 100
-
-    rolling["20D Volatility"] = (
-
-        rolling[return_col]
-
-        .rolling(20)
-
-        .std()
-
-    )
-
-    left, right = st.columns(
-        2
-    )
-
-    with left:
-
-        fig = px.line(
-
-            rolling,
-
-            x=date_col,
-
-            y="20D Rolling Return",
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            xaxis_title="",
-
-            yaxis_title="Rolling Return (%)",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-    with right:
-
-        fig = px.line(
-
-            rolling,
-
-            x=date_col,
-
-            y="20D Volatility",
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            xaxis_title="",
-
-            yaxis_title="Rolling Volatility",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ==========================================================
-# Drawdown History
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Drawdown History",
-)
-
-if (
-
-    portfolio_value_col
-
-    and
-
-    not history.empty
-
-):
-
-    drawdown = history.copy()
-
-    drawdown["Running Max"] = (
-
-        drawdown[portfolio_value_col]
-
-        .cummax()
-
-    )
-
-    drawdown["Drawdown"] = (
-
-        drawdown[portfolio_value_col]
-
-        /
-
-        drawdown["Running Max"]
-
-        - 1
-
-    ) * 100
-
-    left, right = st.columns(
-        [2, 1]
-    )
-
-    with left:
-
-        fig = px.area(
-
-            drawdown,
-
-            x=date_col,
-
-            y="Drawdown",
-
-        )
-
-        fig.update_layout(
-
-            height=430,
-
-            xaxis_title="",
-
-            yaxis_title="Drawdown (%)",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-    with right:
-
-        summary_row(
-
-            [
-
-                (
-
-                    "Current",
-
-                    f"{drawdown['Drawdown'].iloc[-1]:.2f}%",
-
-                    None,
-
-                ),
-
-                (
-
-                    "Maximum",
-
-                    f"{drawdown['Drawdown'].min():.2f}%",
-
-                    None,
-
-                ),
-
-                (
-
-                    "Average",
-
-                    f"{drawdown['Drawdown'].mean():.2f}%",
-
-                    None,
-
-                ),
-
-                (
-
-                    "Median",
-
-                    f"{drawdown['Drawdown'].median():.2f}%",
-
-                    None,
-
-                ),
-
-            ]
-
-        )
-
-# ==========================================================
-# Transaction Timeline
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Transaction Timeline",
-)
-
-if not transactions.empty:
-
-    transaction_date = first_existing(
-
-        transactions,
-
-        "Date",
-
-        "Timestamp",
-
-    )
-
-    transaction_amount = first_existing(
-
-        transactions,
-
-        "Amount",
-
-        "Value",
-
-        "Trade Value",
-
-    )
-
-    if (
-
-        transaction_date
-
-        and
-
-        transaction_amount
-
-    ):
-
-        transactions[transaction_date] = pd.to_datetime(
-
-            transactions[transaction_date],
-
-            errors="coerce",
-
-        )
-
-        daily_transactions = (
-
-            transactions
-
-            .groupby(
-
-                transaction_date
-
-            )[
-
-                transaction_amount
-
-            ]
-
-            .sum()
-
-            .reset_index()
-
-        )
-
-        fig = px.bar(
-
-            daily_transactions,
-
-            x=transaction_date,
-
-            y=transaction_amount,
-
-        )
-
-        fig.update_layout(
-
-            height=430,
-
-            xaxis_title="",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ==========================================================
-# Rebalance History
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Historical Rebalances",
-)
-
-if rebalance.empty:
-
-    st.info(
-
-        "No rebalance history available."
-
-    )
-
-else:
-
-    holdings_table(
-
-        rebalance,
-
-    )
-
-# ==========================================================
-# Signal Timeline
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Signal Timeline",
-)
-
-if not signals.empty:
-
-    signal_date = first_existing(
-
-        signals,
-
-        "Date",
-
-        "Timestamp",
-
-    )
-
-    if signal_date:
-
-        signals[signal_date] = pd.to_datetime(
-
-            signals[signal_date],
-
-            errors="coerce",
-
-        )
-
-        signal_counts = (
-
-            signals
-
-            .groupby(
-
-                signal_date
-
-            )
-
-            .size()
-
-            .reset_index(
-
-                name="Signals"
-
-            )
-
-        )
-
-        fig = px.line(
-
-            signal_counts,
-
-            x=signal_date,
-
-            y="Signals",
-
-            markers=True,
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            xaxis_title="",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ==========================================================
-# Historical Attribution
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Historical Attribution",
-)
-
-if (
-
-    sector_col
-
-    and
-
-    weight_col
-
-    and
-
-    not holdings.empty
-
-):
-
-    contribution_col = first_existing(
-
-        holdings,
-
-        "Contribution",
-
-        "Return Contribution",
-
-    )
-
-    if contribution_col:
-
-        attribution = (
-
-            holdings
-
-            .groupby(
-
-                sector_col
-
-            )[
-
-                contribution_col
-
-            ]
-
-            .sum()
-
-            .reset_index()
-
-            .sort_values(
-
-                contribution_col,
-
-                ascending=False,
-
-            )
-
-        )
-
-        fig = go.Figure(
-
-            go.Waterfall(
-
-                x=attribution[sector_col],
-
-                y=attribution[contribution_col],
-
-                measure=[
-
-                    "relative"
-
-                ]
-
-                * len(attribution),
-
-            )
-
-        )
-
-        fig.update_layout(
-
-            height=430,
-
-            showlegend=False,
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-        holdings_table(
-
-            attribution,
-
-        )
-
-# ==========================================================
-# Monthly Calendar Heatmap
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Monthly Return Heatmap",
-)
-
-if (
-
-    not history.empty
-
-    and
-
-    return_col
-
-):
-
-    calendar = history.copy()
-
-    calendar["Year"] = calendar[date_col].dt.year
-
-    calendar["Month"] = calendar[date_col].dt.strftime("%b")
-
-    monthly = (
-
-        calendar
-
-        .groupby(
-
-            [
-
-                "Year",
-
-                "Month",
-
-            ]
-
-        )[
-
-            return_col
-
-        ]
-
-        .sum()
-
-        .reset_index()
-
-    )
-
-    heatmap = monthly.pivot(
-
-        index="Year",
-
-        columns="Month",
-
-        values=return_col,
-
-    )
-
-    fig = px.imshow(
-
-        heatmap,
-
-        text_auto=".1f",
-
-        aspect="auto",
-
-    )
-
-    fig.update_layout(
-
-        height=450,
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Audit Trail
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Audit Trail",
-)
-
-if audit.empty:
-
-    st.info(
-        "Audit history is unavailable."
-    )
-
-else:
-
-    audit_date_col = first_existing(
-        audit,
-        "Timestamp",
-        "Date",
-        "Created At",
-    )
-
-    audit_user_col = first_existing(
-        audit,
-        "User",
-        "Modified By",
-        "Owner",
-    )
-
-    audit_module_col = first_existing(
-        audit,
-        "Module",
-        "Component",
-    )
-
-    audit_action_col = first_existing(
-        audit,
-        "Action",
-        "Operation",
-    )
-
-    audit_status_col = first_existing(
-        audit,
-        "Status",
-    )
-
-    display_audit = audit.copy()
-
-    search = st.text_input(
-        "Search Audit Log",
-        key="audit_search",
-    )
-
-    if search:
-
-        mask = pd.Series(
-            False,
-            index=display_audit.index,
-        )
-
-        for column in display_audit.columns:
-
-            mask |= (
-
-                display_audit[column]
-
-                .astype(str)
-
-                .str.contains(
-
-                    search,
-
-                    case=False,
-
-                    na=False,
-
-                )
-
-            )
-
-        display_audit = display_audit.loc[mask]
-
-    holdings_table(
-        display_audit,
-    )
-
-# ==========================================================
-# Change Log Summary
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Change Log Summary",
-)
-
-if (
-
-    not audit.empty
-
-    and
-
-    audit_action_col
-
-):
-
-    action_summary = (
-
-        audit
-
-        .groupby(
-
-            audit_action_col
-
-        )
-
-        .size()
-
-        .reset_index(
-
-            name="Count"
-
-        )
-
-        .sort_values(
-
-            "Count",
-
-            ascending=False,
-
-        )
-
-    )
-
-    left, right = st.columns(
-        [1, 2]
-    )
-
-    with left:
-
-        holdings_table(
-            action_summary,
-        )
-
-    with right:
-
-        fig = px.bar(
-
-            action_summary,
-
-            x=audit_action_col,
-
-            y="Count",
-
-            color="Count",
-
-            text="Count",
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            coloraxis_showscale=False,
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ==========================================================
-# Historical Diagnostics
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Historical Diagnostics",
-)
-
-diagnostics = pd.DataFrame(
-
-    [
-
-        (
-
-            "Portfolio Records",
-
-            len(portfolio),
-
-        ),
-
-        (
-
-            "Holdings Records",
-
-            len(holdings),
-
-        ),
-
-        (
-
-            "Performance Records",
-
-            len(performance),
-
-        ),
-
-        (
-
-            "Risk Records",
-
-            len(risk),
-
-        ),
-
-        (
-
-            "Execution Records",
-
-            len(execution),
-
-        ),
-
-        (
-
-            "Rebalance Records",
-
-            len(rebalance),
-
-        ),
-
-        (
-
-            "Transaction Records",
-
-            len(transactions),
-
-        ),
-
-        (
-
-            "Audit Records",
-
-            len(audit),
-
-        ),
-
-        (
-
-            "Signal Records",
-
-            len(signals),
-
-        ),
-
-        (
-
-            "Tracking Days",
-
-            date_range,
-
-        ),
-
-    ],
-
-    columns=[
-
-        "Metric",
-
-        "Value",
-
-    ],
-
-)
-
-left, right = st.columns(
-    [1, 2]
-)
-
-with left:
-
-    holdings_table(
-        diagnostics,
-    )
-
-with right:
-
-    dataframe_info(
-        performance,
-    )
-
-# ==========================================================
-# Historical Data Quality
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Data Quality",
-)
-
-quality = pd.DataFrame(
-
-    [
-
-        (
-
-            "Missing Values",
-
-            sum(
-
-                df.isna().sum().sum()
-
-                for df in datasets
-
-            ),
-
-        ),
-
-        (
-
-            "Duplicate Holdings",
-
-            holdings.duplicated().sum(),
-
-        ),
-
-        (
-
-            "Duplicate Transactions",
-
-            transactions.duplicated().sum(),
-
-        ),
-
-        (
-
-            "Duplicate Signals",
-
-            signals.duplicated().sum(),
-
-        ),
-
-        (
-
-            "Duplicate Audit Records",
-
-            audit.duplicated().sum(),
-
-        ),
-
-    ],
-
-    columns=[
-
-        "Metric",
-
-        "Value",
-
-    ],
-
-)
-
-holdings_table(
-    quality,
-)
-
-# ==========================================================
-# Download Center
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Historical Downloads",
-)
-
-downloads = [
 
     (
-
-        "Portfolio History",
-
-        CONFIG.portfolio_history,
-
-        "portfolio_history.csv",
-
+        "Executive overview of the "
+        "workflow-generated "
+        "historical reports."
     ),
 
-    (
-
-        "Performance History",
-
-        CONFIG.performance_history,
-
-        "performance_history.csv",
-
-    ),
-
-    (
-
-        "Risk History",
-
-        CONFIG.risk_history,
-
-        "risk_history.csv",
-
-    ),
-
-    (
-
-        "Execution History",
-
-        CONFIG.execution_history,
-
-        "execution_history.csv",
-
-    ),
-
-    (
-
-        "Transaction History",
-
-        CONFIG.transaction_history,
-
-        "transactions.csv",
-
-    ),
-
-    (
-
-        "Audit Log",
-
-        CONFIG.audit_history,
-
-        "audit_log.csv",
-
-    ),
-
-    (
-
-        "Signal History",
-
-        CONFIG.signal_history,
-
-        "signal_history.csv",
-
-    ),
-
-    (
-
-        "Rebalance History",
-
-        CONFIG.rebalance_history,
-
-        "rebalance_history.csv",
-
-    ),
-
-]
-
-for label, path, filename in downloads:
-
-    if path.exists():
-
-        with open(
-
-            path,
-
-            "rb",
-
-        ) as file:
-
-            st.download_button(
-
-                label=f"Download {label}",
-
-                data=file,
-
-                file_name=filename,
-
-                mime="text/csv",
-
-            )
-
-# ==========================================================
-# Executive Insights
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Historical Insights",
 )
 
-insights = []
+history_kpis(
 
-if date_range >= 365:
+    portfolio_history=portfolio_history,
 
-    insights.append(
-        "More than one year of historical data is available for long-term trend analysis."
-    )
+    performance_history=performance_history,
 
-if len(transactions) > 1000:
+    risk_history=risk_history,
 
-    insights.append(
-        "High trading activity detected across the historical period."
-    )
+)
 
-if len(rebalance) > 0:
+divider()
 
-    insights.append(
-        "Portfolio rebalancing history is available for allocation analysis."
-    )
+# =============================================================================
+# Executive Historical Summary
+# =============================================================================
 
-if coverage_score >= 90:
+section(
 
-    insights.append(
-        "Historical data coverage is excellent."
-    )
+    "Historical Summary",
 
-elif coverage_score >= 75:
+    (
+        "Summary of historical "
+        "portfolio reports generated "
+        "by the workflow."
+    ),
 
-    insights.append(
-        "Historical data coverage is good with limited missing information."
-    )
-
-else:
-
-    insights.append(
-        "Historical data quality should be improved before performing advanced analytics."
-    )
-
-if len(audit):
-
-    insights.append(
-        "Audit trail is available for governance and compliance reviews."
-    )
-
-for message in insights:
-
-    st.info(
-        message,
-    )
-
-# ==========================================================
-# Executive Summary
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Executive Summary",
 )
 
 summary = pd.DataFrame(
@@ -2397,33 +311,33 @@ summary = pd.DataFrame(
 
         (
 
-            "History Rating",
+            "Portfolio History",
 
-            rating,
-
-        ),
-
-        (
-
-            "Coverage Score",
-
-            f"{coverage_score:.0f}%",
+            len(portfolio_history),
 
         ),
 
         (
 
-            "Historical Records",
+            "Performance History",
 
-            history_records,
+            len(performance_history),
 
         ),
 
         (
 
-            "Tracking Period (Days)",
+            "Risk History",
 
-            date_range,
+            len(risk_history),
+
+        ),
+
+        (
+
+            "Execution History",
+
+            len(execution_history),
 
         ),
 
@@ -2431,7 +345,7 @@ summary = pd.DataFrame(
 
             "Transactions",
 
-            len(transactions),
+            len(transaction_history),
 
         ),
 
@@ -2439,7 +353,7 @@ summary = pd.DataFrame(
 
             "Signals",
 
-            len(signals),
+            len(signal_history),
 
         ),
 
@@ -2447,7 +361,7 @@ summary = pd.DataFrame(
 
             "Audit Records",
 
-            len(audit),
+            len(audit_history),
 
         ),
 
@@ -2455,28 +369,1148 @@ summary = pd.DataFrame(
 
     columns=[
 
-        "Metric",
+        "Report",
 
-        "Value",
+        "Records",
 
     ],
 
 )
 
 holdings_table(
+
+    summary,
+
+    key="history_summary",
+
+)
+
+dataframe_info(
     summary,
 )
 
-# ==========================================================
-# Footer
-# ==========================================================
+divider()
 
-st.divider()
+# =============================================================================
+# Historical Overview
+# =============================================================================
+
+section(
+
+    "Historical Overview",
+
+    (
+        "Timeline view of workflow-"
+        "generated historical reports."
+    ),
+
+)
+
+# =============================================================================
+# Date Filter
+# =============================================================================
+
+date_column = None
+
+for dataframe in (
+
+    portfolio_history,
+
+    performance_history,
+
+    risk_history,
+
+    execution_history,
+
+):
+
+    if dataframe.empty:
+
+        continue
+
+    for column in (
+
+        "Date",
+
+        "Trade Date",
+
+        "Timestamp",
+
+        "Scan Date",
+
+    ):
+
+        if column in dataframe.columns:
+
+            date_column = column
+
+            break
+
+    if date_column:
+
+        break
+
+start_date = None
+
+end_date = None
+
+if (
+
+    date_column
+
+    and
+
+    not portfolio_history.empty
+
+):
+
+    dates = pd.to_datetime(
+
+        portfolio_history[
+            date_column
+        ],
+
+        errors="coerce",
+
+    ).dropna()
+
+    if not dates.empty:
+
+        start_date = dates.min()
+
+        end_date = dates.max()
+
+        selected_dates = st.date_input(
+
+            "Date Range",
+
+            value=(
+
+                start_date,
+
+                end_date,
+
+            ),
+
+        )
+
+divider()
+
+# =============================================================================
+# Portfolio Timeline
+# =============================================================================
+
+section(
+
+    "Portfolio Timeline",
+
+    (
+        "Historical portfolio "
+        "records."
+    ),
+
+)
+
+if (
+
+    not portfolio_history.empty
+
+):
+
+    value_column = None
+
+    for column in (
+
+        "Portfolio Value",
+
+        "Net Value",
+
+        "Current Value",
+
+    ):
+
+        if column in portfolio_history.columns:
+
+            value_column = column
+
+            break
+
+    if (
+
+        date_column
+
+        and
+
+        value_column
+
+    ):
+
+        figure = px.line(
+
+            portfolio_history,
+
+            x=date_column,
+
+            y=value_column,
+
+            markers=True,
+
+        )
+
+        figure.update_layout(
+
+            height=CONFIG.chart_height,
+
+            xaxis_title="",
+
+            yaxis_title=value_column,
+
+        )
+
+        st.plotly_chart(
+
+            figure,
+
+            use_container_width=True,
+
+        )
+
+    else:
+
+        holdings_table(
+
+            portfolio_history,
+
+            key="portfolio_history",
+
+        )
+
+else:
+
+    st.info(
+        "Portfolio history "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Performance Timeline
+# =============================================================================
+
+section(
+
+    "Performance Timeline",
+
+    (
+        "Historical performance "
+        "records."
+    ),
+
+)
+
+if performance_history.empty:
+
+    st.info(
+        "Performance history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        performance_history,
+
+        key="performance_history",
+
+    )
+
+divider()
+
+# =============================================================================
+# Risk Timeline
+# =============================================================================
+
+section(
+
+    "Risk Timeline",
+
+    (
+        "Historical risk reports."
+    ),
+
+)
+
+if risk_history.empty:
+
+    st.info(
+        "Risk history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        risk_history,
+
+        key="risk_history",
+
+    )
+
+divider()
+
+# =============================================================================
+# Execution Timeline
+# =============================================================================
+
+section(
+
+    "Execution Timeline",
+
+    (
+        "Historical execution "
+        "records."
+    ),
+
+)
+
+if execution_history.empty:
+
+    st.info(
+        "Execution history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        execution_history,
+
+        key="execution_history",
+
+    )
+
+divider()
+
+# =============================================================================
+# Holdings History
+# =============================================================================
+
+section(
+
+    "Holdings History",
+
+    (
+        "Historical portfolio "
+        "holdings."
+    ),
+
+)
+
+if holdings_history.empty:
+
+    st.info(
+        "Holdings history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        holdings_history,
+
+        key="holdings_history",
+
+    )
+
+    dataframe_info(
+
+        holdings_history,
+
+    )
+
+divider()
+
+# =============================================================================
+# Sector Evolution
+# =============================================================================
+
+section(
+
+    "Sector Evolution",
+
+    (
+        "Historical sector allocation "
+        "from workflow-generated reports."
+    ),
+
+)
+
+sector_column = None
+
+for column in (
+
+    "Sector",
+
+    "Sector Name",
+
+):
+
+    if column in holdings_history.columns:
+
+        sector_column = column
+
+        break
+
+weight_column = None
+
+for column in (
+
+    "Portfolio Weight",
+
+    "Weight",
+
+    "Weight (%)",
+
+):
+
+    if column in holdings_history.columns:
+
+        weight_column = column
+
+        break
+
+if (
+
+    not holdings_history.empty
+
+    and
+
+    sector_column
+
+    and
+
+    weight_column
+
+):
+
+    sector_history = (
+
+        holdings_history
+
+        .groupby(
+
+            sector_column,
+
+            dropna=False,
+
+        )[
+
+            weight_column
+
+        ]
+
+        .sum()
+
+        .reset_index()
+
+        .sort_values(
+
+            weight_column,
+
+            ascending=False,
+
+        )
+
+    )
+
+    left, right = st.columns(
+        [2, 1],
+    )
+
+    with left:
+
+        figure = px.bar(
+
+            sector_history,
+
+            x=sector_column,
+
+            y=weight_column,
+
+            color=weight_column,
+
+            text=weight_column,
+
+        )
+
+        figure.update_layout(
+
+            height=CONFIG.chart_height,
+
+            coloraxis_showscale=False,
+
+        )
+
+        st.plotly_chart(
+
+            figure,
+
+            use_container_width=True,
+
+        )
+
+    with right:
+
+        st.dataframe(
+
+            sector_history,
+
+            use_container_width=True,
+
+            hide_index=True,
+
+        )
+
+else:
+
+    st.info(
+        "Sector history "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Allocation History
+# =============================================================================
+
+section(
+
+    "Allocation History",
+
+    (
+        "Historical portfolio "
+        "allocation."
+    ),
+
+)
+
+if holdings_history.empty:
+
+    st.info(
+        "Allocation history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        holdings_history,
+
+        key="allocation_history",
+
+    )
+
+divider()
+
+# =============================================================================
+# Transaction History
+# =============================================================================
+
+section(
+
+    "Transaction History",
+
+    (
+        "Historical portfolio "
+        "transactions."
+    ),
+
+)
+
+if transaction_history.empty:
+
+    st.info(
+        "Transaction history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        transaction_history,
+
+        key="transaction_history",
+
+    )
+
+    dataframe_info(
+        transaction_history,
+    )
+
+divider()
+
+# =============================================================================
+# Signal History
+# =============================================================================
+
+section(
+
+    "Signal History",
+
+    (
+        "Historical scanner "
+        "signals."
+    ),
+
+)
+
+if signal_history.empty:
+
+    st.info(
+        "Signal history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        signal_history,
+
+        key="signal_history",
+
+    )
+
+divider()
+
+# =============================================================================
+# Rebalance History
+# =============================================================================
+
+section(
+
+    "Rebalance History",
+
+    (
+        "Historical portfolio "
+        "rebalancing activity."
+    ),
+
+)
+
+if rebalance_history.empty:
+
+    st.info(
+        "Rebalance history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        rebalance_history,
+
+        key="rebalance_history",
+
+    )
+
+divider()
+
+# =============================================================================
+# Audit Trail
+# =============================================================================
+
+section(
+
+    "Audit Trail",
+
+    (
+        "Workflow audit "
+        "history."
+    ),
+
+)
+
+if audit_history.empty:
+
+    st.info(
+        "Audit trail "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        audit_history,
+
+        key="audit_history",
+
+    )
+
+    dataframe_info(
+        audit_history,
+    )
+
+divider()
+
+# =============================================================================
+# Historical Diagnostics
+# =============================================================================
+
+section(
+
+    "Historical Diagnostics",
+
+    (
+        "Health and completeness of "
+        "workflow-generated historical "
+        "reports."
+    ),
+
+)
+
+diagnostics = pd.DataFrame(
+
+    [
+
+        {
+
+            "Report": "Portfolio History",
+
+            "Records": len(
+                portfolio_history,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not portfolio_history.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Holdings History",
+
+            "Records": len(
+                holdings_history,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not holdings_history.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Performance History",
+
+            "Records": len(
+                performance_history,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not performance_history.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Risk History",
+
+            "Records": len(
+                risk_history,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not risk_history.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Execution History",
+
+            "Records": len(
+                execution_history,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not execution_history.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Transaction History",
+
+            "Records": len(
+                transaction_history,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not transaction_history.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Signal History",
+
+            "Records": len(
+                signal_history,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not signal_history.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Audit History",
+
+            "Records": len(
+                audit_history,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not audit_history.empty
+
+                else "Missing",
+
+        },
+
+    ]
+
+)
+
+st.dataframe(
+
+    diagnostics,
+
+    use_container_width=True,
+
+    hide_index=True,
+
+)
+
+divider()
+
+# =============================================================================
+# Data Quality
+# =============================================================================
+
+section(
+
+    "Data Quality",
+
+    (
+        "Overview of the historical "
+        "report quality."
+    ),
+
+)
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+
+    st.metric(
+
+        "Portfolio",
+
+        len(
+            portfolio_history,
+        ),
+
+    )
+
+with col2:
+
+    st.metric(
+
+        "Performance",
+
+        len(
+            performance_history,
+        ),
+
+    )
+
+with col3:
+
+    st.metric(
+
+        "Risk",
+
+        len(
+            risk_history,
+        ),
+
+    )
+
+with col4:
+
+    st.metric(
+
+        "Execution",
+
+        len(
+            execution_history,
+        ),
+
+    )
+
+divider()
+
+# =============================================================================
+# Report Status
+# =============================================================================
+
+section(
+
+    "Report Status",
+
+    (
+        "Workflow reports loaded "
+        "for this dashboard."
+    ),
+
+)
+
+status = pd.DataFrame(
+
+    [
+
+        {
+
+            "Report": "Portfolio",
+
+            "Rows": len(
+                portfolio_history,
+            ),
+
+        },
+
+        {
+
+            "Report": "Holdings",
+
+            "Rows": len(
+                holdings_history,
+            ),
+
+        },
+
+        {
+
+            "Report": "Performance",
+
+            "Rows": len(
+                performance_history,
+            ),
+
+        },
+
+        {
+
+            "Report": "Risk",
+
+            "Rows": len(
+                risk_history,
+            ),
+
+        },
+
+        {
+
+            "Report": "Execution",
+
+            "Rows": len(
+                execution_history,
+            ),
+
+        },
+
+        {
+
+            "Report": "Transactions",
+
+            "Rows": len(
+                transaction_history,
+            ),
+
+        },
+
+        {
+
+            "Report": "Signals",
+
+            "Rows": len(
+                signal_history,
+            ),
+
+        },
+
+        {
+
+            "Report": "Audit",
+
+            "Rows": len(
+                audit_history,
+            ),
+
+        },
+
+    ]
+
+)
+
+st.dataframe(
+
+    status,
+
+    use_container_width=True,
+
+    hide_index=True,
+
+)
+
+divider()
+
+# =============================================================================
+# Explore Reports
+# =============================================================================
+
+section(
+
+    "Explore Reports",
+
+    (
+        "Navigate through the "
+        "Institutional Scanner Monitor."
+    ),
+
+)
+
+left, right = st.columns(2)
+
+with left:
+
+    st.info(
+        """
+📊 **Dashboard**
+
+Executive overview.
+"""
+    )
+
+    st.info(
+        """
+📈 **Daily Monitor**
+
+Scanner activity.
+"""
+    )
+
+    st.info(
+        """
+🛡️ **Risk**
+
+Portfolio risk reports.
+"""
+    )
+
+with right:
+
+    st.info(
+        """
+📉 **Performance**
+
+Performance analytics.
+"""
+    )
+
+    st.info(
+        """
+⚡ **Execution**
+
+Execution reports.
+"""
+    )
+
+    st.info(
+        """
+📁 **Portfolio**
+
+Portfolio reports.
+"""
+    )
+
+divider()
+
+# =============================================================================
+# Footer
+# =============================================================================
 
 st.caption(
     "Institutional Scanner Monitor"
 )
 
 st.caption(
-    "History Dashboard • Portfolio Evolution • Audit Trail • Transactions • Rebalances • Historical Analytics"
+    "Historical Dashboard"
+)
+
+st.caption(
+    (
+        "Workflow Report Viewer • "
+        "Historical Analytics"
+    )
 )

@@ -1,98 +1,65 @@
 """
-components.py
+ui.components
 =============
 
-Reusable Streamlit UI components for the
+Reusable UI components for the
 Institutional Scanner Monitor.
 
-These helpers provide a consistent look
-and feel across every dashboard page.
+Provides standardized page
+components used across every
+dashboard.
 """
 
 from __future__ import annotations
 
-from typing import Iterable
+from dataclasses import dataclass
+from typing import Any
 
 import streamlit as st
 
+# =============================================================================
+# Configuration
+# =============================================================================
+
+
+@dataclass(slots=True, frozen=True)
+class ComponentConfig:
+    """
+    Shared component configuration.
+    """
+
+    badge_radius: str = "12px"
+
+    badge_padding: str = "4px 10px"
+
+    badge_font_size: str = "0.80rem"
+
+    badge_font_weight: str = "600"
+
+    default_badge_color: str = "#2563EB"
+
+    default_empty_message: str = (
+        "No data available."
+    )
+
+
+CONFIG = ComponentConfig()
 
 # =============================================================================
-# Page Section
+# HTML Renderer
 # =============================================================================
 
 
-def section(
-    title: str,
-    description: str | None = None,
+def render_html(
+    html: str,
 ) -> None:
     """
-    Render a standardized page section.
-    """
-
-    st.markdown(f"## {title}")
-
-    if description:
-
-        st.caption(description)
-
-
-# =============================================================================
-# Divider
-# =============================================================================
-
-
-def divider() -> None:
-    """
-    Render a horizontal divider.
-    """
-
-    st.divider()
-
-
-# =============================================================================
-# Page Spacer
-# =============================================================================
-
-
-def spacer(
-    height: int = 1,
-) -> None:
-    """
-    Insert vertical spacing.
-    """
-
-    for _ in range(height):
-
-        st.write("")
-
-
-# =============================================================================
-# Badge
-# =============================================================================
-
-
-def badge(
-    text: str,
-    color: str = "blue",
-) -> None:
-    """
-    Render a small colored badge.
+    Render HTML safely.
     """
 
     st.markdown(
 
-        f"""
-        <span style="
-            background:{color};
-            color:white;
-            padding:4px 10px;
-            border-radius:12px;
-            font-size:0.8rem;
-            font-weight:600;
-        ">
-            {text}
-        </span>
-        """,
+        html,
 
         unsafe_allow_html=True,
 
@@ -109,17 +76,130 @@ def page_title(
     subtitle: str | None = None,
 ) -> None:
     """
-    Render the page title.
+    Display page title.
     """
 
-    st.title(title)
+    st.title(
+
+        title,
+
+    )
 
     if subtitle:
 
-        st.caption(subtitle)
+        st.caption(
+
+            subtitle,
+
+        )
+
 
 # =============================================================================
-# Information Box
+# Section
+# =============================================================================
+
+
+def section(
+    title: str,
+    description: str | None = None,
+) -> None:
+    """
+    Display section heading.
+    """
+
+    st.subheader(
+
+        title,
+
+    )
+
+    if description:
+
+        st.caption(
+
+            description,
+
+        )
+
+
+# =============================================================================
+# Divider
+# =============================================================================
+
+
+def divider() -> None:
+    """
+    Standard divider.
+    """
+
+    st.divider()
+
+
+# =============================================================================
+# Spacer
+# =============================================================================
+
+
+def spacer(
+    lines: int = 1,
+) -> None:
+    """
+    Vertical spacing.
+    """
+
+    for _ in range(
+
+        max(
+
+            0,
+
+            lines,
+
+        )
+
+    ):
+
+        st.write("")
+
+
+# =============================================================================
+# Badge
+# =============================================================================
+
+
+def badge(
+    text: str,
+    color: str = (
+        CONFIG.default_badge_color
+    ),
+) -> None:
+    """
+    Display badge.
+    """
+
+    render_html(
+
+        f"""
+<span
+style="
+background:{color};
+color:white;
+padding:{CONFIG.badge_padding};
+border-radius:{CONFIG.badge_radius};
+font-size:{CONFIG.badge_font_size};
+font-weight:{CONFIG.badge_font_weight};
+">
+
+{text}
+
+</span>
+"""
+
+    )
+
+
+# =============================================================================
+# Message Components
 # =============================================================================
 
 
@@ -127,56 +207,56 @@ def info_box(
     message: str,
 ) -> None:
     """
-    Render an informational message.
+    Information message.
     """
 
-    st.info(message)
+    st.info(
 
+        message,
 
-# =============================================================================
-# Success Box
-# =============================================================================
+    )
 
 
 def success_box(
     message: str,
 ) -> None:
     """
-    Render a success message.
+    Success message.
     """
 
-    st.success(message)
+    st.success(
 
+        message,
 
-# =============================================================================
-# Warning Box
-# =============================================================================
+    )
 
 
 def warning_box(
     message: str,
 ) -> None:
     """
-    Render a warning message.
+    Warning message.
     """
 
-    st.warning(message)
+    st.warning(
 
+        message,
 
-# =============================================================================
-# Error Box
-# =============================================================================
+    )
 
 
 def error_box(
     message: str,
 ) -> None:
     """
-    Render an error message.
+    Error message.
     """
 
-    st.error(message)
+    st.error(
 
+        message,
+
+    )
 
 # =============================================================================
 # Empty State
@@ -184,38 +264,158 @@ def error_box(
 
 
 def empty_state(
-    message: str = "No data available.",
+    message: str = (
+        CONFIG.default_empty_message
+    ),
 ) -> None:
     """
-    Display a standardized empty state.
+    Display standardized
+    empty state.
     """
 
-    st.info(message)
+    st.info(
+
+        message,
+
+    )
 
 
 # =============================================================================
-# Key / Value List
+# Key / Value Components
 # =============================================================================
+
+
+def key_value(
+    key: str,
+    value: Any,
+) -> None:
+    """
+    Display a single
+    key/value pair.
+    """
+
+    left, right = st.columns(
+
+        [1, 2],
+
+    )
+
+    with left:
+
+        st.markdown(
+
+            f"**{key}**",
+
+        )
+
+    with right:
+
+        st.write(
+
+            value,
+
+        )
 
 
 def key_value_list(
-    items: dict,
+    items: dict[
+        str,
+        Any,
+    ],
 ) -> None:
     """
-    Render key/value pairs.
+    Display multiple
+    key/value pairs.
     """
 
-    for key, value in items.items():
+    if not items:
 
-        left, right = st.columns([1, 2])
+        empty_state(
 
-        with left:
+            "Nothing to display.",
 
-            st.markdown(f"**{key}**")
+        )
 
-        with right:
+        return
 
-            st.write(value)
+    for key, value in (
+
+        items.items()
+
+    ):
+
+        key_value(
+
+            key,
+
+            value,
+
+        )
+
+
+# =============================================================================
+# Information Panel
+# =============================================================================
+
+
+def information_panel(
+    title: str,
+    items: dict[
+        str,
+        Any,
+    ],
+) -> None:
+    """
+    Display an
+    information panel.
+    """
+
+    st.subheader(
+
+        title,
+
+    )
+
+    key_value_list(
+
+        items,
+
+    )
+
+
+# =============================================================================
+# Status Panel
+# =============================================================================
+
+
+def status_panel(
+    title: str,
+    status: str,
+    description: str | None = None,
+) -> None:
+    """
+    Display status panel.
+    """
+
+    st.subheader(
+
+        title,
+
+    )
+
+    badge(
+
+        status,
+
+    )
+
+    if description:
+
+        st.caption(
+
+            description,
+
+        )
 
 
 # =============================================================================
@@ -227,9 +427,102 @@ def footer(
     text: str,
 ) -> None:
     """
-    Render a page footer.
+    Display footer.
     """
 
-    st.divider()
+    divider()
 
-    st.caption(text)
+    st.caption(
+
+        text,
+
+    )
+
+
+# =============================================================================
+# Utility Helpers
+# =============================================================================
+
+
+def page_header(
+    title: str,
+    subtitle: str | None = None,
+) -> None:
+    """
+    Standard page header.
+    """
+
+    page_title(
+
+        title,
+
+        subtitle,
+
+    )
+
+    divider()
+
+
+def page_section(
+    title: str,
+    description: str | None = None,
+) -> None:
+    """
+    Standard page section.
+    """
+
+    section(
+
+        title,
+
+        description,
+
+    )
+
+
+# =============================================================================
+# Public Exports
+# =============================================================================
+
+
+__all__ = [
+
+    "CONFIG",
+
+    "render_html",
+
+    "page_title",
+
+    "page_header",
+
+    "section",
+
+    "page_section",
+
+    "divider",
+
+    "spacer",
+
+    "badge",
+
+    "info_box",
+
+    "success_box",
+
+    "warning_box",
+
+    "error_box",
+
+    "empty_state",
+
+    "key_value",
+
+    "key_value_list",
+
+    "information_panel",
+
+    "status_panel",
+
+    "footer",
+
+]

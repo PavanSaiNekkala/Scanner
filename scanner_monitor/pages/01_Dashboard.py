@@ -4,34 +4,71 @@ pages/01_Dashboard.py
 
 Institutional Scanner Monitor
 
-Dashboard Page
+Executive Dashboard
+
+Displays a high-level overview of the
+latest generated workflow reports.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
 import streamlit as st
 
-from ui.loader import load_reports
+from core.logger import get_logger
+from ui.loader import (
+    ReportData,
+    load_reports,
+)
+
+LOGGER = get_logger(__name__)
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+
+@dataclass(slots=True, frozen=True)
+class DashboardConfig:
+    """
+    Dashboard configuration.
+    """
+
+    page_title: str = "Dashboard"
+
+    page_icon: str = "🏠"
+
+    layout: str = "wide"
+
+    preview_rows: int = 5
+
+
+CONFIG = DashboardConfig()
 
 # =============================================================================
 # Page Configuration
 # =============================================================================
 
 st.set_page_config(
-    page_title="Dashboard",
-    page_icon="🏠",
-    layout="wide",
+    page_title=CONFIG.page_title,
+    page_icon=CONFIG.page_icon,
+    layout=CONFIG.layout,
 )
 
 # =============================================================================
-# Load Reports
+# Data Loading
 # =============================================================================
 
 
-@st.cache_data(
-    show_spinner=False,
-)
-def get_reports():
+@st.cache_data(show_spinner=False)
+def get_reports() -> ReportData:
+    """
+    Load all workflow reports.
+    """
 
     return load_reports()
 
@@ -40,81 +77,157 @@ try:
 
     reports = get_reports()
 
-except Exception as exc:
+    latest = reports.latest
 
-    st.error(
-        "Unable to load reports.",
+    history = reports.history
+
+except Exception:
+
+    LOGGER.exception(
+        "Unable to load dashboard reports."
     )
 
-    st.exception(
-        exc,
+    st.error(
+        "Unable to load reports."
     )
 
     st.stop()
 
 # =============================================================================
-# Title
+# Helper Functions
 # =============================================================================
 
-st.title("🏠 Dashboard")
 
-st.caption(
-    "Institutional Portfolio Monitoring Dashboard"
-)
+def safe_len(
+    dataframe: pd.DataFrame,
+) -> int:
+    """
+    Safely return dataframe length.
+    """
 
-st.divider()
+    if dataframe is None:
 
-# =============================================================================
-# KPI Cards
-# =============================================================================
+        return 0
 
-holdings_count = len(
-    reports.holdings,
-)
+    try:
 
-active_trades = len(
-    reports.daily_monitor,
-)
+        return len(dataframe)
 
-risk_metrics = len(
-    reports.risk_summary,
-)
+    except Exception:
 
-execution_metrics = len(
-    reports.execution_summary,
-)
+        return 0
 
-universe_size = 0
 
-if not reports.daily_monitor.empty:
+def report_status(
+    dataframe: pd.DataFrame,
+) -> str:
+    """
+    Return report status icon.
+    """
 
-    universe_size = len(
-        reports.daily_monitor,
+    if dataframe is None:
+
+        return "❌ Missing"
+
+    if dataframe.empty:
+
+        return "⚠ Empty"
+
+    return "✅ Available"
+
+
+def report_modified(
+    dataframe: pd.DataFrame,
+) -> str:
+    """
+    Return latest timestamp if available.
+    """
+
+    if dataframe.empty:
+
+        return "-"
+
+    return datetime.now().strftime(
+        "%d %b %Y %H:%M"
     )
 
-target_hits = 0
 
-stop_losses = 0
+def preview_section(
+    title: str,
+    dataframe: pd.DataFrame,
+) -> None:
+    """
+    Display report preview.
+    """
 
-if (
+    st.subheader(title)
 
-    not reports.daily_monitor.empty
+    if dataframe.empty:
 
-    and
+        st.info(
+            f"{title} not available."
+        )
 
-    "trade_status"
+        return
 
-    in reports.daily_monitor.columns
+    st.dataframe(
+        dataframe.head(
+            CONFIG.preview_rows,
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
 
-):
+    if len(dataframe) > CONFIG.preview_rows:
+
+        st.caption(
+            f"Showing first "
+            f"{CONFIG.preview_rows} of "
+            f"{len(dataframe):,} rows."
+        )
+
+    st.divider()
+
+
+def trade_statistics() -> tuple[int, int]:
+    """
+    Return target hit and stop loss statistics.
+    """
+
+    dataframe = latest.get(
+        "daily_monitor",
+        pd.DataFrame(),
+    )
+
+    if dataframe.empty:
+
+        return 0, 0
+
+
+    if (
+        "trade_status"
+        not in dataframe.columns
+    ):
+
+        return 0, 0
+
+
+    status = (
+
+        dataframe["trade_status"]
+
+        .astype(str)
+
+        .str.upper()
+
+    )
+
 
     target_hits = int(
 
         (
 
-            reports.daily_monitor[
-                "trade_status"
-            ]
+            status
 
             ==
 
@@ -124,13 +237,12 @@ if (
 
     )
 
+
     stop_losses = int(
 
         (
 
-            reports.daily_monitor[
-                "trade_status"
-            ]
+            status
 
             ==
 
@@ -140,184 +252,360 @@ if (
 
     )
 
-col1, col2, col3 = st.columns(3)
 
-with col1:
-
-    st.metric(
-
-        "Portfolio",
-
-        holdings_count,
-
-    )
-
-with col2:
-
-    st.metric(
-
-        "Active Trades",
-
-        active_trades,
-
-    )
-
-with col3:
-
-    st.metric(
-
-        "Universe",
-
-        universe_size,
-
-    )
-
-col4, col5, col6 = st.columns(3)
-
-with col4:
-
-    st.metric(
-
-        "Risk Metrics",
-
-        risk_metrics,
-
-    )
-
-with col5:
-
-    st.metric(
-
-        "Target Hits",
+    return (
 
         target_hits,
-
-    )
-
-with col6:
-
-    st.metric(
-
-        "Stop Losses",
 
         stop_losses,
 
     )
 
+# =============================================================================
+# Executive Metrics
+# =============================================================================
+
+portfolio_df = latest.get(
+    "portfolio_summary",
+    pd.DataFrame(),
+)
+
+holdings_df = latest.get(
+    "holdings",
+    pd.DataFrame(),
+)
+
+daily_monitor_df = latest.get(
+    "daily_monitor",
+    pd.DataFrame(),
+)
+
+risk_df = latest.get(
+    "risk_summary",
+    pd.DataFrame(),
+)
+
+execution_df = latest.get(
+    "execution_summary",
+    pd.DataFrame(),
+)
+
+
+holdings = safe_len(
+    holdings_df,
+)
+
+
+daily_monitor = safe_len(
+    daily_monitor_df,
+)
+
+
+portfolio = safe_len(
+    portfolio_df,
+)
+
+
+risk = safe_len(
+    risk_df,
+)
+
+
+execution = safe_len(
+    execution_df,
+)
+
+
+target_hits, stop_losses = (
+    trade_statistics()
+)
+
+# =============================================================================
+# Dashboard Header
+# =============================================================================
+
+st.title(
+    "🏠 Executive Dashboard"
+)
+
+st.caption(
+    "Institutional Scanner Monitor"
+)
+
+st.caption(
+    "Executive overview of the latest "
+    "generated workflow reports."
+)
+
 st.divider()
 
 # =============================================================================
-# Portfolio Summary
+# Executive KPIs
 # =============================================================================
 
-st.subheader("Portfolio Summary")
+row1 = st.columns(3)
 
-if reports.portfolio_summary.empty:
+with row1[0]:
 
-    st.info("Portfolio summary not available.")
+    st.metric(
+        "Portfolio",
+        holdings,
+    )
 
-else:
+with row1[1]:
 
-    st.dataframe(
-        reports.portfolio_summary,
-        use_container_width=True,
-        hide_index=True,
+    st.metric(
+        "Daily Monitor",
+        daily_monitor,
+    )
+
+with row1[2]:
+
+    st.metric(
+        "Target Hits",
+        target_hits,
+    )
+
+row2 = st.columns(3)
+
+with row2[0]:
+
+    st.metric(
+        "Risk Reports",
+        risk,
+    )
+
+with row2[1]:
+
+    st.metric(
+        "Execution",
+        execution,
+    )
+
+with row2[2]:
+
+    st.metric(
+        "Stop Losses",
+        stop_losses,
     )
 
 st.divider()
-
 # =============================================================================
-# Holdings Preview
+# Workflow Status
 # =============================================================================
 
-st.subheader("Current Holdings")
+st.subheader(
+    "Workflow Status"
+)
 
-if reports.holdings.empty:
 
-    st.info("No holdings available.")
+status = pd.DataFrame(
 
-else:
+    [
 
-    st.dataframe(
-        reports.holdings.head(20),
-        use_container_width=True,
-        hide_index=True,
-    )
+        {
+            "Report": "Portfolio Summary",
+
+            "Rows": safe_len(
+                portfolio_df,
+            ),
+
+            "Status": report_status(
+                portfolio_df,
+            ),
+
+            "Updated": report_modified(
+                portfolio_df,
+            ),
+        },
+
+
+        {
+            "Report": "Holdings",
+
+            "Rows": safe_len(
+                holdings_df,
+            ),
+
+            "Status": report_status(
+                holdings_df,
+            ),
+
+            "Updated": report_modified(
+                holdings_df,
+            ),
+        },
+
+
+        {
+            "Report": "Daily Monitor",
+
+            "Rows": safe_len(
+                daily_monitor_df,
+            ),
+
+            "Status": report_status(
+                daily_monitor_df,
+            ),
+
+            "Updated": report_modified(
+                daily_monitor_df,
+            ),
+        },
+
+
+        {
+            "Report": "Risk Summary",
+
+            "Rows": safe_len(
+                risk_df,
+            ),
+
+            "Status": report_status(
+                risk_df,
+            ),
+
+            "Updated": report_modified(
+                risk_df,
+            ),
+        },
+
+
+        {
+            "Report": "Execution Summary",
+
+            "Rows": safe_len(
+                execution_df,
+            ),
+
+            "Status": report_status(
+                execution_df,
+            ),
+
+            "Updated": report_modified(
+                execution_df,
+            ),
+        },
+
+    ]
+
+)
+
+
+st.dataframe(
+
+    status,
+
+    use_container_width=True,
+
+    hide_index=True,
+
+)
+
 
 st.divider()
 
 # =============================================================================
-# Daily Monitor
+# Report Previews
 # =============================================================================
 
-st.subheader("Daily Monitor")
+preview_section(
+    "Portfolio Summary",
+    portfolio_df,
+)
 
-if reports.daily_monitor.empty:
 
-    st.info("Daily monitor not available.")
+preview_section(
+    "Current Holdings",
+    holdings_df,
+)
 
-else:
 
-    st.dataframe(
+preview_section(
+    "Daily Monitor",
+    daily_monitor_df,
+)
 
-        reports.daily_monitor.head(
-            20,
-        ),
 
-        use_container_width=True,
-        hide_index=True,
+preview_section(
+    "Risk Summary",
+    risk_df,
+)
 
+
+preview_section(
+    "Execution Summary",
+    execution_df,
+)
+
+# =============================================================================
+# Quick Navigation
+# =============================================================================
+
+st.subheader(
+    "Quick Navigation"
+)
+
+nav1, nav2, nav3 = st.columns(3)
+
+with nav1:
+
+    st.info(
+        """
+📁 **Portfolio**
+
+View portfolio summary,
+allocation and holdings.
+"""
     )
 
-    if len(
-        reports.daily_monitor,
-    ) > 20:
+    st.info(
+        """
+📈 **Daily Monitor**
 
-        st.caption(
-
-            f"Showing first 20 of "
-            f"{len(reports.daily_monitor)} rows."
-
-        )
-
-st.divider()
-
-# =============================================================================
-# Risk Summary
-# =============================================================================
-
-st.subheader("Risk Summary")
-
-if reports.risk_summary.empty:
-
-    st.info("Risk summary not available.")
-
-else:
-
-    st.dataframe(
-        reports.risk_summary,
-        use_container_width=True,
-        hide_index=True,
+Today's scanner output,
+signals and opportunities.
+"""
     )
 
-st.divider()
+with nav2:
 
-# =============================================================================
-# Execution Summary
-# =============================================================================
+    st.info(
+        """
+🛡️ **Risk**
 
-st.subheader("Execution Summary")
+Portfolio risk,
+drawdown and exposure.
+"""
+    )
 
-if reports.execution_summary.empty:
+    st.info(
+        """
+📊 **Performance**
 
-    st.info("Execution summary not available.")
+Performance metrics,
+returns and attribution.
+"""
+    )
 
-else:
+with nav3:
 
-    st.dataframe(
-        reports.execution_summary,
-        use_container_width=True,
-        hide_index=True,
+    st.info(
+        """
+⚙️ **Execution**
+
+Execution summary
+and trade history.
+"""
+    )
+
+    st.info(
+        """
+📥 **Downloads**
+
+Export generated
+workflow reports.
+"""
     )
 
 st.divider()
@@ -327,5 +615,10 @@ st.divider()
 # =============================================================================
 
 st.caption(
-    "Scanner Monitor • Institutional Reporting Dashboard"
+    "Institutional Scanner Monitor"
+)
+
+st.caption(
+    "Executive reporting dashboard "
+    "for workflow-generated reports."
 )

@@ -1,188 +1,361 @@
 """
-streamlit_app.py
-================
+scanner_monitor.streamlit_app
+=============================
 
 Institutional Scanner Monitor
 
-Main entry point for the reporting dashboard.
+Main Streamlit application bootstrap.
 
-Author
-------
-Nekkala Pavan Sai
-
+Responsibilities
+----------------
+- Application startup
+- Page configuration
+- Theme initialization
+- Report availability checks
+- Logging lifecycle
 """
 
 from __future__ import annotations
 
-import logging
-from pathlib import Path
+from dataclasses import dataclass
 
 import streamlit as st
+import pandas as pd
 
-from ui.loader import load_reports
-
-# =============================================================================
-# Logging
-# =============================================================================
-
-logging.basicConfig(
-    level=logging.INFO,
-    format=(
-        "%(asctime)s | "
-        "%(levelname)s | "
-        "%(name)s | "
-        "%(message)s"
-    ),
+from core.config import (
+    APP_NAME,
+    APP_VERSION,
+    DEFAULT_LAYOUT,
+    DEFAULT_PAGE_ICON,
+    LATEST_REPORTS_DIR,
+    REPORTS_DIR,
 )
 
-LOGGER = logging.getLogger(__name__)
+from core.logger import get_logger
+
+from core.theme import (
+    apply_theme,
+    hide_streamlit_style,
+    inject_card_css,
+    use_wide_layout,
+)
+
+
+LOGGER = get_logger(__name__)
+
 
 # =============================================================================
-# Paths
+# Application Configuration
 # =============================================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parent
 
-REPORTS_DIR = PROJECT_ROOT / "reports"
+@dataclass(
+    slots=True,
+    frozen=True,
+)
+class AppConfig:
+    """
+    Streamlit application metadata.
+    """
 
-LATEST_DIR = REPORTS_DIR / "latest"
+    name: str = APP_NAME
 
-HISTORY_DIR = REPORTS_DIR / "history"
+    version: str = APP_VERSION
+
+    icon: str = DEFAULT_PAGE_ICON
+
+    layout: str = DEFAULT_LAYOUT
+
+    subtitle: str = (
+        "Production Portfolio "
+        "Reporting Dashboard"
+    )
+
+
+CONFIG = AppConfig()
+
 
 # =============================================================================
 # Page Configuration
 # =============================================================================
 
-st.set_page_config(
-    page_title="Scanner Monitor",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
-# =============================================================================
-# Helpers
-# =============================================================================
-
-
-@st.cache_data(show_spinner=False)
-def reports_available() -> bool:
+def configure_page() -> None:
     """
-    Check whether report directory exists.
-
-    Returns
-    -------
-    bool
+    Configure Streamlit page.
     """
 
-    return (
-        REPORTS_DIR.exists()
-        and LATEST_DIR.exists()
+    st.set_page_config(
+
+        page_title=CONFIG.name,
+
+        page_icon=CONFIG.icon,
+
+        layout=CONFIG.layout,
+
+        initial_sidebar_state="expanded",
+
     )
 
 
-def report_status() -> None:
+# =============================================================================
+# Theme Bootstrap
+# =============================================================================
+
+
+def initialize_theme() -> None:
     """
-    Display report status.
+    Initialize application theme.
+    """
+
+    apply_theme()
+
+    inject_card_css()
+
+    use_wide_layout()
+
+    hide_streamlit_style()
+
+
+# =============================================================================
+# Report Health
+# =============================================================================
+
+
+@st.cache_data(
+    show_spinner=False,
+)
+def reports_available() -> bool:
+    """
+    Validate report directories.
+    """
+
+    return (
+
+        REPORTS_DIR.exists()
+
+        and
+
+        LATEST_REPORTS_DIR.exists()
+
+    )
+
+
+def report_health() -> dict[str, bool]:
+    """
+    Return report system health.
+    """
+
+    return {
+
+        "reports_directory":
+
+            REPORTS_DIR.exists(),
+
+        "latest_directory":
+
+            LATEST_REPORTS_DIR.exists(),
+
+        "available":
+
+            reports_available(),
+
+    }
+
+
+def ensure_reports_available() -> bool:
+    """
+    Validate reports before loading.
     """
 
     if reports_available():
 
-        st.sidebar.success(
-            "Reports Loaded",
-            icon="✅",
-        )
-
-    else:
-
-        st.sidebar.error(
-            "Reports Not Found",
-            icon="❌",
-        )
+        return True
 
 
-def sidebar() -> None:
-    """
-    Sidebar.
-    """
-
-    st.sidebar.title(
-        "Scanner Monitor"
+    LOGGER.warning(
+        "Reports directory unavailable."
     )
 
-    st.sidebar.markdown("---")
 
-    report_status()
-
-    st.sidebar.markdown("---")
-
-    st.sidebar.caption(
-        "Institutional Portfolio Reporting"
+    st.error(
+        "Reports directory not found."
     )
 
-    st.sidebar.caption(
-        "Version 1.0"
-    )
+
+    return False
+
+# =============================================================================
+# UI Imports
+# =============================================================================
+
+from ui.loader import load_reports
+
+from ui.sidebar import (
+    enterprise_sidebar,
+)
+
+from ui.metrics import (
+    metric_row,
+)
+
+from ui.components import (
+    page_title,
+    section,
+    info_box,
+    error_box,
+)
 
 
 # =============================================================================
-# Main
+# Dashboard Sidebar
 # =============================================================================
 
-def main() -> None:
 
-    sidebar()
+def render_application_sidebar() -> None:
+    """
+    Render institutional sidebar.
+    """
 
-    st.title("📊 Institutional Scanner Monitor")
+    enterprise_sidebar()
 
-    st.caption(
-        "Production Portfolio Reporting Dashboard"
-    )
 
-    st.divider()
+# =============================================================================
+# Executive Summary
+# =============================================================================
 
-    if not reports_available():
 
-        st.error(
-            "Reports directory not found."
-        )
-
-        return
+def render_summary() -> None:
+    """
+    Render executive dashboard KPIs.
+    """
 
     reports = load_reports()
 
-    col1, col2, col3 = st.columns(3)
 
-    with col1:
+    latest = reports.latest
 
-        st.metric(
-            "Holdings",
-            len(reports.holdings),
-        )
 
-    with col2:
+    metric_row(
 
-        st.metric(
-            "Daily Monitor",
-            len(reports.daily_monitor),
-        )
+        [
 
-    with col3:
+            (
 
-        st.metric(
-            "Risk Metrics",
-            len(reports.risk_summary),
-        )
-        
-    st.divider()
+                "Holdings",
 
-    st.subheader(
-        "Dashboard Overview"
+                len(
+
+                    latest.get(
+
+                        "holdings",
+
+                        pd.DataFrame(),
+
+                    )
+
+                ),
+
+                "number",
+
+            ),
+
+
+            (
+
+                "Daily Monitor",
+
+                len(
+
+                    latest.get(
+
+                        "daily_monitor",
+
+                        pd.DataFrame(),
+
+                    )
+
+                ),
+
+                "number",
+
+            ),
+
+
+            (
+
+                "Risk Metrics",
+
+                len(
+
+                    latest.get(
+
+                        "risk_summary",
+
+                        pd.DataFrame(),
+
+                    )
+
+                ),
+
+                "number",
+
+            ),
+
+
+            (
+
+                "Execution",
+
+                len(
+
+                    latest.get(
+
+                        "execution_summary",
+
+                        pd.DataFrame(),
+
+                    )
+
+                ),
+
+                "number",
+
+            ),
+
+        ]
+
     )
 
+# =============================================================================
+# Dashboard Overview
+# =============================================================================
+
+
+def render_overview() -> None:
+    """
+    Render application overview.
+    """
+
+    section(
+
+        "Dashboard Overview",
+
+        (
+
+            "Institutional portfolio monitoring "
+
+            "and reporting system."
+
+        ),
+
+    )
+
+
     st.markdown(
+
         """
-This dashboard provides institutional monitoring for:
+The dashboard provides monitoring for:
 
 - Portfolio Summary
 - Holdings
@@ -193,16 +366,167 @@ This dashboard provides institutional monitoring for:
 - Historical Reports
 - Report Downloads
 
-Use the navigation menu on the left to explore each section.
+Navigate using the Streamlit pages menu.
 """
+
     )
 
-    st.info(
-        "The remaining pages will appear automatically once created inside the pages/ directory."
+
+    info_box(
+
+        "Additional pages are automatically loaded "
+        "from the pages/ directory."
+
     )
 
 
 # =============================================================================
+# Report Failure Handler
+# =============================================================================
+
+
+def render_report_error() -> None:
+    """
+    Display report loading error.
+    """
+
+    error_box(
+
+        "Unable to load report data."
+
+    )
+
+# =============================================================================
+# Application Lifecycle
+# =============================================================================
+
+
+def initialize_application() -> None:
+    """
+    Initialize application services.
+    """
+
+    LOGGER.info(
+
+        "Initializing %s",
+
+        CONFIG.name,
+
+    )
+
+    configure_page()
+
+    initialize_theme()
+
+
+
+# =============================================================================
+# Main Application
+# =============================================================================
+
+
+def main() -> None:
+    """
+    Streamlit application entry point.
+    """
+
+    try:
+
+        initialize_application()
+
+
+        render_application_sidebar()
+
+
+        page_title(
+
+            f"{CONFIG.icon} {CONFIG.name}",
+
+            CONFIG.subtitle,
+
+        )
+
+
+        if not ensure_reports_available():
+
+            return
+
+
+        st.divider()
+
+
+        render_summary()
+
+
+        st.divider()
+
+
+        render_overview()
+
+
+        LOGGER.info(
+
+            "%s started successfully",
+
+            CONFIG.name,
+
+        )
+
+
+    except Exception as exc:
+
+        LOGGER.exception(
+
+            "Application startup failed.",
+
+        )
+
+        render_report_error()
+
+        st.exception(
+
+            exc,
+
+        )
+
+
+
+# =============================================================================
+# Public API
+# =============================================================================
+
+
+__all__ = [
+
+    "CONFIG",
+
+    "configure_page",
+
+    "initialize_theme",
+
+    "reports_available",
+
+    "report_health",
+
+    "ensure_reports_available",
+
+    "render_application_sidebar",
+
+    "render_summary",
+
+    "render_overview",
+
+    "initialize_application",
+
+    "main",
+
+]
+
+
+# =============================================================================
+# Entry Point
+# =============================================================================
+
 
 if __name__ == "__main__":
 

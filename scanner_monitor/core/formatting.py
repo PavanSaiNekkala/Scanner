@@ -1,9 +1,14 @@
 """
-core/formatting.py
-==================
+scanner_monitor.core.formatting
+===============================
 
-Formatting utilities for the
-Institutional Scanner Monitor.
+Formatting utilities for the Institutional Scanner Monitor.
+
+This module provides consistent formatting helpers for numbers,
+currencies, percentages, dates, text, DataFrames, booleans,
+missing values, and file sizes.
+
+All public APIs are preserved for backward compatibility.
 """
 
 from __future__ import annotations
@@ -11,8 +16,44 @@ from __future__ import annotations
 from datetime import date
 from datetime import datetime
 from typing import Any
+from typing import Final
 
 import pandas as pd
+
+__all__ = [
+    "number",
+    "integer",
+    "percent",
+    "currency",
+    "date_string",
+    "datetime_string",
+    "title",
+    "uppercase",
+    "lowercase",
+    "rename_columns",
+    "dash",
+    "yes_no",
+    "file_size",
+]
+
+# =============================================================================
+# Constants
+# =============================================================================
+
+DEFAULT_DATE_FORMAT: Final[str] = "%d %b %Y"
+
+DEFAULT_DATETIME_FORMAT: Final[str] = "%d %b %Y %H:%M:%S"
+
+DEFAULT_MISSING_VALUE: Final[str] = "-"
+
+_FILE_SIZE_UNITS: Final[tuple[str, ...]] = (
+    "B",
+    "KB",
+    "MB",
+    "GB",
+    "TB",
+    "PB",
+)
 
 # =============================================================================
 # Numbers
@@ -22,47 +63,52 @@ import pandas as pd
 def number(
     value: Any,
     decimals: int = 2,
-    default: str = "-",
+    default: str = DEFAULT_MISSING_VALUE,
 ) -> str:
     """
-    Format a numeric value.
+    Format a numeric value with thousands separators.
+
+    Parameters
+    ----------
+    value:
+        Value to format.
+    decimals:
+        Number of decimal places.
+    default:
+        Returned if formatting fails.
+
+    Returns
+    -------
+    str
     """
 
     try:
-
         return f"{float(value):,.{decimals}f}"
 
     except (
-
         TypeError,
-
         ValueError,
-
+        OverflowError,
     ):
-
         return default
 
 
 def integer(
     value: Any,
-    default: str = "-",
+    default: str = DEFAULT_MISSING_VALUE,
 ) -> str:
     """
-    Format an integer.
+    Format an integer with thousands separators.
     """
 
     try:
-
         return f"{int(value):,}"
 
     except (
-
         TypeError,
-
         ValueError,
-
+        OverflowError,
     ):
-
         return default
 
 
@@ -74,24 +120,20 @@ def integer(
 def percent(
     value: Any,
     decimals: int = 2,
-    default: str = "-",
+    default: str = DEFAULT_MISSING_VALUE,
 ) -> str:
     """
-    Format a percentage.
+    Format a percentage value.
     """
 
     try:
-
         return f"{float(value):.{decimals}f}%"
 
     except (
-
         TypeError,
-
         ValueError,
-
+        OverflowError,
     ):
-
         return default
 
 
@@ -104,30 +146,20 @@ def currency(
     value: Any,
     symbol: str = "$",
     decimals: int = 2,
-    default: str = "-",
+    default: str = DEFAULT_MISSING_VALUE,
 ) -> str:
     """
     Format a currency value.
     """
 
     try:
-
-        return (
-
-            f"{symbol}"
-
-            f"{float(value):,.{decimals}f}"
-
-        )
+        return f"{symbol}{float(value):,.{decimals}f}"
 
     except (
-
         TypeError,
-
         ValueError,
-
+        OverflowError,
     ):
-
         return default
 
 
@@ -138,56 +170,45 @@ def currency(
 
 def date_string(
     value: datetime | date | str | None,
-    fmt: str = "%d %b %Y",
+    fmt: str = DEFAULT_DATE_FORMAT,
 ) -> str:
     """
-    Format a date.
+    Format a date-like value.
+
+    Accepts datetime, date, pandas.Timestamp,
+    or a string parseable by pandas.
     """
 
     if value is None:
+        return DEFAULT_MISSING_VALUE
 
-        return "-"
-
-    if isinstance(
-
-        value,
-
-        str,
-
-    ):
+    if isinstance(value, str):
 
         try:
-
-            value = pd.to_datetime(
-
-                value,
-
-            )
+            value = pd.to_datetime(value)
 
         except Exception:
-
             return value
 
-    return value.strftime(
+    try:
+        return value.strftime(fmt)
 
-        fmt,
-
-    )
+    except AttributeError:
+        return DEFAULT_MISSING_VALUE
 
 
 def datetime_string(
     value: datetime | None = None,
 ) -> str:
     """
-    Format datetime.
+    Format a datetime value.
+
+    If no value is supplied, the current
+    local datetime is used.
     """
 
-    value = value or datetime.now()
-
-    return value.strftime(
-
-        "%d %b %Y %H:%M:%S",
-
+    return (value or datetime.now()).strftime(
+        DEFAULT_DATETIME_FORMAT,
     )
 
 
@@ -200,15 +221,13 @@ def title(
     text: str,
 ) -> str:
     """
-    Title-case text.
+    Convert snake_case or underscored text
+    into title case.
     """
 
-    return text.replace(
-
+    return str(text).replace(
         "_",
-
         " ",
-
     ).title()
 
 
@@ -216,20 +235,20 @@ def uppercase(
     text: str,
 ) -> str:
     """
-    Uppercase text.
+    Convert text to uppercase.
     """
 
-    return text.upper()
+    return str(text).upper()
 
 
 def lowercase(
     text: str,
 ) -> str:
     """
-    Lowercase text.
+    Convert text to lowercase.
     """
 
-    return text.lower()
+    return str(text).lower()
 
 
 # =============================================================================
@@ -241,23 +260,15 @@ def rename_columns(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Create display-friendly column names.
+    Return a copy of the DataFrame with
+    display-friendly column names.
     """
 
     renamed = df.copy()
 
     renamed.columns = [
-
-        title(
-
-            column,
-
-        )
-
-        for column
-
-        in renamed.columns
-
+        title(str(column))
+        for column in renamed.columns
     ]
 
     return renamed
@@ -275,19 +286,10 @@ def dash(
     Replace missing values with '-'.
     """
 
-    if pd.isna(
+    if pd.isna(value):
+        return DEFAULT_MISSING_VALUE
 
-        value,
-
-    ):
-
-        return "-"
-
-    return str(
-
-        value,
-
-    )
+    return str(value)
 
 
 # =============================================================================
@@ -299,18 +301,10 @@ def yes_no(
     value: bool,
 ) -> str:
     """
-    Format booleans.
+    Convert a boolean into 'Yes' or 'No'.
     """
 
-    return (
-
-        "Yes"
-
-        if value
-
-        else "No"
-
-    )
+    return "Yes" if bool(value) else "No"
 
 
 # =============================================================================
@@ -319,36 +313,31 @@ def yes_no(
 
 
 def file_size(
-    size: int,
+    size: int | float,
 ) -> str:
     """
-    Human-readable file size.
+    Convert a file size in bytes into a
+    human-readable representation.
+
+    Examples
+    --------
+    512      -> 512.0 B
+    2048     -> 2.0 KB
+    5242880  -> 5.0 MB
     """
 
-    units = [
+    try:
+        value = max(float(size), 0.0)
 
-        "B",
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return DEFAULT_MISSING_VALUE
 
-        "KB",
+    for unit in _FILE_SIZE_UNITS:
 
-        "MB",
-
-        "GB",
-
-        "TB",
-
-    ]
-
-    value = float(
-
-        size,
-
-    )
-
-    for unit in units:
-
-        if value < 1024:
-
+        if value < 1024 or unit == _FILE_SIZE_UNITS[-1]:
             return f"{value:.1f} {unit}"
 
         value /= 1024

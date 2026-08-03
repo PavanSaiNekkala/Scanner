@@ -1,18 +1,72 @@
 """
-core/helpers.py
-===============
+scanner_monitor.core.helpers
+============================
 
-General helper utilities for the
-Institutional Scanner Monitor.
+General helper utilities for the Institutional Scanner Monitor.
+
+This module provides commonly used helper functions for working with
+DataFrames, numeric values, formatting, statistics, and dates.
+
+All public APIs are preserved for backward compatibility.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from typing import Final
 
 import numpy as np
 import pandas as pd
+
+__all__ = [
+    # Column Helpers
+    "first_existing",
+    "existing_columns",
+    # Numeric Helpers
+    "numeric_series",
+    "safe_float",
+    "safe_int",
+    # DataFrame Helpers
+    "copy_dataframe",
+    "clean_columns",
+    "sort_dataframe",
+    # Formatting
+    "format_percent",
+    "format_number",
+    "format_integer",
+    "format_datetime",
+    # Missing Values
+    "fill_missing",
+    # Statistics
+    "safe_mean",
+    "safe_median",
+    "safe_std",
+    "safe_max",
+    "safe_min",
+    # Date Helpers
+    "today",
+    "timestamp",
+    # Miscellaneous
+    "percentage",
+    "unique_count",
+    "is_numeric_dtype",
+    "replace_inf",
+]
+
+# =============================================================================
+# Constants
+# =============================================================================
+
+DEFAULT_FLOAT: Final[float] = 0.0
+
+DEFAULT_INT: Final[int] = 0
+
+DEFAULT_DATETIME_FORMAT: Final[str] = "%d %b %Y %H:%M:%S"
+
+DEFAULT_DATE_FORMAT: Final[str] = "%Y-%m-%d"
+
+DEFAULT_TIMESTAMP_FORMAT: Final[str] = "%Y%m%d_%H%M%S"
 
 # =============================================================================
 # Column Helpers
@@ -23,13 +77,31 @@ def first_existing(
     *columns: str,
 ) -> str | None:
     """
-    Return first matching column
-    (case-insensitive).
+    Return the first matching DataFrame column.
+
+    Matching is case-insensitive and ignores
+    leading/trailing whitespace.
+
+    Parameters
+    ----------
+    df
+        Input DataFrame.
+    *columns
+        Candidate column names.
+
+    Returns
+    -------
+    str | None
+        Matching column name from the DataFrame,
+        otherwise ``None``.
     """
 
+    if df.empty and len(df.columns) == 0:
+        return None
+
     lookup = {
-        str(col).strip().lower(): col
-        for col in df.columns
+        str(column).strip().lower(): column
+        for column in df.columns
     }
 
     for column in columns:
@@ -44,20 +116,19 @@ def first_existing(
 
 def existing_columns(
     df: pd.DataFrame,
-    columns: list[str],
+    columns: list[str] | tuple[str, ...],
 ) -> list[str]:
     """
-    Return all columns that exist.
+    Return all columns that exist
+    in the DataFrame.
     """
 
+    available = set(df.columns)
+
     return [
-
         column
-
         for column in columns
-
-        if column in df.columns
-
+        if column in available
     ]
 
 
@@ -65,91 +136,80 @@ def existing_columns(
 # Numeric Helpers
 # =============================================================================
 
-
 def numeric_series(
     df: pd.DataFrame,
     column: str | None,
 ) -> pd.Series:
     """
-    Safely convert a column to numeric.
+    Return a numeric version of a DataFrame column.
+
+    Missing values are replaced with ``0.0``.
+
+    If the column does not exist, an empty
+    float Series is returned.
     """
 
     if (
-
         column is None
-
         or column not in df.columns
-
     ):
-
         return pd.Series(
-
             dtype=float,
-
         )
 
     return (
-
         pd.to_numeric(
-
             df[column],
-
             errors="coerce",
-
         )
-
+        .replace(
+            [
+                np.inf,
+                -np.inf,
+            ],
+            np.nan,
+        )
         .fillna(
-
-            0.0,
-
+            DEFAULT_FLOAT,
         )
-
     )
 
 
 def safe_float(
     value: Any,
-    default: float = 0.0,
+    default: float = DEFAULT_FLOAT,
 ) -> float:
     """
-    Safely convert to float.
+    Safely convert a value to float.
     """
 
     try:
-
         return float(value)
 
     except (
-
         TypeError,
-
         ValueError,
-
+        OverflowError,
     ):
-
         return default
 
 
 def safe_int(
     value: Any,
-    default: int = 0,
+    default: int = DEFAULT_INT,
 ) -> int:
     """
-    Safely convert to integer.
+    Safely convert a value to integer.
     """
 
     try:
-
-        return int(value)
+        return int(float(value))
 
     except (
-
         TypeError,
-
         ValueError,
-
+        OverflowError,
     ):
-
         return default
 
 
@@ -157,34 +217,41 @@ def safe_int(
 # DataFrame Helpers
 # =============================================================================
 
-
 def copy_dataframe(
     df: pd.DataFrame,
+    *,
+    deep: bool = True,
 ) -> pd.DataFrame:
     """
-    Return a safe copy.
+    Return a copy of the DataFrame.
+
+    Parameters
+    ----------
+    deep
+        Whether to perform a deep copy.
     """
 
-    return df.copy()
+    return df.copy(
+        deep=deep,
+    )
 
 
 def clean_columns(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Normalize column names.
+    Normalize DataFrame column names.
+
+    - Convert to string
+    - Strip whitespace
     """
 
     cleaned = df.copy()
 
     cleaned.columns = (
-
         cleaned.columns
-
         .astype(str)
-
         .str.strip()
-
     )
 
     return cleaned
@@ -196,19 +263,24 @@ def sort_dataframe(
     ascending: bool = False,
 ) -> pd.DataFrame:
     """
-    Sort by column if it exists.
+    Sort a DataFrame if the requested
+    column exists.
+
+    If the column is missing, the original
+    DataFrame is returned unchanged.
     """
 
-    if column not in df.columns:
-
+    if (
+        df.empty
+        or column not in df.columns
+    ):
         return df
 
     return df.sort_values(
-
-        column,
-
+        by=column,
         ascending=ascending,
-
+        kind="stable",
+        ignore_index=False,
     )
 
 
@@ -216,16 +288,17 @@ def sort_dataframe(
 # Formatting
 # =============================================================================
 
-
 def format_percent(
     value: float,
     decimals: int = 2,
 ) -> str:
     """
-    Format percentage.
+    Format a percentage value.
     """
 
-    return f"{safe_float(value):.{decimals}f}%"
+    return (
+        f"{safe_float(value):.{decimals}f}%"
+    )
 
 
 def format_number(
@@ -233,35 +306,42 @@ def format_number(
     decimals: int = 2,
 ) -> str:
     """
-    Format numeric value.
+    Format a numeric value with
+    thousands separators.
     """
 
-    return f"{safe_float(value):,.{decimals}f}"
+    return (
+        f"{safe_float(value):,.{decimals}f}"
+    )
 
 
 def format_integer(
     value: int,
 ) -> str:
     """
-    Format integer.
+    Format an integer using
+    thousands separators.
     """
 
-    return f"{safe_int(value):,}"
+    return (
+        f"{safe_int(value):,}"
+    )
 
 
 def format_datetime(
     value: datetime | None = None,
 ) -> str:
     """
-    Format datetime.
+    Format a datetime value.
+
+    If no value is supplied,
+    the current local time is used.
     """
 
-    value = value or datetime.now()
-
-    return value.strftime(
-
-        "%d %b %Y %H:%M:%S",
-
+    return (
+        value or datetime.now()
+    ).strftime(
+        DEFAULT_DATETIME_FORMAT,
     )
 
 
@@ -269,143 +349,132 @@ def format_datetime(
 # Missing Values
 # =============================================================================
 
-
 def fill_missing(
     df: pd.DataFrame,
     value: Any = 0,
 ) -> pd.DataFrame:
     """
-    Fill missing values.
+    Replace missing values in
+    a DataFrame.
     """
 
-    return df.fillna(
-
-        value,
-
-    )
+    return df.fillna(value)
 
 
 # =============================================================================
 # Statistics
 # =============================================================================
 
-
 def safe_mean(
     series: pd.Series,
 ) -> float:
     """
-    Mean ignoring empty series.
+    Return the arithmetic mean.
+
+    Empty or fully missing Series return 0.0.
     """
 
-    if series.empty:
+    cleaned = series.dropna()
 
-        return 0.0
+    if cleaned.empty:
+        return DEFAULT_FLOAT
 
-    return float(
-
-        series.mean()
-
-    )
+    return float(cleaned.mean())
 
 
 def safe_median(
     series: pd.Series,
 ) -> float:
     """
-    Median ignoring empty series.
+    Return the median.
+
+    Empty or fully missing Series return 0.0.
     """
 
-    if series.empty:
+    cleaned = series.dropna()
 
-        return 0.0
+    if cleaned.empty:
+        return DEFAULT_FLOAT
 
-    return float(
-
-        series.median()
-
-    )
+    return float(cleaned.median())
 
 
 def safe_std(
     series: pd.Series,
 ) -> float:
     """
-    Standard deviation.
+    Return the standard deviation.
+
+    Empty or fully missing Series return 0.0.
     """
 
-    if series.empty:
+    cleaned = series.dropna()
 
-        return 0.0
+    if cleaned.empty:
+        return DEFAULT_FLOAT
 
-    return float(
-
-        series.std()
-
-    )
+    return float(cleaned.std())
 
 
 def safe_max(
     series: pd.Series,
 ) -> float:
     """
-    Maximum value.
+    Return the maximum value.
+
+    Empty or fully missing Series return 0.0.
     """
 
-    if series.empty:
+    cleaned = series.dropna()
 
-        return 0.0
+    if cleaned.empty:
+        return DEFAULT_FLOAT
 
-    return float(
-
-        series.max()
-
-    )
+    return float(cleaned.max())
 
 
 def safe_min(
     series: pd.Series,
 ) -> float:
     """
-    Minimum value.
+    Return the minimum value.
+
+    Empty or fully missing Series return 0.0.
     """
 
-    if series.empty:
+    cleaned = series.dropna()
 
-        return 0.0
+    if cleaned.empty:
+        return DEFAULT_FLOAT
 
-    return float(
-
-        series.min()
-
-    )
+    return float(cleaned.min())
 
 
 # =============================================================================
 # Date Helpers
 # =============================================================================
 
-
 def today() -> str:
     """
-    Return today's date.
+    Return today's date as YYYY-MM-DD.
     """
 
     return datetime.now().strftime(
-
-        "%Y-%m-%d",
-
+        DEFAULT_DATE_FORMAT,
     )
 
 
 def timestamp() -> str:
     """
-    Current timestamp.
+    Return the current timestamp.
+
+    Format
+    ------
+    YYYYMMDD_HHMMSS
     """
 
     return datetime.now().strftime(
-
-        "%Y%m%d_%H%M%S",
-
+        DEFAULT_TIMESTAMP_FORMAT,
     )
 
 
@@ -413,39 +482,45 @@ def timestamp() -> str:
 # Miscellaneous
 # =============================================================================
 
-
 def percentage(
     numerator: float,
     denominator: float,
 ) -> float:
     """
-    Safe percentage calculation.
+    Calculate a percentage safely.
+
+    Returns 0.0 when the denominator is zero.
     """
 
-    if denominator == 0:
+    denominator = safe_float(denominator)
 
-        return 0.0
+    if denominator == 0:
+        return DEFAULT_FLOAT
 
     return (
-
-        numerator
-
+        safe_float(numerator)
         / denominator
-
-    ) * 100
+    ) * 100.0
 
 
 def unique_count(
     series: pd.Series,
+    *,
+    dropna: bool = True,
 ) -> int:
     """
-    Count unique values.
+    Return the number of unique values.
+
+    Parameters
+    ----------
+    dropna
+        Whether missing values should be excluded.
     """
 
     return int(
-
-        series.nunique()
-
+        series.nunique(
+            dropna=dropna,
+        )
     )
 
 
@@ -453,13 +528,14 @@ def is_numeric_dtype(
     series: pd.Series,
 ) -> bool:
     """
-    Check numeric dtype.
+    Return True if the Series has
+    a numeric dtype.
     """
 
-    return pd.api.types.is_numeric_dtype(
-
-        series,
-
+    return bool(
+        pd.api.types.is_numeric_dtype(
+            series,
+        )
     )
 
 
@@ -467,19 +543,19 @@ def replace_inf(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Replace infinite values.
+    Replace positive and negative infinity
+    values with NaN.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Cleaned DataFrame.
     """
 
     return df.replace(
-
         [
-
             np.inf,
-
             -np.inf,
-
         ],
-
         np.nan,
-
     )

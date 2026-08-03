@@ -1,9 +1,20 @@
 """
-ui.cards
-========
+ui/cards.py
+===========
 
-Reusable Streamlit UI cards for the
+Reusable UI components for the
 Institutional Scanner Monitor.
+
+This module provides standardized
+dashboard components including:
+
+- Hero banners
+- KPI cards
+- Status badges
+- Report cards
+- Empty states
+- Section headers
+- Dashboard summaries
 
 Author
 ------
@@ -19,110 +30,425 @@ import streamlit as st
 from ui.theme import THEME
 
 # =============================================================================
-# CSS
+# Constants
+# =============================================================================
+
+CARD_RADIUS = "14px"
+
+CARD_PADDING = "18px"
+
+CARD_MARGIN = "12px"
+
+CARD_BORDER = f"1px solid {THEME.BORDER}"
+
+CARD_BACKGROUND = "white"
+
+CARD_SHADOW = (
+    "0 3px 12px "
+    "rgba(0,0,0,0.08)"
+)
+
+TRANSITION = "0.20s"
+
+# =============================================================================
+# CSS Engine
+# =============================================================================
+
+_CARD_CSS = f"""
+<style>
+
+/* ==========================================================
+   Generic Cards
+========================================================== */
+
+.metric-card {{
+
+    background: {CARD_BACKGROUND};
+
+    border: {CARD_BORDER};
+
+    border-radius: {CARD_RADIUS};
+
+    padding: {CARD_PADDING};
+
+    margin-bottom: {CARD_MARGIN};
+
+    transition: {TRANSITION};
+
+}}
+
+.metric-card:hover {{
+
+    border-color: {THEME.PRIMARY};
+
+    box-shadow: {CARD_SHADOW};
+
+}}
+
+/* ==========================================================
+   Typography
+========================================================== */
+
+.metric-title {{
+
+    font-size: 0.90rem;
+
+    color: {THEME.MUTED};
+
+    margin-bottom: 8px;
+
+}}
+
+.metric-value {{
+
+    font-size: 1.80rem;
+
+    font-weight: 700;
+
+    color: {THEME.TEXT};
+
+}}
+
+.metric-subtitle {{
+
+    color: {THEME.MUTED};
+
+    font-size: 0.82rem;
+
+    margin-top: 6px;
+
+}}
+
+.section-title {{
+
+    font-size: 1.45rem;
+
+    font-weight: 700;
+
+    color: {THEME.TEXT};
+
+}}
+
+.section-caption {{
+
+    color: {THEME.MUTED};
+
+    margin-bottom: 16px;
+
+}}
+
+/* ==========================================================
+   KPI Delta
+========================================================== */
+
+.metric-positive {{
+
+    color: {THEME.SUCCESS};
+
+    font-weight: 600;
+
+}}
+
+.metric-negative {{
+
+    color: {THEME.DANGER};
+
+    font-weight: 600;
+
+}}
+
+/* ==========================================================
+   Message Cards
+========================================================== */
+
+.info-card {{
+
+    border-left: 5px solid {THEME.INFO};
+
+    background: #F8FCFF;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+}}
+
+.success-card {{
+
+    border-left: 5px solid {THEME.SUCCESS};
+
+    background: #F6FFF8;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+}}
+
+.warning-card {{
+
+    border-left: 5px solid {THEME.WARNING};
+
+    background: #FFFDF5;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+}}
+
+.error-card {{
+
+    border-left: 5px solid {THEME.DANGER};
+
+    background: #FFF6F6;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+}}
+
+.empty-card {{
+
+    border: 2px dashed {THEME.BORDER};
+
+    border-radius: 12px;
+
+    padding: 36px;
+
+    text-align: center;
+
+    color: {THEME.MUTED};
+
+}}
+
+</style>
+"""
+
+# =============================================================================
+# CSS Injection
 # =============================================================================
 
 
 def inject_card_css() -> None:
     """
-    Inject reusable card styling.
+    Inject reusable dashboard CSS.
+
+    Safe to call multiple times.
     """
 
     st.markdown(
-        f"""
-<style>
 
-.metric-card {{
-    background:white;
-    border:1px solid {THEME.BORDER};
-    border-radius:14px;
-    padding:18px;
-    margin-bottom:12px;
-    transition:0.2s;
-}}
+        _CARD_CSS,
 
-.metric-card:hover {{
-    border-color:{THEME.PRIMARY};
-    box-shadow:0 3px 12px rgba(0,0,0,0.08);
-}}
-
-.metric-title {{
-    font-size:0.90rem;
-    color:{THEME.MUTED};
-    margin-bottom:8px;
-}}
-
-.metric-value {{
-    font-size:1.8rem;
-    font-weight:700;
-    color:{THEME.TEXT};
-}}
-
-.metric-delta-positive {{
-    color:{THEME.SUCCESS};
-    font-weight:600;
-}}
-
-.metric-delta-negative {{
-    color:{THEME.DANGER};
-    font-weight:600;
-}}
-
-.info-card {{
-    border-left:5px solid {THEME.INFO};
-    background:#F8FCFF;
-    padding:15px;
-    border-radius:10px;
-}}
-
-.success-card {{
-    border-left:5px solid {THEME.SUCCESS};
-    background:#F6FFF8;
-    padding:15px;
-    border-radius:10px;
-}}
-
-.warning-card {{
-    border-left:5px solid {THEME.WARNING};
-    background:#FFFDF5;
-    padding:15px;
-    border-radius:10px;
-}}
-
-.error-card {{
-    border-left:5px solid {THEME.DANGER};
-    background:#FFF6F6;
-    padding:15px;
-    border-radius:10px;
-}}
-
-.empty-card {{
-    border:2px dashed {THEME.BORDER};
-    border-radius:10px;
-    padding:35px;
-    text-align:center;
-    color:{THEME.MUTED};
-}}
-
-.section-title {{
-    font-size:1.45rem;
-    font-weight:700;
-    color:{THEME.TEXT};
-}}
-
-.section-caption {{
-    color:{THEME.MUTED};
-    margin-bottom:15px;
-}}
-
-</style>
-""",
         unsafe_allow_html=True,
+
+    )
+
+# =============================================================================
+# Internal Rendering Engine
+# =============================================================================
+
+
+def _render_html(
+    html: str,
+) -> None:
+    """
+    Render raw HTML.
+
+    All components use this helper
+    instead of calling st.markdown()
+    directly.
+    """
+
+    st.markdown(
+
+        html,
+
+        unsafe_allow_html=True,
+
+    )
+
+# =============================================================================
+# Internal Card Renderer
+# =============================================================================
+
+
+def _render_card(
+    body: str,
+    css_class: str = "metric-card",
+) -> None:
+    """
+    Render a generic card container.
+
+    Parameters
+    ----------
+    body
+        Inner HTML.
+
+    css_class
+        Card CSS class.
+    """
+
+    _render_html(
+
+        f"""
+<div class="{css_class}">
+
+{body}
+
+</div>
+"""
+
+    )
+
+# =============================================================================
+# Internal Section Renderer
+# =============================================================================
+
+
+def _render_section(
+    title: str,
+    caption: str | None = None,
+) -> None:
+    """
+    Render a standardized section header.
+    """
+
+    body = f"""
+<div class="section-title">
+
+{title}
+
+</div>
+"""
+
+    if caption:
+
+        body += f"""
+
+<div class="section-caption">
+
+{caption}
+
+</div>
+
+"""
+
+    _render_html(body)
+
+
+# =============================================================================
+# Internal Message Renderer
+# =============================================================================
+
+
+def _render_message_card(
+    message: str,
+    css_class: str,
+) -> None:
+    """
+    Render a message card.
+
+    Parameters
+    ----------
+    message
+        Card message.
+
+    css_class
+        CSS class name.
+    """
+
+    _render_card(
+
+        message,
+
+        css_class,
+
     )
 
 
 # =============================================================================
-# Section Header
+# Internal Metric Renderer
+# =============================================================================
+
+
+def _metric_body(
+    title: str,
+    value: Any,
+    subtitle: str | None = None,
+) -> str:
+    """
+    Build KPI body.
+    """
+
+    html = f"""
+<div class="metric-title">
+
+{title}
+
+</div>
+
+<div class="metric-value">
+
+{value}
+
+</div>
+"""
+
+    if subtitle:
+
+        html += f"""
+
+<div class="metric-subtitle">
+
+{subtitle}
+
+</div>
+
+"""
+
+    return html
+
+
+# =============================================================================
+# Internal Delta Renderer
+# =============================================================================
+
+
+def _delta_html(
+    delta: str | None,
+) -> str:
+    """
+    Build KPI delta.
+    """
+
+    if not delta:
+
+        return ""
+
+    css = (
+
+        "metric-negative"
+
+        if "-" in delta
+
+        else "metric-positive"
+
+    )
+
+    return f"""
+<div class="{css}">
+
+{delta}
+
+</div>
+"""
+
+
+# =============================================================================
+# Public Section Components
 # =============================================================================
 
 
@@ -131,33 +457,23 @@ def section(
     caption: str | None = None,
 ) -> None:
     """
-    Render a section title.
+    Display a section heading.
     """
 
-    st.markdown(
-        f"""
-<div class="section-title">
-{title}
-</div>
-""",
-        unsafe_allow_html=True,
+    inject_card_css()
+
+    _render_section(
+
+        title,
+
+        caption,
+
     )
-
-    if caption:
-
-        st.markdown(
-            f"""
-<div class="section-caption">
-{caption}
-</div>
-""",
-            unsafe_allow_html=True,
-        )
 
 
 def divider() -> None:
     """
-    Styled divider.
+    Standard divider.
     """
 
     st.divider()
@@ -173,24 +489,26 @@ def card(
     body: str,
 ) -> None:
     """
-    Generic card.
+    Generic reusable card.
     """
 
-    st.markdown(
+    inject_card_css()
+
+    _render_card(
+
         f"""
-<div class="metric-card">
 
 <div class="metric-title">
+
 {title}
+
 </div>
 
 {body}
 
-</div>
-""",
-        unsafe_allow_html=True,
-    )
+"""
 
+    )
 
 # =============================================================================
 # KPI Card
@@ -203,32 +521,35 @@ def kpi_card(
     delta: str | None = None,
 ) -> None:
     """
-    KPI metric card.
+    Display a KPI card.
     """
 
-    delta_html = ""
+    inject_card_css()
 
-    if delta:
+    body = (
 
-        css = (
-            "metric-delta-positive"
-            if "-" not in delta
-            else "metric-delta-negative"
+        _metric_body(
+
+            title,
+
+            value,
+
         )
 
-        delta_html = (
-            f'<div class="{css}">{delta}</div>'
+        +
+
+        _delta_html(
+
+            delta,
+
         )
 
-    card(
-        title,
-        f"""
-<div class="metric-value">
-{value}
-</div>
+    )
 
-{delta_html}
-""",
+    _render_card(
+
+        body,
+
     )
 
 
@@ -248,221 +569,119 @@ def kpi_grid(
     columns: int = 4,
 ) -> None:
     """
-    Display KPI cards in a grid.
+    Display KPI cards
+    in a responsive grid.
     """
 
-    cols = st.columns(columns)
+    if not metrics:
 
-    for i, metric in enumerate(metrics):
+        return
+
+    columns = max(
+
+        1,
+
+        columns,
+
+    )
+
+    grid = st.columns(
+
+        columns,
+
+    )
+
+    for index, metric in enumerate(
+
+        metrics,
+
+    ):
 
         title, value, delta = metric
 
-        with cols[i % columns]:
+        with grid[
+
+            index % columns
+
+        ]:
 
             kpi_card(
+
                 title,
+
                 value,
+
                 delta,
+
             )
 
 
 # =============================================================================
-# Information Cards
+# Summary Row
 # =============================================================================
 
-
-def info_card(
-    message: str,
-) -> None:
-    """
-    Blue information card.
-    """
-
-    st.markdown(
-        f"""
-<div class="info-card">
-
-{message}
-
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-
-def success_card(
-    message: str,
-) -> None:
-    """
-    Success card.
-    """
-
-    st.markdown(
-        f"""
-<div class="success-card">
-
-{message}
-
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-
-def warning_card(
-    message: str,
-) -> None:
-    """
-    Warning card.
-    """
-
-    st.markdown(
-        f"""
-<div class="warning-card">
-
-{message}
-
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-
-def error_card(
-    message: str,
-) -> None:
-    """
-    Error card.
-    """
-
-    st.markdown(
-        f"""
-<div class="error-card">
-
-{message}
-
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-
-# =============================================================================
-# Empty State
-# =============================================================================
-
-
-def empty_state(
-    title: str,
-    message: str,
-) -> None:
-    """
-    Render an empty state.
-    """
-
-    st.markdown(
-        f"""
-<div class="empty-card">
-
-<h3>{title}</h3>
-
-<p>{message}</p>
-
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-
-# =============================================================================
-# Dashboard Summary
-# =============================================================================
 
 def summary_row(
-    metrics,
+    metrics: (
+        list[
+            tuple[
+                str,
+                Any,
+                str | None,
+            ]
+        ]
+        |
+        dict[
+            str,
+            Any,
+        ]
+    ),
 ) -> None:
     """
-    Render dashboard KPI row.
-
-    Accepts either:
-
-    - list[tuple(title, value, delta)]
-    - dict[str, Any]
+    Display dashboard
+    summary metrics.
     """
 
     inject_card_css()
 
-    if isinstance(metrics, dict):
+    if isinstance(
+
+        metrics,
+
+        dict,
+
+    ):
 
         metrics = [
 
             (
-                title,
+
+                key,
+
                 value,
+
                 None,
+
             )
 
-            for title, value in metrics.items()
+            for key, value
+
+            in metrics.items()
 
         ]
 
     kpi_grid(
+
         metrics,
-        columns=max(len(metrics), 1),
-    )
 
-# =============================================================================
-# Status Badge
-# =============================================================================
+        columns=max(
 
-def status_badge(
-    status: str,
-) -> None:
-    """
-    Display a colored status badge.
-    """
+            len(metrics),
 
-    colors = {
+            1,
 
-        "ACTIVE": THEME.INFO,
+        ),
 
-        "BUY": THEME.SUCCESS,
-
-        "SELL": THEME.DANGER,
-
-        "WATCH": THEME.WARNING,
-
-        "TARGET HIT": THEME.SUCCESS,
-
-        "STOP HIT": THEME.DANGER,
-
-        "EXIT": THEME.WARNING,
-
-        "EXIT DUE": THEME.WARNING,
-
-    }
-
-    color = colors.get(
-        str(status).upper(),
-        THEME.INFO,
-    )
-
-    st.markdown(
-        f"""
-<div
-style="
-display:inline-block;
-padding:6px 14px;
-border-radius:16px;
-background:{color};
-color:white;
-font-weight:600;
-font-size:0.85rem;
-">
-{status}
-</div>
-""",
-        unsafe_allow_html=True,
     )
 
 
@@ -477,109 +696,260 @@ def statistic_card(
     subtitle: str | None = None,
 ) -> None:
     """
-    Compact statistic card.
+    Compact metric card.
     """
 
-    subtitle_html = ""
+    inject_card_css()
 
-    if subtitle:
+    _render_card(
 
-        subtitle_html = (
-            f"<small>{subtitle}</small>"
+        _metric_body(
+
+            title,
+
+            value,
+
+            subtitle,
+
         )
 
-    st.markdown(
-        f"""
-<div class="metric-card">
-
-<div class="metric-title">
-{title}
-</div>
-
-<div class="metric-value">
-{value}
-</div>
-
-{subtitle_html}
-
-</div>
-""",
-        unsafe_allow_html=True,
     )
 
 
 # =============================================================================
-# Report Card
+# Report Statistics
 # =============================================================================
 
 
-def report_card(
-    report_name: str,
-    records: int,
-    updated: str,
+def report_statistics_card(
+    statistics: dict[
+        str,
+        Any,
+    ],
 ) -> None:
     """
-    Summary card for report files.
+    Display report statistics.
     """
 
-    st.markdown(
-        f"""
-<div class="metric-card">
+    if not statistics:
 
-<h4>{report_name}</h4>
+        return
 
-<p>
-Records
-</p>
+    columns = st.columns(
 
-<h2>{records}</h2>
+        len(
 
-<hr>
+            statistics,
 
-<small>
+        )
 
-Updated
+    )
 
-<br>
+    for column, item in zip(
 
-{updated}
+        columns,
 
-</small>
+        statistics.items(),
 
-</div>
-""",
-        unsafe_allow_html=True,
+    ):
+
+        key, value = item
+
+        with column:
+
+            statistic_card(
+
+                key,
+
+                value,
+
+            )
+
+# =============================================================================
+# Message Cards
+# =============================================================================
+
+
+def info_card(
+    message: str,
+) -> None:
+    """
+    Display an information card.
+    """
+
+    inject_card_css()
+
+    _render_message_card(
+
+        message,
+
+        "info-card",
+
+    )
+
+
+def success_card(
+    message: str,
+) -> None:
+    """
+    Display a success card.
+    """
+
+    inject_card_css()
+
+    _render_message_card(
+
+        message,
+
+        "success-card",
+
+    )
+
+
+def warning_card(
+    message: str,
+) -> None:
+    """
+    Display a warning card.
+    """
+
+    inject_card_css()
+
+    _render_message_card(
+
+        message,
+
+        "warning-card",
+
+    )
+
+
+def error_card(
+    message: str,
+) -> None:
+    """
+    Display an error card.
+    """
+
+    inject_card_css()
+
+    _render_message_card(
+
+        message,
+
+        "error-card",
+
     )
 
 
 # =============================================================================
-# Download Card
+# Empty State
 # =============================================================================
 
 
-def download_card(
+def empty_state(
     title: str,
-    description: str,
+    message: str,
 ) -> None:
     """
-    Header displayed above download buttons.
+    Display an empty-state card.
     """
 
-    st.markdown(
-        f"""
-<div class="metric-card">
+    inject_card_css()
 
+    body = f"""
 <h3>
+
 {title}
+
 </h3>
 
 <p>
-{description}
+
+{message}
+
 </p>
+"""
+
+    _render_card(
+
+        body,
+
+        "empty-card",
+
+    )
+
+
+# =============================================================================
+# Status Badge
+# =============================================================================
+
+
+_STATUS_COLORS = {
+
+    "ACTIVE":
+        THEME.INFO,
+
+    "BUY":
+        THEME.SUCCESS,
+
+    "SELL":
+        THEME.DANGER,
+
+    "WATCH":
+        THEME.WARNING,
+
+    "TARGET HIT":
+        THEME.SUCCESS,
+
+    "STOP HIT":
+        THEME.DANGER,
+
+    "EXIT":
+        THEME.WARNING,
+
+    "EXIT DUE":
+        THEME.WARNING,
+
+}
+
+
+def status_badge(
+    status: str,
+) -> None:
+    """
+    Display a colored status badge.
+    """
+
+    inject_card_css()
+
+    color = _STATUS_COLORS.get(
+
+        str(status).upper(),
+
+        THEME.INFO,
+
+    )
+
+    _render_html(
+
+        f"""
+<div
+style="
+display:inline-block;
+padding:6px 14px;
+border-radius:16px;
+background:{color};
+color:white;
+font-weight:600;
+font-size:0.85rem;
+">
+
+{status}
 
 </div>
-""",
-        unsafe_allow_html=True,
+"""
+
     )
 
 
@@ -593,19 +963,57 @@ def progress_card(
     value: float,
 ) -> None:
     """
-    Progress indicator.
+    Display progress.
     """
 
-    st.subheader(title)
+    value = max(
 
-    st.progress(
+        0.0,
+
         min(
-            max(value / 100.0, 0.0),
-            1.0,
+
+            value,
+
+            100.0,
+
         ),
-        text=f"{value:.1f}%",
+
     )
 
+    st.subheader(
+
+        title,
+
+    )
+
+    st.progress(
+
+        value / 100.0,
+
+        text=f"{value:.1f}%",
+
+    )
+
+
+# =============================================================================
+# Loading Card
+# =============================================================================
+
+
+def loading_card(
+    message: str = "Loading...",
+) -> None:
+    """
+    Display loading spinner.
+    """
+
+    with st.spinner(
+
+        message,
+
+    ):
+
+        st.empty()
 
 # =============================================================================
 # Hero Card
@@ -617,18 +1025,21 @@ def hero_card(
     subtitle: str,
 ) -> None:
     """
-    Dashboard hero banner.
+    Display dashboard hero banner.
     """
 
-    st.markdown(
+    inject_card_css()
+
+    _render_html(
+
         f"""
 <div
 style="
-padding:25px;
+padding:28px;
 border-radius:18px;
 background:{THEME.PRIMARY};
 color:white;
-margin-bottom:25px;
+margin-bottom:24px;
 ">
 
 <h1>
@@ -644,26 +1055,104 @@ margin-bottom:25px;
 </p>
 
 </div>
-""",
-        unsafe_allow_html=True,
+"""
+
     )
 
 
 # =============================================================================
-# Loading Card
+# Report Card
 # =============================================================================
 
 
-def loading_card(
-    message: str = "Loading...",
+def report_card(
+    report_name: str,
+    records: int,
+    updated: str,
 ) -> None:
     """
-    Loading placeholder.
+    Display report summary.
     """
 
-    with st.spinner(message):
+    inject_card_css()
 
-        st.empty()
+    body = f"""
+
+<h4>
+
+{report_name}
+
+</h4>
+
+<p>
+
+Records
+
+</p>
+
+<div class="metric-value">
+
+{records:,}
+
+</div>
+
+<hr>
+
+<small>
+
+Updated
+
+<br>
+
+{updated}
+
+</small>
+
+"""
+
+    _render_card(
+
+        body,
+
+    )
+
+
+# =============================================================================
+# Download Card
+# =============================================================================
+
+
+def download_card(
+    title: str,
+    description: str,
+) -> None:
+    """
+    Display download section card.
+    """
+
+    inject_card_css()
+
+    body = f"""
+
+<h3>
+
+{title}
+
+</h3>
+
+<p>
+
+{description}
+
+</p>
+
+"""
+
+    _render_card(
+
+        body,
+
+    )
 
 
 # =============================================================================
@@ -676,12 +1165,12 @@ def action_card(
     description: str,
 ) -> None:
     """
-    Generic action card.
+    Display generic action card.
     """
 
-    st.markdown(
-        f"""
-<div class="metric-card">
+    inject_card_css()
+
+    body = f"""
 
 <h4>
 
@@ -695,9 +1184,12 @@ def action_card(
 
 </p>
 
-</div>
-""",
-        unsafe_allow_html=True,
+"""
+
+    _render_card(
+
+        body,
+
     )
 
 
@@ -711,14 +1203,16 @@ def file_card(
     filesize: str,
 ) -> None:
     """
-    File information card.
+    Display file information.
     """
 
-    st.markdown(
-        f"""
-<div class="metric-card">
+    inject_card_css()
+
+    body = f"""
 
 📄
+
+<br><br>
 
 <b>
 
@@ -734,86 +1228,12 @@ def file_card(
 
 </small>
 
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-
-# =============================================================================
-# Report Statistics
-# =============================================================================
-
-
-def report_statistics_card(
-    statistics: dict[str, Any],
-) -> None:
-    """
-    Display report statistics.
-    """
-
-    cols = st.columns(
-        len(statistics),
-    )
-
-    for column, item in zip(
-        cols,
-        statistics.items(),
-    ):
-
-        key, value = item
-
-        with column:
-
-            statistic_card(
-                key,
-                value,
-            )
-
-
-# =============================================================================
-# Footer
-# =============================================================================
-
-
-def footer_card() -> None:
-    """
-    Application footer.
-    """
-
-    st.markdown("---")
-
-    st.caption(
-        "Institutional Scanner Monitor"
-    )
-
-    st.caption(
-        "Production Reporting Dashboard"
-    )
-
-
-# =============================================================================
-# Legend
-# =============================================================================
-
-
-def legend_card() -> None:
-    """
-    Dashboard legend.
-    """
-
-    st.markdown(
-        """
-### Legend
-
-🟢 Positive
-
-🔵 Active
-
-🟡 Watch
-
-🔴 Risk
 """
+
+    _render_card(
+
+        body,
+
     )
 
 
@@ -824,7 +1244,7 @@ def legend_card() -> None:
 
 def dashboard_header() -> None:
     """
-    Dashboard title.
+    Display dashboard banner.
     """
 
     hero_card(
@@ -833,7 +1253,7 @@ def dashboard_header() -> None:
 
         (
             "Portfolio • Risk • "
-            "Execution • Performance"
+            "Performance • Execution"
         ),
 
     )
@@ -851,25 +1271,168 @@ def overview_cards(
     executions: int,
 ) -> None:
     """
-    Dashboard KPI cards.
+    Display executive KPI row.
     """
 
     summary_row(
 
         [
 
-            ("Holdings", holdings, None),
-
-            ("Active Trades", trades, None),
-
-            ("Risk Metrics", risks, None),
-
             (
-                "Execution Metrics",
-                executions,
+
+                "Holdings",
+
+                holdings,
+
                 None,
+
             ),
 
-        ],
+            (
+
+                "Active Trades",
+
+                trades,
+
+                None,
+
+            ),
+
+            (
+
+                "Risk Metrics",
+
+                risks,
+
+                None,
+
+            ),
+
+            (
+
+                "Execution",
+
+                executions,
+
+                None,
+
+            ),
+
+        ]
 
     )
+
+
+# =============================================================================
+# Footer
+# =============================================================================
+
+
+def footer_card() -> None:
+    """
+    Display dashboard footer.
+    """
+
+    st.divider()
+
+    st.caption(
+
+        "Institutional Scanner Monitor"
+
+    )
+
+    st.caption(
+
+        "Production Reporting Dashboard"
+
+    )
+
+
+# =============================================================================
+# Legend
+# =============================================================================
+
+
+def legend_card() -> None:
+    """
+    Display dashboard legend.
+    """
+
+    st.markdown(
+
+        """
+### Legend
+
+🟢 Positive
+
+🔵 Active
+
+🟡 Watch
+
+🔴 Risk
+
+""",
+
+    )
+
+
+# =============================================================================
+# Public Exports
+# =============================================================================
+
+
+__all__ = [
+
+    "inject_card_css",
+
+    "section",
+
+    "divider",
+
+    "card",
+
+    "kpi_card",
+
+    "kpi_grid",
+
+    "summary_row",
+
+    "statistic_card",
+
+    "report_statistics_card",
+
+    "info_card",
+
+    "success_card",
+
+    "warning_card",
+
+    "error_card",
+
+    "empty_state",
+
+    "status_badge",
+
+    "progress_card",
+
+    "loading_card",
+
+    "hero_card",
+
+    "report_card",
+
+    "download_card",
+
+    "action_card",
+
+    "file_card",
+
+    "dashboard_header",
+
+    "overview_cards",
+
+    "footer_card",
+
+    "legend_card",
+
+]

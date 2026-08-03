@@ -1,50 +1,69 @@
 """
-07_Execution.py
-===============
+pages/07_Execution.py
+=====================
 
-Institutional Execution Dashboard.
+Institutional Scanner Monitor
 
-Provides order management,
-trade monitoring,
-execution quality,
-rebalance monitoring,
-broker analytics,
-and compliance reporting.
+Execution Dashboard
+
+Displays workflow-generated
+execution reports.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from core.config import REPORTS_DIR
-from core.helpers import first_existing
-from core.helpers import numeric_series
-from core.theme import apply_theme
+from core.logger import get_logger
+from core.session import (
+    initialize as initialize_session,
+)
+from core.theme import (
+    apply_theme,
+    inject_card_css,
+)
 
-from ui.cards import dashboard_header
-from ui.cards import summary_row
+from ui.cards import (
+    divider,
+    empty_state,
+    section,
+)
 
-from ui.sidebar import render_sidebar
+from ui.loader import (
+    ReportData,
+    load_reports,
+)
 
-from ui.tables import dataframe_info
-from ui.tables import holdings_table
+from ui.metrics import (
+    dataframe_info,
+    execution_kpis,
+)
 
-from ui.loader import load_first_available_csv
+from ui.sidebar import (
+    render_sidebar,
+)
 
-# ==========================================================
+from ui.tables import (
+    holdings_table,
+)
+
+LOGGER = get_logger(__name__)
+
+# =============================================================================
 # Configuration
-# ==========================================================
+# =============================================================================
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class ExecutionConfig:
+    """
+    Execution dashboard configuration.
+    """
 
     page_title: str = "Execution"
 
@@ -52,36 +71,18 @@ class ExecutionConfig:
 
     layout: str = "wide"
 
-    orders_file: Path = (
-        REPORTS_DIR
-        / "latest"
-        / "orders.csv"
-    )
+    chart_height: int = 420
 
-    trades_file: Path = (
-        REPORTS_DIR
-        / "latest"
-        / "trade_list.csv"
-    )
+    preview_rows: int = 25
 
-    rebalance_file: Path = (
-        REPORTS_DIR
-        / "latest"
-        / "rebalance_orders.csv"
-    )
-
-    execution_file: Path = (
-        REPORTS_DIR
-        / "history"
-        / "execution_history.csv"
-    )
+    top_orders: int = 20
 
 
 CONFIG = ExecutionConfig()
 
-# ==========================================================
-# Page Configuration
-# ==========================================================
+# =============================================================================
+# Streamlit Configuration
+# =============================================================================
 
 st.set_page_config(
 
@@ -95,505 +96,767 @@ st.set_page_config(
 
 apply_theme()
 
+inject_card_css()
+
 render_sidebar()
 
-dashboard_header()
+initialize_session()
 
-st.title("⚡ Execution Dashboard")
-
-st.caption(
-    "Institutional trade execution, order management and execution analytics."
-)
-
-# ==========================================================
-# Data Loading
-# ==========================================================
+# =============================================================================
+# Report Loading
+# =============================================================================
 
 
-orders = load_first_available_csv(
-    CONFIG.orders_file,
-)
+@st.cache_data(show_spinner=False)
+def get_reports() -> ReportData:
+    """
+    Load workflow reports.
+    """
 
-trades = load_first_available_csv(
-    CONFIG.trades_file,
-)
+    return load_reports()
 
-rebalance = load_first_available_csv(
-    CONFIG.rebalance_file,
-)
 
-history = load_first_available_csv(
-    CONFIG.execution_file,
-)
+try:
 
-# ==========================================================
-# Validation
-# ==========================================================
+    reports = get_reports()
 
-if (
+    latest = reports.latest
 
-    orders.empty
+    history = reports.history
 
-    and trades.empty
+except Exception:
 
-    and rebalance.empty
+    LOGGER.exception(
+        "Unable to load execution reports."
+    )
 
-):
-
-    st.warning(
-
-        "No execution data available."
-
+    st.error(
+        "Unable to load execution reports."
     )
 
     st.stop()
 
-# ==========================================================
-# Column Detection
-# ==========================================================
+# =============================================================================
+# Validation
+# =============================================================================
 
-symbol_col = first_existing(
 
-    trades,
+def validate_reports(
+    reports: ReportData,
+) -> bool:
+    """
+    Validate required reports.
+    """
 
-    "Symbol",
+    required = {
 
-    "Ticker",
+        "Execution Summary":
 
-    "Stock",
+            latest.get(
+                "execution_summary",
+                pd.DataFrame(),
+            ),
+
+    }
+
+    missing = [
+
+        report
+
+        for report, dataframe
+
+        in required.items()
+
+        if dataframe.empty
+
+    ]
+
+    if not missing:
+
+        return True
+
+    empty_state(
+
+        "Execution Reports Missing",
+
+        (
+            "The following reports "
+            "are unavailable:\n\n"
+
+            + "\n".join(
+                f"• {report}"
+                for report in missing
+            )
+
+            + "\n\nRun the workflow "
+              "to regenerate reports."
+
+        ),
+
+    )
+
+    return False
+
+
+if not validate_reports(
+    reports,
+):
+
+    st.stop()
+
+# =============================================================================
+# Working Reports
+# =============================================================================
+
+orders = latest.get(
+
+    "orders",
+
+    pd.DataFrame(),
 
 )
 
-side_col = first_existing(
 
-    trades,
+trade_list = latest.get(
 
-    "Side",
+    "trade_list",
 
-    "Action",
-
-)
-
-quantity_col = first_existing(
-
-    trades,
-
-    "Quantity",
-
-    "Qty",
+    pd.DataFrame(),
 
 )
 
-price_col = first_existing(
 
-    trades,
+rebalance_orders = latest.get(
 
-    "Price",
+    "rebalance_orders",
 
-    "Execution Price",
+    pd.DataFrame(),
 
 )
 
-status_col = first_existing(
 
-    trades,
+execution_summary = latest.get(
+
+    "execution_summary",
+
+    pd.DataFrame(),
+
+)
+
+
+execution_history = history.get(
+
+    "execution_history",
+
+    pd.DataFrame(),
+
+)
+
+# =============================================================================
+# Page Header
+# =============================================================================
+
+section(
+
+    "Execution Dashboard",
+
+    (
+        "Executive overview of the "
+        "latest workflow-generated "
+        "execution reports."
+    ),
+
+)
+
+execution_kpis(
+
+    execution_summary,
+
+)
+
+divider()
+
+# =============================================================================
+# Executive Execution Summary
+# =============================================================================
+
+section(
+
+    "Executive Execution Summary",
+
+    (
+        "Summary of execution metrics "
+        "generated by the workflow."
+    ),
+
+)
+
+if execution_summary.empty:
+
+    st.info(
+        "Execution summary is unavailable."
+    )
+
+else:
+
+    st.dataframe(
+
+        execution_summary,
+        use_container_width=True,
+        hide_index=True,
+
+    )
+
+    dataframe_info(
+        execution_summary,
+    )
+
+divider()
+
+# =============================================================================
+# Order Management
+# =============================================================================
+
+section(
+
+    "Order Management",
+
+    (
+        "Review workflow-generated "
+        "orders and execution status."
+    ),
+
+)
+
+# =============================================================================
+# Order Queue
+# =============================================================================
+
+st.subheader(
+    "Order Queue"
+)
+
+if orders.empty:
+
+    st.info(
+        "Order queue is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        orders,
+
+        key="execution_orders",
+
+    )
+
+    dataframe_info(
+        orders,
+    )
+
+divider()
+
+# =============================================================================
+# Trade Blotter
+# =============================================================================
+
+section(
+
+    "Trade Blotter",
+
+    (
+        "Latest executed trades "
+        "generated by the workflow."
+    ),
+
+)
+if trade_list.empty:
+
+    st.info(
+        "No trade blotter available. "
+        "The workflow did not generate trade-level execution records."
+    )
+
+else:
+
+    holdings_table(
+
+        trade_list,
+
+        key="trade_blotter",
+
+    )
+
+
+divider()
+
+# =============================================================================
+# Pending Orders
+# =============================================================================
+
+section(
+
+    "Pending Orders",
+
+    (
+        "Orders awaiting execution."
+    ),
+
+)
+
+status_column = None
+
+for column in (
 
     "Status",
 
-)
+    "Order Status",
 
-broker_col = first_existing(
+):
 
-    trades,
+    if column in orders.columns:
 
-    "Broker",
+        status_column = column
 
-)
+        break
 
-slippage_col = first_existing(
+if (
 
-    trades,
+    status_column
 
-    "Slippage",
+    and
 
-)
+    not orders.empty
 
-cost_col = first_existing(
+):
 
-    trades,
+    pending_orders = (
 
-    "Cost",
+        orders[
 
-    "Execution Cost",
+            orders[
+                status_column
+            ]
 
-)
+            .astype(str)
 
-time_col = first_existing(
+            .str.upper()
 
-    trades,
+            .isin(
 
-    "Execution Time",
+                [
 
-    "Timestamp",
+                    "PENDING",
 
-)
+                    "OPEN",
 
-# ==========================================================
-# Numeric Series
-# ==========================================================
+                ]
 
-quantities = numeric_series(
-
-    trades,
-
-    quantity_col,
-
-)
-
-prices = numeric_series(
-
-    trades,
-
-    price_col,
-
-)
-
-costs = numeric_series(
-
-    trades,
-
-    cost_col,
-
-)
-
-slippage = numeric_series(
-
-    trades,
-
-    slippage_col,
-
-)
-
-# ==========================================================
-# Execution KPIs
-# ==========================================================
-
-total_orders = len(
-    trades
-)
-
-executed_orders = (
-
-    trades[status_col]
-
-    .eq("Executed")
-
-    .sum()
-
-    if status_col
-
-    else 0
-
-)
-
-pending_orders = (
-
-    trades[status_col]
-
-    .eq("Pending")
-
-    .sum()
-
-    if status_col
-
-    else 0
-
-)
-
-failed_orders = (
-
-    trades[status_col]
-
-    .eq("Failed")
-
-    .sum()
-
-    if status_col
-
-    else 0
-
-)
-
-execution_value = (
-
-    quantities
-
-    * prices
-
-).sum()
-
-summary_row(
-
-    [
-
-        (
-
-            "Orders",
-
-            total_orders,
-
-            None,
-
-        ),
-
-        (
-
-            "Executed",
-
-            executed_orders,
-
-            None,
-
-        ),
-
-        (
-
-            "Pending",
-
-            pending_orders,
-
-            None,
-
-        ),
-
-        (
-
-            "Execution Value",
-
-            f"{execution_value:,.0f}",
-
-            None,
-
-        ),
-
-    ]
-
-)
-
-# ==========================================================
-# Executive Summary
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Execution Summary",
-)
-
-fill_rate = (
-
-    executed_orders
-
-    / total_orders
-
-    * 100
-
-    if total_orders
-
-    else 0
-
-)
-
-average_slippage = (
-
-    slippage.mean()
-
-    if len(slippage)
-
-    else 0
-
-)
-
-average_cost = (
-
-    costs.mean()
-
-    if len(costs)
-
-    else 0
-
-)
-
-execution_score = 100
-
-execution_score -= min(
-
-    failed_orders * 5,
-
-    40,
-
-)
-
-execution_score -= min(
-
-    average_slippage,
-
-    20,
-
-)
-
-execution_score = max(
-
-    execution_score,
-
-    0,
-
-)
-
-left, right = st.columns(
-    [
-        2,
-        1,
-    ]
-)
-
-with left:
-
-    summary_row(
-
-        [
-
-            (
-
-                "Fill Rate",
-
-                f"{fill_rate:.1f}%",
-
-                None,
-
-            ),
-
-            (
-
-                "Avg Slippage",
-
-                f"{average_slippage:.2f}",
-
-                None,
-
-            ),
-
-            (
-
-                "Avg Cost",
-
-                f"{average_cost:.2f}",
-
-                None,
-
-            ),
-
-            (
-
-                "Execution Score",
-
-                f"{execution_score:.0f}",
-
-                None,
-
-            ),
+            )
 
         ]
 
     )
 
-with right:
+    if pending_orders.empty:
 
-    color = "#16A34A"
+        st.success(
+            "No pending orders.",
+            icon="✅",
+        )
 
-    rating = "EXCELLENT"
+    else:
 
-    if execution_score < 85:
+        holdings_table(
 
-        color = "#65A30D"
+            pending_orders,
 
-        rating = "GOOD"
+            key="pending_orders",
 
-    if execution_score < 70:
+        )
 
-        color = "#F59E0B"
+else:
 
-        rating = "AVERAGE"
+    st.info(
+        "Pending order report "
+        "is unavailable."
+    )
 
-    if execution_score < 50:
+divider()
 
-        color = "#DC2626"
+# =============================================================================
+# Executed Orders
+# =============================================================================
 
-        rating = "POOR"
+section(
 
-    st.markdown(
+    "Executed Orders",
 
-        f"""
-<div
-style="
-background:{color};
-padding:24px;
-border-radius:14px;
-text-align:center;
-color:white;
-">
+    (
+        "Successfully executed "
+        "workflow orders."
+    ),
 
-<h3>
+)
 
-Execution Rating
+if (
 
-</h3>
+    status_column
 
-<h1>
+    and
 
-{rating}
+    not orders.empty
 
-</h1>
+):
 
-<h2>
+    executed_orders = (
 
-{execution_score:.0f}
+        orders[
 
-</h2>
+            orders[
+                status_column
+            ]
 
-</div>
+            .astype(str)
 
-""",
+            .str.upper()
 
-        unsafe_allow_html=True,
+            .isin(
+
+                [
+
+                    "EXECUTED",
+
+                    "FILLED",
+
+                    "COMPLETED",
+
+                ]
+
+            )
+
+        ]
 
     )
 
-# ==========================================================
-# Order Queue Overview
-# ==========================================================
+    if executed_orders.empty:
 
-st.divider()
+        st.info(
+            "No executed orders."
+        )
 
-st.header(
-    "Order Queue Overview",
+    else:
+
+        holdings_table(
+
+            executed_orders,
+
+            key="executed_orders",
+
+        )
+
+else:
+
+    st.info(
+        "Executed order report "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Failed Orders
+# =============================================================================
+
+section(
+
+    "Failed Orders",
+
+    (
+        "Orders rejected or "
+        "cancelled."
+    ),
+
 )
 
-if status_col:
+if (
 
-    status_summary = (
+    status_column
 
-        trades
+    and
 
-        .groupby(status_col)
+    not orders.empty
+
+):
+
+    failed_orders = (
+
+        orders[
+
+            orders[
+                status_column
+            ]
+
+            .astype(str)
+
+            .str.upper()
+
+            .isin(
+
+                [
+
+                    "FAILED",
+
+                    "REJECTED",
+
+                    "CANCELLED",
+
+                ]
+
+            )
+
+        ]
+
+    )
+
+    if failed_orders.empty:
+
+        st.success(
+            "No failed orders.",
+            icon="✅",
+        )
+
+    else:
+
+        holdings_table(
+
+            failed_orders,
+
+            key="failed_orders",
+
+        )
+
+else:
+
+    st.info(
+        "Failed order report "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Rebalance Orders
+# =============================================================================
+
+section(
+
+    "Rebalance Orders",
+
+    (
+        "Portfolio rebalance "
+        "orders generated by "
+        "the workflow."
+    ),
+
+)
+
+if rebalance_orders.empty:
+
+    st.info(
+        "Rebalance orders "
+        "are unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        rebalance_orders,
+
+        key="rebalance_orders",
+
+    )
+
+    dataframe_info(
+        rebalance_orders,
+    )
+
+divider()
+
+# =============================================================================
+# Execution Timeline
+# =============================================================================
+
+section(
+
+    "Execution Timeline",
+
+    (
+        "Historical execution "
+        "activity generated by "
+        "the workflow."
+    ),
+
+)
+
+date_column = None
+
+for column in (
+
+    "Date",
+
+    "Trade Date",
+
+    "Execution Date",
+
+    "Timestamp",
+
+):
+
+    if column in execution_history.columns:
+
+        date_column = column
+
+        break
+
+count_column = None
+
+for column in (
+
+    "Executed Orders",
+
+    "Orders",
+
+    "Trades",
+
+    "Executions",
+
+):
+
+    if column in execution_history.columns:
+
+        count_column = column
+
+        break
+
+if (
+
+    date_column
+
+    and
+
+    count_column
+
+):
+
+    figure = px.line(
+
+        execution_history,
+
+        x=date_column,
+
+        y=count_column,
+
+        markers=True,
+
+        title="Execution Trend",
+
+    )
+
+    figure.update_layout(
+
+        height=CONFIG.chart_height,
+
+        xaxis_title="",
+
+        yaxis_title=count_column,
+
+    )
+
+    st.plotly_chart(
+
+        figure,
+
+        use_container_width=True,
+
+    )
+
+else:
+
+    st.info(
+        "Execution timeline "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Broker Analytics
+# =============================================================================
+
+section(
+
+    "Broker Analytics",
+
+    (
+        "Execution grouped by "
+        "broker."
+    ),
+
+)
+
+broker_column = None
+
+for column in (
+
+    "Broker",
+
+    "Broker Name",
+
+):
+
+    if column in trade_list.columns:
+
+        broker_column = column
+
+        break
+
+if (
+
+    broker_column
+
+    and
+
+    not trade_list.empty
+
+):
+
+    broker_summary = (
+
+        trade_list
+
+        .groupby(
+
+            broker_column,
+
+            dropna=False,
+
+        )
 
         .size()
 
-        .reset_index(name="Orders")
+        .reset_index(
+
+            name="Trades",
+
+        )
 
         .sort_values(
 
-            "Orders",
+            "Trades",
 
             ascending=False,
 
@@ -602,1712 +865,674 @@ if status_col:
     )
 
     left, right = st.columns(
-
-        [
-
-            1,
-
-            2,
-
-        ]
-
+        [2, 1],
     )
 
     with left:
 
-        holdings_table(
+        figure = px.bar(
 
-            status_summary,
+            broker_summary,
 
-        )
+            x=broker_column,
 
-    with right:
+            y="Trades",
 
-        fig = px.pie(
-
-            status_summary,
-
-            names=status_col,
-
-            values="Orders",
-
-            hole=0.55,
+            text="Trades",
 
         )
 
-        fig.update_layout(
+        figure.update_layout(
 
-            height=400,
+            height=CONFIG.chart_height,
 
         )
 
         st.plotly_chart(
 
-            fig,
+            figure,
 
             use_container_width=True,
 
         )
 
-# ==========================================================
-# Pending Orders
-# ==========================================================
+    with right:
 
-st.divider()
+        st.dataframe(
 
-st.header(
-    "Pending Orders",
-)
+            broker_summary,
 
-pending_df = pd.DataFrame()
+            use_container_width=True,
 
-if status_col:
+            hide_index=True,
 
-    pending_df = trades.loc[
-
-        trades[status_col]
-
-        .astype(str)
-
-        .str.upper()
-
-        == "PENDING"
-
-    ].copy()
-
-if pending_df.empty:
-
-    st.success(
-
-        "No pending orders."
-
-    )
+        )
 
 else:
-
-    holdings_table(
-
-        pending_df,
-
-    )
-
-# ==========================================================
-# Executed Orders
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Executed Orders",
-)
-
-executed_df = pd.DataFrame()
-
-if status_col:
-
-    executed_df = trades.loc[
-
-        trades[status_col]
-
-        .astype(str)
-
-        .str.upper()
-
-        == "EXECUTED"
-
-    ].copy()
-
-if executed_df.empty:
 
     st.info(
-
-        "No executed orders."
-
+        "Broker analytics "
+        "are unavailable."
     )
 
-else:
+divider()
 
-    holdings_table(
+# =============================================================================
+# Execution Cost
+# =============================================================================
 
-        executed_df,
+section(
 
-    )
+    "Execution Cost",
 
-# ==========================================================
-# Failed Orders
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Failed Orders",
-)
-
-failed_df = pd.DataFrame()
-
-if status_col:
-
-    failed_df = trades.loc[
-
-        trades[status_col]
-
-        .astype(str)
-
-        .str.upper()
-
-        == "FAILED"
-
-    ].copy()
-
-if failed_df.empty:
-
-    st.success(
-
-        "No failed orders."
-
-    )
-
-else:
-
-    holdings_table(
-
-        failed_df,
-
-    )
-
-# ==========================================================
-# Rebalance Queue
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Rebalance Queue",
-)
-
-if rebalance.empty:
-
-    st.info(
-
-        "No rebalance recommendations available."
-
-    )
-
-else:
-
-    holdings_table(
-
-        rebalance,
-
-    )
-
-# ==========================================================
-# Trade Blotter
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Trade Blotter",
-)
-
-display_df = trades.copy()
-
-search = st.text_input(
-
-    "Search Symbol",
+    (
+        "Transaction cost "
+        "reported by the workflow."
+    ),
 
 )
 
-if (
+cost_column = None
 
-    search
+for column in (
 
-    and symbol_col
+    "Transaction Cost",
+
+    "Execution Cost",
+
+    "Cost",
+
+    "Brokerage",
 
 ):
 
-    display_df = display_df.loc[
+    if column in trade_list.columns:
 
-        display_df[symbol_col]
+        cost_column = column
 
-        .astype(str)
-
-        .str.contains(
-
-            search,
-
-            case=False,
-
-            na=False,
-
-        )
-
-    ]
-
-if side_col:
-
-    sides = sorted(
-
-        display_df[side_col]
-
-        .dropna()
-
-        .unique()
-
-        .tolist()
-
-    )
-
-    selected_side = st.selectbox(
-
-        "Order Side",
-
-        [
-
-            "All",
-
-            *sides,
-
-        ],
-
-    )
-
-    if selected_side != "All":
-
-        display_df = display_df.loc[
-
-            display_df[side_col]
-
-            == selected_side
-
-        ]
-
-if status_col:
-
-    statuses = sorted(
-
-        display_df[status_col]
-
-        .dropna()
-
-        .unique()
-
-        .tolist()
-
-    )
-
-    selected_status = st.selectbox(
-
-        "Status",
-
-        [
-
-            "All",
-
-            *statuses,
-
-        ],
-
-    )
-
-    if selected_status != "All":
-
-        display_df = display_df.loc[
-
-            display_df[status_col]
-
-            == selected_status
-
-        ]
-
-holdings_table(
-
-    display_df,
-
-)
-
-# ==========================================================
-# Live Execution Monitor
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Live Execution Monitor",
-)
-
-monitor = pd.DataFrame(
-
-    [
-
-        (
-
-            "Total Orders",
-
-            total_orders,
-
-        ),
-
-        (
-
-            "Executed",
-
-            executed_orders,
-
-        ),
-
-        (
-
-            "Pending",
-
-            pending_orders,
-
-        ),
-
-        (
-
-            "Failed",
-
-            failed_orders,
-
-        ),
-
-        (
-
-            "Fill Rate",
-
-            f"{fill_rate:.2f}%",
-
-        ),
-
-        (
-
-            "Average Slippage",
-
-            f"{average_slippage:.2f}",
-
-        ),
-
-        (
-
-            "Execution Score",
-
-            execution_score,
-
-        ),
-
-    ],
-
-    columns=[
-
-        "Metric",
-
-        "Value",
-
-    ],
-
-)
-
-left, right = st.columns(
-
-    [
-
-        1,
-
-        2,
-
-    ]
-
-)
-
-with left:
-
-    holdings_table(
-
-        monitor,
-
-    )
-
-with right:
-
-    if status_col:
-
-        fig = px.bar(
-
-            status_summary,
-
-            x=status_col,
-
-            y="Orders",
-
-            text="Orders",
-
-            color="Orders",
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            coloraxis_showscale=False,
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ==========================================================
-# Fill Rate Analytics
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Fill Rate Analytics",
-)
-
-if status_col:
-
-    total = max(
-        total_orders,
-        1,
-    )
-
-    partial_orders = (
-
-        trades[status_col]
-
-        .astype(str)
-
-        .str.upper()
-
-        .eq("PARTIAL")
-
-        .sum()
-
-    )
-
-    cancelled_orders = (
-
-        trades[status_col]
-
-        .astype(str)
-
-        .str.upper()
-
-        .eq("CANCELLED")
-
-        .sum()
-
-    )
-
-    rejected_orders = (
-
-        trades[status_col]
-
-        .astype(str)
-
-        .str.upper()
-
-        .eq("REJECTED")
-
-        .sum()
-
-    )
-
-    fill_metrics = pd.DataFrame(
-
-        [
-
-            (
-
-                "Executed",
-
-                executed_orders,
-
-                executed_orders / total * 100,
-
-            ),
-
-            (
-
-                "Partial",
-
-                partial_orders,
-
-                partial_orders / total * 100,
-
-            ),
-
-            (
-
-                "Pending",
-
-                pending_orders,
-
-                pending_orders / total * 100,
-
-            ),
-
-            (
-
-                "Rejected",
-
-                rejected_orders,
-
-                rejected_orders / total * 100,
-
-            ),
-
-            (
-
-                "Cancelled",
-
-                cancelled_orders,
-
-                cancelled_orders / total * 100,
-
-            ),
-
-        ],
-
-        columns=[
-
-            "Status",
-
-            "Orders",
-
-            "Percentage",
-
-        ],
-
-    )
-
-    left, right = st.columns(
-        [1, 2]
-    )
-
-    with left:
-
-        holdings_table(
-            fill_metrics,
-        )
-
-    with right:
-
-        fig = px.bar(
-
-            fill_metrics,
-
-            x="Status",
-
-            y="Percentage",
-
-            text="Percentage",
-
-            color="Percentage",
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            coloraxis_showscale=False,
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ==========================================================
-# Slippage Analysis
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Slippage Analysis",
-)
-
-if len(slippage):
-
-    slippage_summary = pd.DataFrame(
-
-        [
-
-            (
-
-                "Average",
-
-                slippage.mean(),
-
-            ),
-
-            (
-
-                "Median",
-
-                slippage.median(),
-
-            ),
-
-            (
-
-                "Maximum",
-
-                slippage.max(),
-
-            ),
-
-            (
-
-                "Minimum",
-
-                slippage.min(),
-
-            ),
-
-            (
-
-                "Std Dev",
-
-                slippage.std(),
-
-            ),
-
-        ],
-
-        columns=[
-
-            "Metric",
-
-            "Value",
-
-        ],
-
-    )
-
-    left, right = st.columns(
-        [1, 2]
-    )
-
-    with left:
-
-        holdings_table(
-            slippage_summary,
-        )
-
-    with right:
-
-        fig = px.histogram(
-
-            slippage,
-
-            nbins=25,
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            xaxis_title="Slippage",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-else:
-
-    st.info(
-        "Slippage information unavailable."
-    )
-
-# ==========================================================
-# Execution Cost Analytics
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Execution Cost Analysis",
-)
-
-if len(costs):
-
-    total_cost = costs.sum()
-
-    average_cost = costs.mean()
-
-    maximum_cost = costs.max()
-
-    minimum_cost = costs.min()
-
-    summary_row(
-
-        [
-
-            (
-
-                "Total Cost",
-
-                f"{total_cost:,.2f}",
-
-                None,
-
-            ),
-
-            (
-
-                "Average Cost",
-
-                f"{average_cost:.2f}",
-
-                None,
-
-            ),
-
-            (
-
-                "Highest Cost",
-
-                f"{maximum_cost:.2f}",
-
-                None,
-
-            ),
-
-            (
-
-                "Lowest Cost",
-
-                f"{minimum_cost:.2f}",
-
-                None,
-
-            ),
-
-        ]
-
-    )
-
-    fig = px.box(
-
-        y=costs,
-
-    )
-
-    fig.update_layout(
-
-        height=400,
-
-        yaxis_title="Execution Cost",
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Broker Performance
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Broker Performance",
-)
-
-if broker_col:
-
-    broker_summary = (
-
-        trades
-
-        .groupby(broker_col)
-
-        .agg(
-
-            Orders=(
-
-                symbol_col,
-
-                "count",
-
-            ),
-
-            Avg_Cost=(
-
-                cost_col,
-
-                "mean",
-
-            ),
-
-            Avg_Slippage=(
-
-                slippage_col,
-
-                "mean",
-
-            ),
-
-        )
-
-        .reset_index()
-
-    )
-
-    holdings_table(
-        broker_summary,
-    )
-
-    fig = px.bar(
-
-        broker_summary,
-
-        x=broker_col,
-
-        y="Orders",
-
-        color="Avg_Slippage",
-
-        text="Orders",
-
-    )
-
-    fig.update_layout(
-
-        height=420,
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Trading Volume Analytics
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Trading Volume Analytics",
-)
-
-if quantity_col:
-
-    volume_summary = pd.DataFrame(
-
-        [
-
-            (
-
-                "Total Quantity",
-
-                quantities.sum(),
-
-            ),
-
-            (
-
-                "Average Quantity",
-
-                quantities.mean(),
-
-            ),
-
-            (
-
-                "Largest Order",
-
-                quantities.max(),
-
-            ),
-
-            (
-
-                "Median Quantity",
-
-                quantities.median(),
-
-            ),
-
-        ],
-
-        columns=[
-
-            "Metric",
-
-            "Value",
-
-        ],
-
-    )
-
-    left, right = st.columns(
-        [1, 2]
-    )
-
-    with left:
-
-        holdings_table(
-            volume_summary,
-        )
-
-    with right:
-
-        fig = px.histogram(
-
-            quantities,
-
-            nbins=30,
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            xaxis_title="Order Quantity",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ==========================================================
-# Execution Timeline
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Execution Timeline",
-)
+        break
 
 if (
 
-    time_col
+    cost_column
 
     and
 
-    not history.empty
+    not trade_list.empty
 
 ):
 
-    history[time_col] = pd.to_datetime(
+    figure = px.histogram(
 
-        history[time_col],
+        trade_list,
 
-        errors="coerce",
+        x=cost_column,
 
-    )
+        nbins=30,
 
-    timeline_metric = first_existing(
-
-        history,
-
-        "Executed Orders",
-
-        "Orders",
-
-        "Count",
+        title="Execution Cost Distribution",
 
     )
 
-    if timeline_metric:
+    figure.update_layout(
 
-        fig = px.line(
+        height=CONFIG.chart_height,
 
-            history,
+    )
 
-            x=time_col,
+    st.plotly_chart(
 
-            y=timeline_metric,
+        figure,
 
-            markers=True,
+        use_container_width=True,
 
+    )
+
+else:
+
+    st.info(
+        "Execution cost "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Slippage Analysis
+# =============================================================================
+
+section(
+
+    "Slippage Analysis",
+
+    (
+        "Workflow-reported "
+        "execution slippage."
+    ),
+
+)
+
+slippage_column = None
+
+for column in (
+
+    "Slippage",
+
+    "Slippage (%)",
+
+    "Execution Slippage",
+
+):
+
+    if column in trade_list.columns:
+
+        slippage_column = column
+
+        break
+
+symbol_column = None
+
+for column in (
+
+    "Symbol",
+
+    "Ticker",
+
+    "Stock",
+
+):
+
+    if column in trade_list.columns:
+
+        symbol_column = column
+
+        break
+
+if (
+
+    not trade_list.empty
+
+    and
+
+    slippage_column is not None
+
+    and
+
+    symbol_column is not None
+
+):
+
+    figure = px.scatter(
+
+        trade_list,
+
+        x=slippage_column,
+
+        y=symbol_column,
+
+        color=slippage_column,
+
+        hover_name=symbol_column,
+
+    )
+
+    figure.update_layout(
+
+        height=CONFIG.chart_height,
+
+        xaxis_title=slippage_column,
+
+        yaxis_title="",
+
+        coloraxis_showscale=False,
+
+    )
+
+    st.plotly_chart(
+
+        figure,
+
+        use_container_width=True,
+
+    )
+
+else:
+
+    st.info(
+        "Slippage report "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Execution History
+# =============================================================================
+
+section(
+
+    "Execution History",
+
+    (
+        "Historical execution "
+        "records."
+    ),
+
+)
+
+if execution_history.empty:
+
+    st.info(
+        "Execution history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        execution_history,
+
+        key="execution_history",
+
+    )
+
+    dataframe_info(
+        execution_history,
+    )
+
+divider()
+
+# =============================================================================
+# Execution Scorecard
+# =============================================================================
+
+section(
+
+    "Execution Scorecard",
+
+    (
+        "Executive summary of "
+        "workflow-generated execution "
+        "metrics."
+    ),
+
+)
+
+if execution_summary.empty:
+
+    st.info(
+        "Execution summary "
+        "is unavailable."
+    )
+
+else:
+
+    st.dataframe(
+
+        execution_summary,
+
+        use_container_width=True,
+
+        hide_index=True,
+
+    )
+
+divider()
+
+# =============================================================================
+# Execution Alerts
+# =============================================================================
+
+section(
+
+    "Execution Alerts",
+
+    (
+        "Execution alerts reported "
+        "by the workflow."
+    ),
+
+)
+
+alert_columns = [
+
+    column
+
+    for column in (
+
+        "Alert",
+
+        "Severity",
+
+        "Description",
+
+        "Status",
+
+    )
+
+    if column in execution_summary.columns
+
+]
+
+if alert_columns:
+
+    alerts = execution_summary[
+        alert_columns
+    ]
+
+    if alerts.empty:
+
+        st.success(
+            "No execution alerts.",
+            icon="✅",
         )
 
-        fig.update_layout(
+    else:
 
-            height=430,
+        holdings_table(
 
-            xaxis_title="",
+            alerts,
 
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
+            key="execution_alerts",
 
         )
 
 else:
 
     st.info(
-        "Execution history unavailable."
+        "Execution alerts "
+        "are unavailable."
     )
 
-# ==========================================================
-# Execution Quality Scorecard
-# ==========================================================
+divider()
 
-st.divider()
+# =============================================================================
+# Compliance Status
+# =============================================================================
 
-st.header(
-    "Execution Quality Scorecard",
-)
+section(
 
-quality_score = pd.DataFrame(
+    "Compliance Status",
 
-    [
-
-        (
-
-            "Fill Rate",
-
-            f"{fill_rate:.2f}%",
-
-        ),
-
-        (
-
-            "Average Slippage",
-
-            f"{average_slippage:.2f}",
-
-        ),
-
-        (
-
-            "Average Cost",
-
-            f"{average_cost:.2f}",
-
-        ),
-
-        (
-
-            "Execution Score",
-
-            execution_score,
-
-        ),
-
-        (
-
-            "Failed Orders",
-
-            failed_orders,
-
-        ),
-
-        (
-
-            "Pending Orders",
-
-            pending_orders,
-
-        ),
-
-    ],
-
-    columns=[
-
-        "Metric",
-
-        "Value",
-
-    ],
+    (
+        "Workflow execution "
+        "compliance."
+    ),
 
 )
 
-holdings_table(
-    quality_score,
-)
+if (
 
-# ==========================================================
-# Compliance Dashboard
-# ==========================================================
+    "Status"
 
-st.divider()
+    in execution_summary.columns
 
-st.header(
-    "Execution Compliance",
-)
+):
 
-max_slippage_limit = 0.50
-max_order_value = 1_000_000
+    status = (
 
-trade_value = quantities * prices
+        execution_summary[
+            "Status"
+        ]
 
-compliance = []
+        .astype(str)
 
-for i in range(len(trades)):
-
-    violations = []
-
-    if len(slippage) > i:
-
-        if slippage.iloc[i] > max_slippage_limit:
-
-            violations.append("High Slippage")
-
-    if len(trade_value) > i:
-
-        if trade_value.iloc[i] > max_order_value:
-
-            violations.append("Large Order")
-
-    compliance.append(
-
-        ", ".join(violations)
-
-        if violations
-
-        else "PASS"
+        .str.upper()
 
     )
 
-compliance_df = trades.copy()
-
-compliance_df["Compliance"] = compliance
-
-summary = pd.DataFrame(
-
-    [
-
-        (
-
-            "Pass",
-
-            (
-
-                compliance_df["Compliance"]
-
-                == "PASS"
-
-            ).sum(),
-
-        ),
-
-        (
-
-            "Violations",
-
-            (
-
-                compliance_df["Compliance"]
-
-                != "PASS"
-
-            ).sum(),
-
-        ),
-
-    ],
-
-    columns=[
-
-        "Metric",
-
-        "Value",
-
-    ],
-
-)
-
-left, right = st.columns([1, 2])
-
-with left:
-
-    holdings_table(summary)
-
-with right:
-
-    holdings_table(
-
-        compliance_df,
-
+    passed = int(
+        (status == "PASS").sum()
     )
 
-# ==========================================================
-# Trade Exceptions
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Trade Exceptions",
-)
-
-exceptions = compliance_df.loc[
-
-    compliance_df["Compliance"]
-
-    != "PASS"
-
-]
-
-if exceptions.empty:
-
-    st.success(
-
-        "No execution exceptions detected."
-
+    failed = int(
+        (status == "FAIL").sum()
     )
 
-else:
-
-    holdings_table(
-
-        exceptions,
-
+    warnings = int(
+        (status == "WARNING").sum()
     )
 
-# ==========================================================
-# Execution Alerts
-# ==========================================================
+    col1, col2, col3 = st.columns(3)
 
-st.divider()
+    with col1:
 
-st.header(
-    "Execution Alerts",
-)
+        st.metric(
+            "Passed",
+            passed,
+        )
 
-alerts = []
+    with col2:
 
-if failed_orders > 0:
-
-    alerts.append(
-
-        f"{failed_orders} failed orders require review."
-
-    )
-
-if pending_orders > 10:
-
-    alerts.append(
-
-        "Large pending order queue."
-
-    )
-
-if average_slippage > max_slippage_limit:
-
-    alerts.append(
-
-        "Average slippage exceeds policy."
-
-    )
-
-if average_cost > costs.median() * 2 if len(costs) else False:
-
-    alerts.append(
-
-        "Execution cost unusually high."
-
-    )
-
-if fill_rate < 95:
-
-    alerts.append(
-
-        "Fill rate below institutional target."
-
-    )
-
-if not alerts:
-
-    st.success(
-
-        "No active execution alerts."
-
-    )
-
-else:
-
-    for message in alerts:
-
-        st.warning(message)
-
-# ==========================================================
-# Order Lifecycle
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Order Lifecycle",
-)
-
-if status_col:
-
-    lifecycle = (
-
-        trades
-
-        .groupby(status_col)
-
-        .size()
-
-        .reset_index(name="Orders")
-
-    )
-
-    fig = px.funnel(
-
-        lifecycle,
-
-        x="Orders",
-
-        y=status_col,
-
-    )
-
-    fig.update_layout(
-
-        height=420,
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-    holdings_table(
-
-        lifecycle,
-
-    )
-
-
-# ==========================================================
-# OMS Diagnostics
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "OMS Diagnostics",
-)
-
-diagnostics = pd.DataFrame(
-
-    [
-
-        (
-
-            "Orders",
-
-            total_orders,
-
-        ),
-
-        (
-
-            "Executed",
-
-            executed_orders,
-
-        ),
-
-        (
-
-            "Pending",
-
-            pending_orders,
-
-        ),
-
-        (
-
+        st.metric(
             "Failed",
+            failed,
+        )
 
-            failed_orders,
+    with col3:
 
-        ),
+        st.metric(
+            "Warnings",
+            warnings,
+        )
 
-        (
+else:
 
-            "Execution Value",
+    st.info(
+        "Compliance report "
+        "is unavailable."
+    )
 
-            execution_value,
+divider()
 
-        ),
+# =============================================================================
+# Report Status
+# =============================================================================
 
-        (
+section(
 
-            "Average Slippage",
+    "Report Status",
 
-            average_slippage,
-
-        ),
-
-        (
-
-            "Average Cost",
-
-            average_cost,
-
-        ),
-
-        (
-
-            "Fill Rate",
-
-            fill_rate,
-
-        ),
-
-        (
-
-            "Execution Score",
-
-            execution_score,
-
-        ),
-
-    ],
-
-    columns=[
-
-        "Metric",
-
-        "Value",
-
-    ],
+    (
+        "Workflow reports loaded "
+        "for this dashboard."
+    ),
 
 )
 
-left, right = st.columns([1, 2])
+status = pd.DataFrame(
+
+    [
+
+        {
+
+            "Report": "Orders",
+
+            "Rows": len(orders),
+
+            "Status":
+
+                "Available"
+
+                if not orders.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Trade List",
+
+            "Rows": len(trade_list),
+
+            "Status":
+
+                "Available"
+
+                if not trade_list.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Execution Summary",
+
+            "Rows": len(
+                execution_summary,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not execution_summary.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Execution History",
+
+            "Rows": len(
+                execution_history,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not execution_history.empty
+
+                else "Missing",
+
+        },
+
+        {
+
+            "Report": "Rebalance Orders",
+
+            "Rows": len(
+                rebalance_orders,
+            ),
+
+            "Status":
+
+                "Available"
+
+                if not rebalance_orders.empty
+
+                else "Missing",
+
+        },
+
+    ]
+
+)
+
+st.dataframe(
+
+    status,
+
+    use_container_width=True,
+
+    hide_index=True,
+
+)
+
+divider()
+
+# =============================================================================
+# Explore Reports
+# =============================================================================
+
+section(
+
+    "Explore Reports",
+
+    (
+        "Navigate to additional "
+        "workflow reports."
+    ),
+
+)
+
+left, right = st.columns(2)
 
 with left:
 
-    holdings_table(
+    st.info(
+        """
+📊 **Dashboard**
 
-        diagnostics,
+Executive overview.
+"""
+    )
 
+    st.info(
+        """
+💼 **Portfolio**
+
+Portfolio summary.
+"""
+    )
+
+    st.info(
+        """
+📈 **Daily Monitor**
+
+Scanner activity.
+"""
     )
 
 with right:
 
-    dataframe_info(
+    st.info(
+        """
+🛡️ **Risk**
 
-        trades,
-
+Risk analytics.
+"""
     )
 
-# ==========================================================
-# Download Center
-# ==========================================================
+    st.info(
+        """
+📉 **Performance**
 
-st.divider()
-
-st.header(
-    "Execution Reports",
-)
-
-download_files = [
-
-    (
-
-        "Orders",
-
-        CONFIG.orders_file,
-
-        "orders.csv",
-
-    ),
-
-    (
-
-        "Trades",
-
-        CONFIG.trades_file,
-
-        "trade_list.csv",
-
-    ),
-
-    (
-
-        "Rebalance",
-
-        CONFIG.rebalance_file,
-
-        "rebalance_orders.csv",
-
-    ),
-
-    (
-
-        "Execution History",
-
-        CONFIG.execution_file,
-
-        "execution_history.csv",
-
-    ),
-
-]
-
-for label, path, filename in download_files:
-
-    if path.exists():
-
-        with open(path, "rb") as f:
-
-            st.download_button(
-
-                f"Download {label}",
-
-                data=f,
-
-                file_name=filename,
-
-                mime="text/csv",
-
-            )
-
-
-# ==========================================================
-# Executive Insights
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Execution Insights",
-)
-
-insights = []
-
-if fill_rate >= 98:
-
-    insights.append(
-
-        "Execution quality is excellent with a very high fill rate."
-
+Performance reports.
+"""
     )
 
-elif fill_rate >= 95:
+    st.info(
+        """
+📥 **Downloads**
 
-    insights.append(
-
-        "Execution quality is within acceptable institutional limits."
-
+Export reports.
+"""
     )
 
-else:
+divider()
 
-    insights.append(
-
-        "Execution efficiency should be improved to increase fill rates."
-
-    )
-
-if average_slippage <= 0.25:
-
-    insights.append(
-
-        "Market impact remains well controlled."
-
-    )
-
-elif average_slippage <= 0.50:
-
-    insights.append(
-
-        "Slippage is acceptable but should be monitored."
-
-    )
-
-else:
-
-    insights.append(
-
-        "Slippage exceeds acceptable execution thresholds."
-
-    )
-
-if failed_orders == 0:
-
-    insights.append(
-
-        "No failed orders were detected."
-
-    )
-
-if pending_orders > 0:
-
-    insights.append(
-
-        "Pending orders should be monitored until completion."
-
-    )
-
-for insight in insights:
-
-    st.info(insight)
-
-
-# ==========================================================
+# =============================================================================
 # Footer
-# ==========================================================
-
-st.divider()
+# =============================================================================
 
 st.caption(
-
     "Institutional Scanner Monitor"
-
 )
 
 st.caption(
+    "Execution Dashboard"
+)
 
-    "Execution Dashboard • OMS • Rebalancing • Trade Monitoring • Broker Analytics • Compliance"
-
+st.caption(
+    (
+        "Workflow Report Viewer • "
+        "Institutional Trade Execution"
+    )
 )

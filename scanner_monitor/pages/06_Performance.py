@@ -1,49 +1,69 @@
 """
-06_Performance.py
-=================
+pages/06_Performance.py
+=======================
 
-Institutional Performance Dashboard.
+Institutional Scanner Monitor
 
-Provides comprehensive portfolio
-performance analytics, benchmark
-comparison, attribution analysis,
-rolling metrics, and historical
-performance reporting.
+Performance Dashboard
+
+Displays workflow-generated
+portfolio performance reports.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from core.config import REPORTS_DIR
-from core.helpers import first_existing
-from core.helpers import numeric_series
-from core.theme import apply_theme
+from core.logger import get_logger
+from core.session import (
+    initialize as initialize_session,
+)
+from core.theme import (
+    apply_theme,
+    inject_card_css,
+)
 
-from ui.cards import dashboard_header
-from ui.cards import summary_row
+from ui.cards import (
+    divider,
+    empty_state,
+    section,
+)
 
-from ui.sidebar import render_sidebar
+from ui.loader import (
+    ReportData,
+    load_reports,
+)
 
-from ui.tables import dataframe_info
-from ui.tables import holdings_table
+from ui.metrics import (
+    dataframe_info,
+    performance_kpis,
+)
 
-from ui.loader import load_first_available_csv
+from ui.sidebar import (
+    render_sidebar,
+)
 
-# ==========================================================
+from ui.tables import (
+    holdings_table,
+)
+
+LOGGER = get_logger(__name__)
+
+# =============================================================================
 # Configuration
-# ==========================================================
+# =============================================================================
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class PerformanceConfig:
+    """
+    Performance dashboard configuration.
+    """
 
     page_title: str = "Performance"
 
@@ -51,30 +71,18 @@ class PerformanceConfig:
 
     layout: str = "wide"
 
-    portfolio_file: Path = (
-        REPORTS_DIR
-        / "latest"
-        / "portfolio_summary.csv"
-    )
+    chart_height: int = 420
 
-    holdings_file: Path = (
-        REPORTS_DIR
-        / "latest"
-        / "holdings.csv"
-    )
+    preview_rows: int = 20
 
-    performance_file: Path = (
-        REPORTS_DIR
-        / "history"
-        / "performance_history.csv"
-    )
+    top_holdings: int = 15
 
 
 CONFIG = PerformanceConfig()
 
-# ==========================================================
-# Page
-# ==========================================================
+# =============================================================================
+# Streamlit Configuration
+# =============================================================================
 
 st.set_page_config(
 
@@ -88,51 +96,822 @@ st.set_page_config(
 
 apply_theme()
 
+inject_card_css()
+
 render_sidebar()
 
-dashboard_header()
+initialize_session()
 
-st.title("📈 Portfolio Performance Dashboard")
+# =============================================================================
+# Report Loading
+# =============================================================================
 
-st.caption(
-    "Institutional portfolio performance, "
-    "benchmark analytics and attribution."
-)
 
-# ==========================================================
-# Data Loading
-# ==========================================================
+@st.cache_data(show_spinner=False)
+def get_reports() -> ReportData:
+    """
+    Load workflow reports.
+    """
 
-portfolio = load_first_available_csv(
-    CONFIG.portfolio_file,
-)
+    return load_reports()
 
-holdings = load_first_available_csv(
-    CONFIG.holdings_file,
-)
 
-performance = load_first_available_csv(
-    CONFIG.performance_file,
-)
-# ==========================================================
-# Validation
-# ==========================================================
+try:
 
-if holdings.empty:
+    reports = get_reports()
 
-    st.warning(
-        "No holdings available."
+    latest = reports.latest
+
+    history = reports.history
+
+except Exception:
+
+    LOGGER.exception(
+        "Unable to load performance reports."
+    )
+
+    st.error(
+        "Unable to load performance reports."
     )
 
     st.stop()
 
-# ==========================================================
-# Column Detection
-# ==========================================================
+# =============================================================================
+# Validation
+# =============================================================================
 
-symbol_col = first_existing(
 
-    holdings,
+def validate_reports(
+    reports: ReportData,
+) -> bool:
+    """
+    Validate required reports.
+    """
+
+    required = {
+
+        "Portfolio Summary":
+
+            latest.get(
+                "portfolio_summary",
+                pd.DataFrame(),
+            ),
+
+
+        "Holdings":
+
+            latest.get(
+                "holdings",
+                pd.DataFrame(),
+            ),
+
+    
+        "Performance History":
+
+            history.get(
+                "performance_history",
+                pd.DataFrame(),
+            ),
+
+    }
+
+    missing = [
+
+        report
+
+        for report, dataframe
+
+        in required.items()
+
+        if dataframe.empty
+
+    ]
+
+    if not missing:
+
+        return True
+
+    empty_state(
+
+        "Performance Reports Missing",
+
+        (
+            "The following reports "
+            "are unavailable:\n\n"
+
+            + "\n".join(
+                f"• {report}"
+                for report in missing
+            )
+
+            + "\n\nRun the workflow "
+              "to regenerate reports."
+
+        ),
+
+    )
+
+    return False
+
+
+if not validate_reports(
+    reports,
+):
+
+    st.stop()
+
+# =============================================================================
+# Working Reports
+# =============================================================================
+
+portfolio_summary = latest.get(
+
+    "portfolio_summary",
+
+    pd.DataFrame(),
+
+)
+
+
+holdings = latest.get(
+
+    "holdings",
+
+    pd.DataFrame(),
+
+)
+
+
+performance_history = history.get(
+
+    "performance_history",
+
+    pd.DataFrame(),
+
+)
+
+# =============================================================================
+# Page Header
+# =============================================================================
+
+section(
+
+    "Portfolio Performance",
+
+    (
+        "Executive overview of the "
+        "latest workflow-generated "
+        "performance reports."
+    ),
+
+)
+
+performance_kpis(
+
+    portfolio_summary,
+
+)
+
+divider()
+
+# =============================================================================
+# Executive Performance Summary
+# =============================================================================
+
+section(
+
+    "Executive Performance Summary",
+
+    (
+        "Summary of portfolio "
+        "performance metrics "
+        "generated by the workflow."
+    ),
+
+)
+
+if portfolio_summary.empty:
+
+    st.info(
+        "Portfolio summary is unavailable."
+    )
+
+else:
+
+    st.dataframe(
+
+        portfolio_summary,
+
+        use_container_width=True,
+
+        hide_index=True,
+
+    )
+
+    dataframe_info(
+        portfolio_summary,
+    )
+
+divider()
+
+# =============================================================================
+# Portfolio Growth
+# =============================================================================
+
+section(
+
+    "Portfolio Growth",
+
+    (
+        "Historical portfolio growth "
+        "from workflow-generated "
+        "performance reports."
+    ),
+
+)
+
+date_column = None
+
+for column in (
+
+    "Date",
+
+    "Timestamp",
+
+    "Trade Date",
+
+):
+
+    if column in performance_history.columns:
+
+        date_column = column
+
+        break
+
+value_column = None
+
+for column in (
+
+    "Portfolio Value",
+
+    "Current Value",
+
+    "Net Value",
+
+    "Portfolio Equity",
+
+):
+
+    if column in performance_history.columns:
+
+        value_column = column
+
+        break
+
+if (
+
+    date_column
+
+    and
+
+    value_column
+
+):
+
+    figure = px.line(
+
+        performance_history,
+
+        x=date_column,
+
+        y=value_column,
+
+        markers=True,
+
+        title="Portfolio Growth",
+
+    )
+
+    figure.update_layout(
+
+        height=CONFIG.chart_height,
+
+        xaxis_title="",
+
+        yaxis_title=value_column,
+
+    )
+
+    st.plotly_chart(
+
+        figure,
+
+        use_container_width=True,
+
+    )
+
+else:
+
+    st.info(
+        "Portfolio growth "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Historical Performance
+# =============================================================================
+
+section(
+
+    "Historical Performance",
+
+    (
+        "Latest performance history."
+    ),
+
+)
+
+if performance_history.empty:
+
+    st.info(
+        "Performance history "
+        "is unavailable."
+    )
+
+else:
+
+    holdings_table(
+
+        performance_history,
+
+        key="performance_history",
+
+    )
+
+    dataframe_info(
+        performance_history,
+    )
+
+divider()
+
+# =============================================================================
+# Return Distribution
+# =============================================================================
+
+section(
+
+    "Return Distribution",
+
+    (
+        "Distribution of portfolio "
+        "returns from history."
+    ),
+
+)
+
+return_column = None
+
+for column in (
+
+    "Return",
+
+    "Return (%)",
+
+    "Portfolio Return",
+
+    "Daily Return",
+
+):
+
+    if column in performance_history.columns:
+
+        return_column = column
+
+        break
+
+if return_column:
+
+    left, right = st.columns(
+        [2, 1],
+    )
+
+    with left:
+
+        figure = px.histogram(
+
+            performance_history,
+
+            x=return_column,
+
+            nbins=30,
+
+            title="Return Distribution",
+
+        )
+
+        figure.update_layout(
+
+            height=CONFIG.chart_height,
+
+        )
+
+        st.plotly_chart(
+
+            figure,
+
+            use_container_width=True,
+
+        )
+
+    with right:
+
+        summary = (
+
+            performance_history[
+                return_column
+            ]
+
+            .describe()
+
+            .reset_index()
+
+        )
+
+        summary.columns = [
+
+            "Statistic",
+
+            "Value",
+
+        ]
+
+        st.dataframe(
+
+            summary,
+
+            use_container_width=True,
+
+            hide_index=True,
+
+        )
+
+else:
+
+    st.info(
+        "Return distribution "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Rolling Performance
+# =============================================================================
+
+section(
+
+    "Rolling Performance",
+
+    (
+        "Trend of reported "
+        "portfolio performance."
+    ),
+
+)
+
+if (
+
+    date_column
+
+    and
+
+    return_column
+
+):
+
+    figure = px.line(
+
+        performance_history,
+
+        x=date_column,
+
+        y=return_column,
+
+        markers=True,
+
+        title="Performance Trend",
+
+    )
+
+    figure.update_layout(
+
+        height=CONFIG.chart_height,
+
+        xaxis_title="",
+
+        yaxis_title=return_column,
+
+    )
+
+    st.plotly_chart(
+
+        figure,
+
+        use_container_width=True,
+
+    )
+
+else:
+
+    st.info(
+        "Performance trend "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Benchmark Comparison
+# =============================================================================
+
+section(
+
+    "Benchmark Comparison",
+
+    (
+        "Portfolio performance versus "
+        "benchmark reported by the "
+        "workflow."
+    ),
+
+)
+
+benchmark_column = None
+
+for column in (
+
+    "Benchmark Return",
+
+    "Benchmark",
+
+    "Index Return",
+
+):
+
+    if column in performance_history.columns:
+
+        benchmark_column = column
+
+        break
+
+if (
+
+    date_column
+
+    and
+
+    return_column
+
+    and
+
+    benchmark_column
+
+):
+
+    benchmark = (
+
+        performance_history[
+
+            [
+
+                date_column,
+
+                return_column,
+
+                benchmark_column,
+
+            ]
+
+        ]
+
+        .melt(
+
+            id_vars=date_column,
+
+            var_name="Series",
+
+            value_name="Return",
+
+        )
+
+    )
+
+    figure = px.line(
+
+        benchmark,
+
+        x=date_column,
+
+        y="Return",
+
+        color="Series",
+
+        markers=True,
+
+    )
+
+    figure.update_layout(
+
+        height=CONFIG.chart_height,
+
+        xaxis_title="",
+
+        yaxis_title="Return",
+
+    )
+
+    st.plotly_chart(
+
+        figure,
+
+        use_container_width=True,
+
+    )
+
+else:
+
+    st.info(
+        "Benchmark comparison "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Sector Attribution
+# =============================================================================
+
+section(
+
+    "Sector Attribution",
+
+    (
+        "Portfolio contribution by "
+        "sector."
+    ),
+
+)
+
+sector_column = None
+
+for column in (
+
+    "Sector",
+
+    "Sector Name",
+
+):
+
+    if column in holdings.columns:
+
+        sector_column = column
+
+        break
+
+weight_column = None
+
+for column in (
+
+    "Portfolio Weight",
+
+    "Weight",
+
+    "Weight (%)",
+
+):
+
+    if column in holdings.columns:
+
+        weight_column = column
+
+        break
+
+if (
+
+    sector_column
+
+    and
+
+    weight_column
+
+):
+
+    sector = (
+
+        holdings
+
+        .groupby(
+
+            sector_column,
+
+            dropna=False,
+
+        )[
+
+            weight_column
+
+        ]
+
+        .sum()
+
+        .reset_index()
+
+        .sort_values(
+
+            weight_column,
+
+            ascending=False,
+
+        )
+
+    )
+
+    left, right = st.columns(
+        [2, 1],
+    )
+
+    with left:
+
+        figure = px.bar(
+
+            sector,
+
+            x=sector_column,
+
+            y=weight_column,
+
+            text=weight_column,
+
+            color=weight_column,
+
+        )
+
+        figure.update_layout(
+
+            height=CONFIG.chart_height,
+
+            coloraxis_showscale=False,
+
+        )
+
+        st.plotly_chart(
+
+            figure,
+
+            use_container_width=True,
+
+        )
+
+    with right:
+
+        st.dataframe(
+
+            sector,
+
+            use_container_width=True,
+
+            hide_index=True,
+
+        )
+
+else:
+
+    st.info(
+        "Sector attribution "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Top Performers
+# =============================================================================
+
+section(
+
+    "Top Performers",
+
+    (
+        "Highest performing holdings."
+    ),
+
+)
+
+symbol_column = None
+
+for column in (
 
     "Symbol",
 
@@ -140,2724 +919,485 @@ symbol_col = first_existing(
 
     "Stock",
 
-)
+):
 
-sector_col = first_existing(
+    if column in holdings.columns:
 
-    holdings,
+        symbol_column = column
 
-    "Sector",
+        break
 
-)
+holding_return = None
 
-return_col = first_existing(
-
-    holdings,
+for column in (
 
     "Return",
 
-    "Return %",
+    "Return (%)",
 
     "P/L %",
 
-)
+):
 
-weight_col = first_existing(
+    if column in holdings.columns:
 
-    holdings,
+        holding_return = column
 
-    "Weight",
+        break
 
-    "Portfolio Weight",
+if (
 
-)
+    symbol_column
 
-market_value_col = first_existing(
+    and
 
-    holdings,
+    holding_return
 
-    "Market Value",
+):
 
-    "Value",
+    winners = (
 
-)
+        holdings
 
-date_col = first_existing(
+        .sort_values(
 
-    performance,
+            holding_return,
 
-    "Date",
+            ascending=False,
 
-    "Timestamp",
+        )
 
-)
+        .head(10)
 
-# ==========================================================
-# Numeric Series
-# ==========================================================
-
-returns = numeric_series(
-
-    holdings,
-
-    return_col,
-
-)
-
-weights = numeric_series(
-
-    holdings,
-
-    weight_col,
-
-)
-
-market_values = numeric_series(
-
-    holdings,
-
-    market_value_col,
-
-)
-
-# ==========================================================
-# Executive KPIs
-# ==========================================================
-
-portfolio_value = market_values.sum()
-
-average_return = (
-
-    returns.mean()
-
-    if len(returns)
-
-    else 0
-
-)
-
-best_return = (
-
-    returns.max()
-
-    if len(returns)
-
-    else 0
-
-)
-
-worst_return = (
-
-    returns.min()
-
-    if len(returns)
-
-    else 0
-
-)
-
-winning_positions = int(
-
-    (returns > 0).sum()
-
-)
-
-losing_positions = int(
-
-    (returns < 0).sum()
-
-)
-
-summary_row(
-
-    [
-
-        (
-
-            "Portfolio Value",
-
-            f"{portfolio_value:,.0f}",
-
-            None,
-
-        ),
-
-        (
-
-            "Average Return",
-
-            f"{average_return:.2f}%",
-
-            None,
-
-        ),
-
-        (
-
-            "Winning Positions",
-
-            winning_positions,
-
-            None,
-
-        ),
-
-        (
-
-            "Losing Positions",
-
-            losing_positions,
-
-            None,
-
-        ),
-
-    ]
-
-)
-
-# ==========================================================
-# Executive Performance Summary
-# ==========================================================
-
-st.divider()
-
-st.header("Executive Performance Summary")
-
-left_col, right_col = st.columns(
-    [
-        2,
-        1,
-    ]
-)
-
-performance_score = 50
-
-if average_return > 0:
-
-    performance_score += min(
-        average_return,
-        25,
     )
 
-if winning_positions > losing_positions:
+    holdings_table(
 
-    performance_score += 15
+        winners,
 
-if best_return > 15:
+        key="top_performers",
 
-    performance_score += 10
-
-performance_score = min(
-    performance_score,
-    100,
-)
-
-if performance_score >= 85:
-
-    performance_rating = "EXCELLENT"
-
-    rating_color = "#16A34A"
-
-elif performance_score >= 70:
-
-    performance_rating = "GOOD"
-
-    rating_color = "#65A30D"
-
-elif performance_score >= 55:
-
-    performance_rating = "AVERAGE"
-
-    rating_color = "#F59E0B"
+    )
 
 else:
 
-    performance_rating = "WEAK"
-
-    rating_color = "#DC2626"
-
-with left_col:
-
-    summary_row(
-
-        [
-
-            (
-
-                "Performance Score",
-
-                f"{performance_score:.0f}",
-
-                None,
-
-            ),
-
-            (
-
-                "Best Position",
-
-                f"{best_return:.2f}%",
-
-                None,
-
-            ),
-
-            (
-
-                "Worst Position",
-
-                f"{worst_return:.2f}%",
-
-                None,
-
-            ),
-
-            (
-
-                "Average Return",
-
-                f"{average_return:.2f}%",
-
-                None,
-
-            ),
-
-        ]
-
+    st.info(
+        "Top performers "
+        "are unavailable."
     )
 
-with right_col:
+divider()
 
-    st.markdown(
+# =============================================================================
+# Bottom Performers
+# =============================================================================
 
-        f"""
+section(
 
-<div
-style="
-background:{rating_color};
-padding:24px;
-border-radius:14px;
-text-align:center;
-color:white;
-">
+    "Bottom Performers",
 
-<h3>
-
-Performance Rating
-
-</h3>
-
-<h1>
-
-{performance_rating}
-
-</h1>
-
-<h2>
-
-{performance_score:.0f}
-
-</h2>
-
-</div>
-
-""",
-
-        unsafe_allow_html=True,
-
-    )
-
-# ==========================================================
-# Performance Gauge
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Performance Health",
-)
-
-gauge = go.Figure()
-
-gauge.add_trace(
-
-    go.Indicator(
-
-        mode="gauge+number",
-
-        value=performance_score,
-
-        title={
-
-            "text": "Performance Score",
-
-        },
-
-        gauge={
-
-            "axis": {
-
-                "range": [
-
-                    0,
-
-                    100,
-
-                ],
-
-            },
-
-            "bar": {
-
-                "color": rating_color,
-
-            },
-
-            "steps": [
-
-                {
-
-                    "range": [
-
-                        0,
-
-                        40,
-
-                    ],
-
-                    "color": "#FEE2E2",
-
-                },
-
-                {
-
-                    "range": [
-
-                        40,
-
-                        60,
-
-                    ],
-
-                    "color": "#FEF3C7",
-
-                },
-
-                {
-
-                    "range": [
-
-                        60,
-
-                        80,
-
-                    ],
-
-                    "color": "#DCFCE7",
-
-                },
-
-                {
-
-                    "range": [
-
-                        80,
-
-                        100,
-
-                    ],
-
-                    "color": "#BBF7D0",
-
-                },
-
-            ],
-
-        },
-
-    )
-
-)
-
-gauge.update_layout(
-
-    height=350,
-
-    margin=dict(
-
-        l=20,
-
-        r=20,
-
-        t=40,
-
-        b=20,
-
+    (
+        "Lowest performing holdings."
     ),
 
 )
 
-st.plotly_chart(
-
-    gauge,
-
-    use_container_width=True,
-
-)
-
-# ==========================================================
-# Equity Curve
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Equity Curve",
-)
-
 if (
 
-    not performance.empty
-
-    and date_col
-
-):
-
-    equity_col = first_existing(
-
-        performance,
-
-        "Portfolio Value",
-
-        "Equity",
-
-        "Portfolio",
-
-        "NAV",
-
-    )
-
-    if equity_col:
-
-        fig = px.line(
-
-            performance,
-
-            x=date_col,
-
-            y=equity_col,
-
-            markers=True,
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            xaxis_title="",
-
-            yaxis_title="Portfolio Value",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-    else:
-
-        st.info(
-
-            "Equity history unavailable."
-
-        )
-
-else:
-
-    st.info(
-
-        "Performance history unavailable."
-
-    )
-
-# ==========================================================
-# Cumulative Returns
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Cumulative Returns",
-)
-
-if (
-
-    not performance.empty
-
-):
-
-    history_return_col = first_existing(
-
-        performance,
-
-        "Daily Return",
-
-        "Return",
-
-        "Return %",
-
-    )
-
-    if history_return_col:
-
-        cumulative = performance.copy()
-
-        cumulative["Cumulative Return"] = (
-
-            (
-
-                1
-
-                +
-
-                cumulative[history_return_col]
-
-                / 100
-
-            )
-
-            .cumprod()
-
-            - 1
-
-        ) * 100
-
-        fig = px.area(
-
-            cumulative,
-
-            x=date_col,
-
-            y="Cumulative Return",
-
-        )
-
-        fig.update_layout(
-
-            height=420,
-
-            xaxis_title="",
-
-            yaxis_title="Return (%)",
-
-        )
-
-        st.plotly_chart(
-
-            fig,
-
-            use_container_width=True,
-
-        )
-
-# ==========================================================
-# Return Distribution
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Return Distribution",
-)
-
-left, right = st.columns(2)
-
-with left:
-
-    fig = px.histogram(
-
-        returns,
-
-        nbins=30,
-
-    )
-
-    fig.update_layout(
-
-        height=400,
-
-        xaxis_title="Return (%)",
-
-        yaxis_title="Frequency",
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-with right:
-
-    fig = px.box(
-
-        y=returns,
-
-    )
-
-    fig.update_layout(
-
-        height=400,
-
-        yaxis_title="Return (%)",
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Return Statistics
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Performance Statistics",
-)
-
-volatility = (
-
-    returns.std()
-
-    if len(returns)
-
-    else 0
-
-)
-
-median_return = (
-
-    returns.median()
-
-    if len(returns)
-
-    else 0
-
-)
-
-positive_rate = (
-
-    winning_positions
-
-    /
-
-    len(returns)
-
-    * 100
-
-    if len(returns)
-
-    else 0
-
-)
-
-negative_rate = (
-
-    losing_positions
-
-    /
-
-    len(returns)
-
-    * 100
-
-    if len(returns)
-
-    else 0
-
-)
-
-summary_row(
-
-    [
-
-        (
-
-            "Volatility",
-
-            f"{volatility:.2f}%",
-
-            None,
-
-        ),
-
-        (
-
-            "Median Return",
-
-            f"{median_return:.2f}%",
-
-            None,
-
-        ),
-
-        (
-
-            "Positive Rate",
-
-            f"{positive_rate:.1f}%",
-
-            None,
-
-        ),
-
-        (
-
-            "Negative Rate",
-
-            f"{negative_rate:.1f}%",
-
-            None,
-
-        ),
-
-    ]
-
-)
-
-# ==========================================================
-# Executive Commentary
-# ==========================================================
-
-st.subheader(
-    "Performance Assessment",
-)
-
-if performance_rating == "EXCELLENT":
-
-    st.success(
-
-        "Portfolio performance is excellent with consistent positive returns and strong participation across holdings."
-
-    )
-
-elif performance_rating == "GOOD":
-
-    st.success(
-
-        "Portfolio performance remains healthy. Continue monitoring allocation and benchmark-relative returns."
-
-    )
-
-elif performance_rating == "AVERAGE":
-
-    st.warning(
-
-        "Performance is stable but there is room for improvement. Review lagging holdings and sector allocation."
-
-    )
-
-else:
-
-    st.error(
-
-        "Performance is below expectations. Consider portfolio rebalancing and reassessing underperforming positions."
-
-    )
-
-# ==========================================================
-# Institutional Performance Metrics
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Institutional Performance Metrics",
-)
-
-risk_free_rate = 0.06
-
-daily_rf = risk_free_rate / 252
-
-daily_returns = returns / 100
-
-if len(daily_returns):
-
-    annual_return = (
-
-        daily_returns.mean()
-
-        * 252
-
-    )
-
-    annual_volatility = (
-
-        daily_returns.std()
-
-        * np.sqrt(252)
-
-    )
-
-else:
-
-    annual_return = 0.0
-
-    annual_volatility = 0.0
-
-if annual_volatility > 0:
-
-    sharpe_ratio = (
-
-        annual_return
-
-        - risk_free_rate
-
-    ) / annual_volatility
-
-else:
-
-    sharpe_ratio = 0.0
-
-downside_returns = daily_returns[
-    daily_returns < 0
-]
-
-if len(downside_returns):
-
-    downside_volatility = (
-
-        downside_returns.std()
-
-        * np.sqrt(252)
-
-    )
-
-else:
-
-    downside_volatility = 0.0
-
-if downside_volatility > 0:
-
-    sortino_ratio = (
-
-        annual_return
-
-        - risk_free_rate
-
-    ) / downside_volatility
-
-else:
-
-    sortino_ratio = 0.0
-
-
-# ----------------------------------------------------------
-# Maximum Drawdown
-# ----------------------------------------------------------
-
-if len(daily_returns):
-
-    cumulative = (
-
-        1
-
-        + daily_returns
-
-    ).cumprod()
-
-    rolling_max = cumulative.cummax()
-
-    drawdowns = (
-
-        cumulative
-
-        /
-
-        rolling_max
-
-        - 1
-
-    )
-
-    max_drawdown = abs(
-
-        drawdowns.min()
-
-    )
-
-else:
-
-    max_drawdown = 0.0
-
-if max_drawdown > 0:
-
-    calmar_ratio = (
-
-        annual_return
-
-        / max_drawdown
-
-    )
-
-else:
-
-    calmar_ratio = 0.0
-
-summary_row(
-
-    [
-
-        (
-
-            "Sharpe",
-
-            f"{sharpe_ratio:.2f}",
-
-            None,
-
-        ),
-
-        (
-
-            "Sortino",
-
-            f"{sortino_ratio:.2f}",
-
-            None,
-
-        ),
-
-        (
-
-            "Calmar",
-
-            f"{calmar_ratio:.2f}",
-
-            None,
-
-        ),
-
-        (
-
-            "Volatility",
-
-            f"{annual_volatility*100:.2f}%",
-
-            None,
-
-        ),
-
-    ]
-
-)
-
-# ==========================================================
-# Alpha / Beta
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Benchmark Analytics",
-)
-
-benchmark_col = first_existing(
-
-    performance,
-
-    "Benchmark Return",
-
-    "Index Return",
-
-)
-
-if (
-
-    benchmark_col
+    symbol_column
 
     and
 
-    len(performance)
+    holding_return
 
 ):
 
-    benchmark_returns = (
-
-        pd.to_numeric(
-
-            performance[benchmark_col],
-
-            errors="coerce",
-
-        )
-
-        / 100
-
-    )
-
-    portfolio_returns = (
-
-        pd.to_numeric(
-
-            performance[history_return_col],
-
-            errors="coerce",
-
-        )
-
-        / 100
-
-    )
-
-    aligned = pd.concat(
-
-        [
-
-            portfolio_returns,
-
-            benchmark_returns,
-
-        ],
-
-        axis=1,
-
-    ).dropna()
-
-    if len(aligned) > 5:
-
-        covariance = np.cov(
-
-            aligned.iloc[:, 0],
-
-            aligned.iloc[:, 1],
-
-        )[0][1]
-
-        variance = np.var(
-
-            aligned.iloc[:, 1],
-
-        )
-
-        beta = (
-
-            covariance
-
-            / variance
-
-            if variance
-
-            else 0
-
-        )
-
-        alpha = (
-
-            annual_return
-
-            -
-
-            (
-
-                risk_free_rate
-
-                +
-
-                beta
-
-                * (
-
-                    benchmark_returns.mean()
-
-                    * 252
-
-                    -
-
-                    risk_free_rate
-
-                )
-
-            )
-
-        )
-
-    else:
-
-        alpha = 0
-
-        beta = 0
-
-else:
-
-    alpha = 0
-
-    beta = 0
-
-summary_row(
-
-    [
-
-        (
-
-            "Alpha",
-
-            f"{alpha*100:.2f}%",
-
-            None,
-
-        ),
-
-        (
-
-            "Beta",
-
-            f"{beta:.2f}",
-
-            None,
-
-        ),
-
-        (
-
-            "Annual Return",
-
-            f"{annual_return*100:.2f}%",
-
-            None,
-
-        ),
-
-        (
-
-            "Risk-Free Rate",
-
-            f"{risk_free_rate*100:.2f}%",
-
-            None,
-
-        ),
-
-    ]
-
-)
-
-# ==========================================================
-# Rolling Returns
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Rolling Performance",
-)
-
-if (
-
-    history_return_col
-
-    and
-
-    len(performance) > 30
-
-):
-
-    rolling = performance.copy()
-
-    rolling["Rolling Return"] = (
-
-        (
-
-            1
-
-            +
-
-            rolling[history_return_col]
-
-            / 100
-
-        )
-
-        .rolling(20)
-
-        .apply(
-
-            np.prod,
-
-            raw=True,
-
-        )
-
-        - 1
-
-    ) * 100
-
-    fig = px.line(
-
-        rolling,
-
-        x=date_col,
-
-        y="Rolling Return",
-
-    )
-
-    fig.update_layout(
-
-        height=420,
-
-        xaxis_title="",
-
-        yaxis_title="20-Day Rolling Return (%)",
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Rolling Volatility
-# ==========================================================
-
-st.subheader(
-    "Rolling Volatility",
-)
-
-if (
-
-    history_return_col
-
-    and
-
-    len(performance) > 30
-
-):
-
-    rolling["Rolling Volatility"] = (
-
-        rolling[history_return_col]
-
-        .rolling(20)
-
-        .std()
-
-    )
-
-    fig = px.line(
-
-        rolling,
-
-        x=date_col,
-
-        y="Rolling Volatility",
-
-    )
-
-    fig.update_layout(
-
-        height=420,
-
-        xaxis_title="",
-
-        yaxis_title="20-Day Volatility",
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Rolling Drawdown
-# ==========================================================
-
-st.subheader(
-    "Rolling Drawdown",
-)
-
-if (
-
-    history_return_col
-
-    and
-
-    len(performance) > 30
-
-):
-
-    cumulative = (
-
-        (
-
-            1
-
-            +
-
-            rolling[history_return_col]
-
-            / 100
-
-        )
-
-        .cumprod()
-
-    )
-
-    running_max = cumulative.cummax()
-
-    rolling["Drawdown"] = (
-
-        cumulative
-
-        /
-
-        running_max
-
-        - 1
-
-    ) * 100
-
-    fig = px.area(
-
-        rolling,
-
-        x=date_col,
-
-        y="Drawdown",
-
-    )
-
-    fig.update_layout(
-
-        height=420,
-
-        xaxis_title="",
-
-        yaxis_title="Drawdown (%)",
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Benchmark Comparison
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Portfolio vs Benchmark",
-)
-
-if (
-
-    benchmark_col
-
-    and
-
-    history_return_col
-
-    and
-
-    len(performance)
-
-):
-
-    comparison = performance.copy()
-
-    comparison["Portfolio"] = pd.to_numeric(
-
-        comparison[history_return_col],
-
-        errors="coerce",
-
-    )
-
-    comparison["Benchmark"] = pd.to_numeric(
-
-        comparison[benchmark_col],
-
-        errors="coerce",
-
-    )
-
-    comparison = comparison.dropna(
-
-        subset=[
-
-            "Portfolio",
-
-            "Benchmark",
-
-        ]
-
-    )
-
-    comparison["Portfolio Cumulative"] = (
-
-        (
-
-            1
-
-            +
-
-            comparison["Portfolio"]
-
-            / 100
-
-        )
-
-        .cumprod()
-
-        - 1
-
-    ) * 100
-
-    comparison["Benchmark Cumulative"] = (
-
-        (
-
-            1
-
-            +
-
-            comparison["Benchmark"]
-
-            / 100
-
-        )
-
-        .cumprod()
-
-        - 1
-
-    ) * 100
-
-    fig = go.Figure()
-
-    fig.add_trace(
-
-        go.Scatter(
-
-            x=comparison[date_col],
-
-            y=comparison["Portfolio Cumulative"],
-
-            mode="lines",
-
-            name="Portfolio",
-
-        )
-
-    )
-
-    fig.add_trace(
-
-        go.Scatter(
-
-            x=comparison[date_col],
-
-            y=comparison["Benchmark Cumulative"],
-
-            mode="lines",
-
-            name="Benchmark",
-
-        )
-
-    )
-
-    fig.update_layout(
-
-        height=450,
-
-        xaxis_title="",
-
-        yaxis_title="Cumulative Return (%)",
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Sector Performance Attribution
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Sector Attribution",
-)
-
-if (
-
-    sector_col
-
-    and
-
-    return_col
-
-    and
-
-    weight_col
-
-):
-
-    sector_perf = (
+    losers = (
 
         holdings
 
-        .groupby(sector_col)
+        .sort_values(
 
-        .agg(
+            holding_return,
 
-            Average_Return=(
-
-                return_col,
-
-                "mean",
-
-            ),
-
-            Portfolio_Weight=(
-
-                weight_col,
-
-                "sum",
-
-            ),
-
-            Holdings=(
-
-                symbol_col,
-
-                "count",
-
-            ),
+            ascending=True,
 
         )
 
-        .reset_index()
-
-    )
-
-    sector_perf["Contribution"] = (
-
-        sector_perf["Average_Return"]
-
-        *
-
-        sector_perf["Portfolio_Weight"]
-
-        /
-
-        100
-
-    )
-
-    fig = px.bar(
-
-        sector_perf,
-
-        x=sector_col,
-
-        y="Contribution",
-
-        color="Contribution",
-
-        text="Contribution",
-
-    )
-
-    fig.update_layout(
-
-        height=450,
-
-        coloraxis_showscale=False,
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
+        .head(10)
 
     )
 
     holdings_table(
 
-        sector_perf,
-        key="sector_perf",
+        losers,
 
-    )
+        key="bottom_performers",
 
-
-# ==========================================================
-# Winners vs Losers
-# ==========================================================
-
-st.divider()
-
-st.header("Winners vs Losers")
-
-top_winners = pd.DataFrame()
-top_losers = pd.DataFrame()
-
-# Determine return column if not already found
-if (
-    return_col is None
-    or return_col not in holdings.columns
-):
-
-    for candidate in [
-        "return",
-        "returns",
-        "Return",
-        "Returns",
-        "daily_return",
-        "Daily Return",
-        "pnl_pct",
-        "PnL %",
-        "gain_loss_pct",
-        "Performance",
-        "%",
-    ]:
-
-        if candidate in holdings.columns:
-            return_col = candidate
-            break
-
-if (
-    return_col is None
-    or return_col not in holdings.columns
-):
-
-    st.info(
-        "Return column not found. Unable to rank winners and losers."
     )
 
 else:
 
-    ranked = holdings.copy()
-
-    ranked = ranked.sort_values(
-        by=return_col,
-        ascending=False,
+    st.info(
+        "Bottom performers "
+        "are unavailable."
     )
 
-    top_winners = ranked.head(10)
+divider()
 
-    top_losers = ranked.tail(10)
+# =============================================================================
+# Performance Ranking
+# =============================================================================
 
-    left, right = st.columns(2)
+section(
 
-    with left:
+    "Performance Ranking",
 
-        st.subheader("Top Winners")
+    (
+        "Performance ranking of "
+        "portfolio holdings."
+    ),
 
-        holdings_table(
-            top_winners,
-            key="top_winners",
-        )
-
-    with right:
-
-        st.subheader("Top Losers")
-
-        holdings_table(
-            top_losers,
-            key="top_losers",
-        )
-# ==========================================================
-# Best / Worst Holdings
-# ==========================================================
-
-st.divider()
-
-st.header("Performance Ranking")
-
-left, right = st.columns(2)
-
-with left:
-
-    st.subheader("Top Winners")
-
-    if (
-        not top_winners.empty
-        and symbol_col is not None
-        and return_col is not None
-        and symbol_col in top_winners.columns
-        and return_col in top_winners.columns
-    ):
-
-        fig = px.bar(
-            top_winners,
-            x=return_col,
-            y=symbol_col,
-            orientation="h",
-            color=return_col,
-        )
-
-        fig.update_layout(height=420)
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-        )
-
-    else:
-
-        st.info("Winner data unavailable.")
-
-with right:
-
-    st.subheader("Top Losers")
-
-    if (
-        not top_losers.empty
-        and symbol_col is not None
-        and return_col is not None
-        and symbol_col in top_losers.columns
-        and return_col in top_losers.columns
-    ):
-
-        fig = px.bar(
-            top_losers,
-            x=return_col,
-            y=symbol_col,
-            orientation="h",
-            color=return_col,
-        )
-
-        fig.update_layout(height=420)
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-        )
-
-    else:
-
-        st.info("Loser data unavailable.")
-
-
-# ==========================================================
-# Performance Attribution Waterfall
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Performance Attribution",
 )
 
 if (
 
-    sector_col
+    symbol_column
 
     and
 
-    weight_col
-
-    and
-
-    return_col
+    holding_return
 
 ):
 
-    attribution = sector_perf.sort_values(
+    ranking = (
 
-        "Contribution",
+        holdings
 
-        ascending=False,
+        .sort_values(
 
-    )
+            holding_return,
 
-    fig = go.Figure(
-
-        go.Waterfall(
-
-            x=attribution[sector_col],
-
-            y=attribution["Contribution"],
-
-            measure=[
-
-                "relative"
-
-            ]
-
-            * len(attribution),
+            ascending=False,
 
         )
 
     )
 
-    fig.update_layout(
+    holdings_table(
 
-        height=450,
+        ranking,
 
-        showlegend=False,
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
+        key="performance_ranking",
 
     )
 
-# ==========================================================
-# Monthly Performance Heatmap
-# ==========================================================
+    dataframe_info(
+        ranking,
+    )
 
-st.divider()
+else:
 
-st.header(
-    "Monthly Returns",
+    st.info(
+        "Performance ranking "
+        "is unavailable."
+    )
+
+divider()
+
+# =============================================================================
+# Performance Metrics
+# =============================================================================
+
+section(
+
+    "Performance Metrics",
+
+    (
+        "Executive performance metrics "
+        "reported by the workflow."
+    ),
+
 )
 
-if (
+metric_columns = [
 
-    date_col
+    column
 
-    and
+    for column in (
 
-    history_return_col
+        "Total Return",
 
-    and
+        "Annual Return",
 
-    len(performance)
+        "CAGR",
 
-):
+        "Sharpe Ratio",
 
-    monthly = performance.copy()
+        "Sortino Ratio",
 
-    monthly[date_col] = pd.to_datetime(
+        "Calmar Ratio",
 
-        monthly[date_col]
+        "Alpha",
 
-    )
+        "Beta",
 
-    monthly["Year"] = monthly[date_col].dt.year
-
-    monthly["Month"] = monthly[date_col].dt.strftime("%b")
-
-    monthly = (
-
-        monthly
-
-        .groupby(
-
-            [
-
-                "Year",
-
-                "Month",
-
-            ]
-
-        )[
-
-            history_return_col
-
-        ]
-
-        .sum()
-
-        .reset_index()
+        "Maximum Drawdown",
 
     )
 
-    heatmap = monthly.pivot(
+    if column in portfolio_summary.columns
 
-        index="Year",
-
-        columns="Month",
-
-        values=history_return_col,
-
-    )
-
-    fig = px.imshow(
-
-        heatmap,
-
-        text_auto=".1f",
-
-        aspect="auto",
-
-    )
-
-    fig.update_layout(
-
-        height=420,
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Annual Performance
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Annual Performance",
-)
-
-if (
-
-    date_col
-
-    and
-
-    history_return_col
-
-    and
-
-    len(performance)
-
-):
-
-    annual = performance.copy()
-
-    annual[date_col] = pd.to_datetime(
-
-        annual[date_col]
-
-    )
-
-    annual["Year"] = annual[date_col].dt.year
-
-    annual = (
-
-        annual
-
-        .groupby("Year")[
-
-            history_return_col
-
-        ]
-
-        .sum()
-
-        .reset_index()
-
-    )
-
-    fig = px.bar(
-
-        annual,
-
-        x="Year",
-
-        y=history_return_col,
-
-        text=history_return_col,
-
-        color=history_return_col,
-
-    )
-
-    fig.update_layout(
-
-        height=420,
-
-        coloraxis_showscale=False,
-
-    )
-
-    st.plotly_chart(
-
-        fig,
-
-        use_container_width=True,
-
-    )
-
-# ==========================================================
-# Historical Performance Dashboard
-# ==========================================================
-
-st.divider()
-
-st.header("Historical Performance Dashboard")
-
-required = {
-    "Date": date_col,
-    "Return": history_return_col,
-}
-
-missing = [
-    name
-    for name, col in required.items()
-    if (
-        col is None
-        or col not in performance.columns
-    )
 ]
 
-if performance.empty:
+if (
 
-    st.info("Historical performance data unavailable.")
+    not portfolio_summary.empty
 
-elif missing:
+    and
 
-    st.info(
-        f"Historical dashboard unavailable. Missing column(s): {', '.join(missing)}"
+    metric_columns
+
+):
+
+    metrics = portfolio_summary[
+        metric_columns
+    ]
+
+    st.dataframe(
+
+        metrics,
+
+        use_container_width=True,
+
+        hide_index=True,
+
     )
 
 else:
 
-    history = performance.copy()
-
-    history[date_col] = pd.to_datetime(
-        history[date_col],
-        errors="coerce",
+    st.info(
+        "Performance metrics "
+        "are unavailable."
     )
 
-    history = history.dropna(
-        subset=[date_col]
-    )
+divider()
 
-    metrics = pd.DataFrame(
-        [
-            ("Trading Days", len(history)),
-            ("First Record", history[date_col].min()),
-            ("Latest Record", history[date_col].max()),
-            ("Best Daily Return", history[history_return_col].max()),
-            ("Worst Daily Return", history[history_return_col].min()),
-            ("Average Daily Return", history[history_return_col].mean()),
-        ],
-        columns=[
-            "Metric",
-            "Value",
-        ],
-    )
+# =============================================================================
+# Report Status
+# =============================================================================
 
-    left, right = st.columns([1, 2])
+section(
 
-    with left:
+    "Report Status",
 
-        holdings_table(
-            metrics,
-            key="history_metrics",
-        )
+    (
+        "Workflow reports currently "
+        "loaded by this dashboard."
+    ),
 
-    with right:
-
-        fig = px.line(
-            history,
-            x=date_col,
-            y=history_return_col,
-            markers=True,
-        )
-
-        fig.update_layout(
-            height=430,
-            xaxis_title="",
-            yaxis_title="Daily Return (%)",
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-        )
-
-# ==========================================================
-# Portfolio Diagnostics
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Performance Diagnostics",
 )
 
-diagnostics = pd.DataFrame(
+status = pd.DataFrame(
 
     [
 
-        (
+        {
 
-            "Portfolio Positions",
+            "Report": "Portfolio Summary",
 
-            len(holdings),
+            "Rows": len(
+                portfolio_summary,
+            ),
 
-        ),
+            "Status":
 
-        (
+                "Available"
 
-            "Winning Positions",
+                if not portfolio_summary.empty
 
-            winning_positions,
+                else "Missing",
 
-        ),
+        },
 
-        (
+        {
 
-            "Losing Positions",
+            "Report": "Holdings",
 
-            losing_positions,
+            "Rows": len(
+                holdings,
+            ),
 
-        ),
+            "Status":
 
-        (
+                "Available"
 
-            "Average Return",
+                if not holdings.empty
 
-            average_return,
+                else "Missing",
 
-        ),
+        },
 
-        (
+        {
 
-            "Median Return",
+            "Report": "Performance History",
 
-            median_return,
+            "Rows": len(
+                performance_history,
+            ),
 
-        ),
+            "Status":
 
-        (
+                "Available"
 
-            "Best Return",
+                if not performance_history.empty
 
-            best_return,
+                else "Missing",
 
-        ),
-
-        (
-
-            "Worst Return",
-
-            worst_return,
-
-        ),
-
-        (
-
-            "Annual Return",
-
-            annual_return * 100,
-
-        ),
-
-        (
-
-            "Annual Volatility",
-
-            annual_volatility * 100,
-
-        ),
-
-        (
-
-            "Sharpe Ratio",
-
-            sharpe_ratio,
-
-        ),
-
-        (
-
-            "Sortino Ratio",
-
-            sortino_ratio,
-
-        ),
-
-        (
-
-            "Calmar Ratio",
-
-            calmar_ratio,
-
-        ),
-
-        (
-
-            "Alpha",
-
-            alpha,
-
-        ),
-
-        (
-
-            "Beta",
-
-            beta,
-
-        ),
-
-        (
-
-            "Maximum Drawdown",
-
-            max_drawdown * 100,
-
-        ),
-
-    ],
-
-    columns=[
-
-        "Metric",
-
-        "Value",
-
-    ],
-
-)
-
-holdings_table(
-
-    diagnostics,
-    key="diagnostics",
-
-)
-
-# ==========================================================
-# Data Quality
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Data Quality",
-)
-
-quality = pd.DataFrame(
-
-    [
-
-        (
-
-            "Portfolio Records",
-
-            len(portfolio),
-
-        ),
-
-        (
-
-            "Holdings Records",
-
-            len(holdings),
-
-        ),
-
-        (
-
-            "Performance Records",
-
-            len(performance),
-
-        ),
-
-        (
-
-            "Duplicate Holdings",
-
-            holdings.duplicated().sum(),
-
-        ),
-
-        (
-
-            "Missing Values",
-
-            holdings.isna().sum().sum(),
-
-        ),
-
-        (
-
-            "Missing Returns",
-
-            returns.isna().sum(),
-
-        ),
-
-        (
-
-            "Missing Weights",
-
-            weights.isna().sum(),
-
-        ),
-
-    ],
-
-    columns=[
-
-        "Metric",
-
-        "Value",
-
-    ],
-
-)
-
-left, right = st.columns(
-
-    [
-
-        2,
-
-        1,
+        },
 
     ]
 
 )
 
+st.dataframe(
+
+    status,
+
+    use_container_width=True,
+
+    hide_index=True,
+
+)
+
+divider()
+
+# =============================================================================
+# Data Quality
+# =============================================================================
+
+section(
+
+    "Data Quality",
+
+    (
+        "Overview of the loaded "
+        "workflow reports."
+    ),
+
+)
+
+quality_col1, quality_col2, quality_col3 = st.columns(3)
+
+with quality_col1:
+
+    st.metric(
+        "Portfolio Records",
+        len(portfolio_summary),
+    )
+
+with quality_col2:
+
+    st.metric(
+        "Holdings",
+        len(holdings),
+    )
+
+with quality_col3:
+
+    st.metric(
+        "Performance History",
+        len(performance_history),
+    )
+
+divider()
+
+# =============================================================================
+# Explore Reports
+# =============================================================================
+
+section(
+
+    "Explore Reports",
+
+    (
+        "Navigate through the "
+        "Institutional Scanner Monitor."
+    ),
+
+)
+
+left, right = st.columns(2)
+
 with left:
 
-    holdings_table(
+    st.info(
+        """
+📊 **Dashboard**
 
-        quality,
-        key="quality",
+Executive overview.
+"""
+    )
 
+    st.info(
+        """
+💼 **Portfolio**
+
+Portfolio summary.
+"""
+    )
+
+    st.info(
+        """
+📁 **Holdings**
+
+Current holdings.
+"""
     )
 
 with right:
 
-    dataframe_info(
+    st.info(
+        """
+📈 **Daily Monitor**
 
-        holdings,
-
+Latest scanner output.
+"""
     )
 
-# ==========================================================
-# Download Center
-# ==========================================================
+    st.info(
+        """
+🛡️ **Risk**
 
-st.divider()
-
-st.header(
-    "Download Center",
-)
-
-if CONFIG.performance_file.exists():
-
-    with open(
-
-        CONFIG.performance_file,
-
-        "rb",
-
-    ) as f:
-
-        st.download_button(
-
-            "Download Performance History",
-
-            f,
-
-            "performance_history.csv",
-
-            "text/csv",
-
-        )
-
-if CONFIG.holdings_file.exists():
-
-    with open(
-
-        CONFIG.holdings_file,
-
-        "rb",
-
-    ) as f:
-
-        st.download_button(
-
-            "Download Holdings",
-
-            f,
-
-            "holdings.csv",
-
-            "text/csv",
-
-        )
-
-if CONFIG.portfolio_file.exists():
-
-    with open(
-
-        CONFIG.portfolio_file,
-
-        "rb",
-
-    ) as f:
-
-        st.download_button(
-
-            "Download Portfolio Summary",
-
-            f,
-
-            "portfolio_summary.csv",
-
-            "text/csv",
-
-        )
-
-# ==========================================================
-# Institutional Insights
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Portfolio Insights",
-)
-
-insights = []
-
-if sharpe_ratio >= 1.5:
-
-    insights.append(
-
-        "Excellent risk-adjusted performance."
-
+Portfolio risk reports.
+"""
     )
 
-elif sharpe_ratio >= 1:
+    st.info(
+        """
+⚙️ **Execution**
 
-    insights.append(
-
-        "Healthy risk-adjusted returns."
-
+Execution reports.
+"""
     )
 
-else:
+divider()
 
-    insights.append(
-
-        "Improve risk-adjusted returns."
-
-    )
-
-if winning_positions > losing_positions:
-
-    insights.append(
-
-        "Winning positions dominate the portfolio."
-
-    )
-
-else:
-
-    insights.append(
-
-        "Review underperforming holdings."
-
-    )
-
-if annual_return > 0.15:
-
-    insights.append(
-
-        "Annual return exceeds institutional target."
-
-    )
-
-elif annual_return > 0.08:
-
-    insights.append(
-
-        "Annual return is satisfactory."
-
-    )
-
-else:
-
-    insights.append(
-
-        "Portfolio growth is below target."
-
-    )
-
-if beta > 1.2:
-
-    insights.append(
-
-        "Portfolio is more volatile than benchmark."
-
-    )
-
-elif beta < 0.8:
-
-    insights.append(
-
-        "Portfolio is relatively defensive."
-
-    )
-
-if max_drawdown > 0.20:
-
-    insights.append(
-
-        "Large drawdown detected. Risk controls should be reviewed."
-
-    )
-
-for item in insights:
-
-    st.info(item)
-
-# ==========================================================
-# Executive Summary
-# ==========================================================
-
-st.divider()
-
-st.header(
-    "Executive Summary",
-)
-
-summary = pd.DataFrame(
-
-    [
-
-        (
-
-            "Performance Rating",
-
-            performance_rating,
-
-        ),
-
-        (
-
-            "Performance Score",
-
-            performance_score,
-
-        ),
-
-        (
-
-            "Annual Return",
-
-            f"{annual_return*100:.2f}%",
-
-        ),
-
-        (
-
-            "Sharpe Ratio",
-
-            f"{sharpe_ratio:.2f}",
-
-        ),
-
-        (
-
-            "Maximum Drawdown",
-
-            f"{max_drawdown*100:.2f}%",
-
-        ),
-
-        (
-
-            "Alpha",
-
-            f"{alpha*100:.2f}%",
-
-        ),
-
-        (
-
-            "Beta",
-
-            f"{beta:.2f}",
-
-        ),
-
-    ],
-
-    columns=[
-
-        "Metric",
-
-        "Value",
-
-    ],
-
-)
-
-holdings_table(
-
-    summary,
-    key="summary",
-
-)
-
-# ==========================================================
+# =============================================================================
 # Footer
-# ==========================================================
-
-st.divider()
+# =============================================================================
 
 st.caption(
-
     "Institutional Scanner Monitor"
-
 )
 
 st.caption(
+    "Performance Dashboard"
+)
 
-    "Performance Dashboard • Returns • Attribution • Benchmark Analysis • Risk-adjusted Performance"
-
+st.caption(
+    (
+        "Workflow Report Viewer • "
+        "Portfolio Performance Analytics"
+    )
 )

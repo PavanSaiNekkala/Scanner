@@ -1,7 +1,7 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-10-08 16:11:29.529707+05:30",
+        "generated_at": "2026-10-08 22:53:29.009944+05:30",
         "version": "1.0",
         "daily_monitor_statistics": "{'active_trades': 1, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 0, 'average_expected_return_pct': 9.42589719205164, 'average_current_return_pct': 0.0, 'average_risk_reward': 1.9999999999999951}"
     },
@@ -136,7 +136,7 @@
             "avg_loss_%": -4.21,
             "avg_days": 9.1,
             "exp_per_day_%": 0.239,
-            "total_return_sum_%": 1462.43,
+            "total_return_sum_%": 1462.42,
             "cagr_%": -14.2,
             "profit_factor": 2.02,
             "reward_risk_ratio": 2.06,
@@ -263,8 +263,8 @@
             "weight_change": 1.0,
             "rebalance_action": "BUY",
             "turnover": 1.0,
-            "run_id": "20261008_161129",
-            "timestamp": "2026-10-08 16:11:29.489659+05:30"
+            "run_id": "20261008_225328",
+            "timestamp": "2026-10-08 22:53:28.971560+05:30"
         }
     ],
     "risk_summary": [
@@ -282,11 +282,11 @@
         },
         {
             "Metric": "Portfolio Volatility",
-            "Value": 0.02040946862370053
+            "Value": 0.020409467442531148
         },
         {
             "Metric": "Annualized Volatility",
-            "Value": 0.3239902702157238
+            "Value": 0.3239902514652412
         },
         {
             "Metric": "HHI",
@@ -310,11 +310,11 @@
         },
         {
             "Metric": "Expected Shortfall",
-            "Value": 0.04228670255513612
+            "Value": 0.04228669269848182
         },
         {
             "Metric": "Maximum Drawdown",
-            "Value": 0.18694929796454623
+            "Value": 0.1869492979645464
         },
         {
             "Metric": "Risk Violations",
@@ -361,7 +361,7 @@
     ],
     "daily_monitor": [
         {
-            "scan_date": "2026-10-08 16:11:29",
+            "scan_date": "2026-10-08 22:53:28",
             "signal_date": "2026-10-08 00:00:00",
             "expected_exit_date": "2026-10-23 00:00:00",
             "ticker": "LAURUSLABS",

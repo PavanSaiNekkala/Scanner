@@ -2,15 +2,15 @@ Metric,Value
 Gross Exposure,1.0
 Net Exposure,1.0
 Portfolio Beta,1.0
-Portfolio Volatility,0.020439526781754945
-Annualized Volatility,0.32446742868220774
+Portfolio Volatility,0.020419727873905568
+Annualized Volatility,0.3241531307638069
 HHI,1.0
 Effective Positions,1.0
 Largest Position,1.0
 Sector Count,1.0
-Value at Risk,0.029043453057001452
-Expected Shortfall,0.04228670539922998
-Maximum Drawdown,0.18694929796454648
+Value at Risk,0.02903743862256058
+Expected Shortfall,0.04228669642138508
+Maximum Drawdown,0.18694929796454637
 Risk Violations,5.0
-Overall Risk Score,39.04
+Overall Risk Score,39.07
 Risk Rating,Critical

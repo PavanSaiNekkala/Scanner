@@ -1,7 +1,7 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-11-03 16:28:02.159834+05:30",
+        "generated_at": "2026-11-03 23:18:33.120565+05:30",
         "version": "1.0",
         "daily_monitor_statistics": "{'active_trades': 1, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 0, 'average_expected_return_pct': 12.992251399052945, 'average_current_return_pct': 0.0, 'average_risk_reward': 1.9999337353389453}"
     },
@@ -136,7 +136,7 @@
             "avg_loss_%": -4.19,
             "avg_days": 9.0,
             "exp_per_day_%": 0.233,
-            "total_return_sum_%": 1436.21,
+            "total_return_sum_%": 1436.2,
             "cagr_%": -12.67,
             "profit_factor": 1.98,
             "reward_risk_ratio": 2.07,
@@ -166,7 +166,7 @@
             "confidence_pct": 95.23809523809523,
             "recovery_factor_pct": 85.71428571428571,
             "cagr_%_pct": 76.19047619047619,
-            "max_drawdown_%_pct": 57.14285714285714,
+            "max_drawdown_%_pct": 52.38095238095239,
             "institutional_rank": 1,
             "remaining_upside_pct": 12.9923,
             "entry_distance_pct": 0.0,
@@ -186,7 +186,7 @@
             "risk_adjusted_return": 1.9986,
             "volatility_efficiency": 0.6149,
             "stop_loss_buffer": 150.91,
-            "risk_score": 43.29,
+            "risk_score": 43.39,
             "risk_quintile": 3,
             "risk_decile": 6,
             "trend_alignment": 2,
@@ -229,21 +229,21 @@
             "liquidity_quality": 62.175,
             "stability_quality": 23.5294,
             "consistency_quality": 74.447,
-            "opportunity_quality": 55.78,
+            "opportunity_quality": 55.83,
             "quality_score": 79.04,
             "quality_band": "Strong",
             "quality_quintile": 5,
             "quality_decile": 10,
-            "institutional_score": 81.61,
+            "institutional_score": 81.67,
             "alpha_score": 85.73,
-            "execution_score": 74.24,
-            "portfolio_fit_score": 72.42,
-            "composite_score": 97.05,
+            "execution_score": 74.33,
+            "portfolio_fit_score": 72.51,
+            "composite_score": 97.0,
             "institutional_percentile": 100.0,
             "institutional_quintile": 5,
             "institutional_decile": 10,
             "institutional_grade": "A",
-            "recommendation_score": 81.067,
+            "recommendation_score": 81.057,
             "recommendation_band": "Excellent",
             "top_decile": true,
             "top_quintile": true,
@@ -263,8 +263,8 @@
             "weight_change": 1.0,
             "rebalance_action": "BUY",
             "turnover": 1.0,
-            "run_id": "20261103_162802",
-            "timestamp": "2026-11-03 16:28:02.123355+05:30"
+            "run_id": "20261103_231833",
+            "timestamp": "2026-11-03 23:18:33.086191+05:30"
         }
     ],
     "risk_summary": [
@@ -282,11 +282,11 @@
         },
         {
             "Metric": "Portfolio Volatility",
-            "Value": 0.020641208132502847
+            "Value": 0.020641210608941852
         },
         {
             "Metric": "Annualized Volatility",
-            "Value": 0.327669020871159
+            "Value": 0.32766906018340947
         },
         {
             "Metric": "HHI",
@@ -310,11 +310,11 @@
         },
         {
             "Metric": "Expected Shortfall",
-            "Value": 0.04192698833554135
+            "Value": 0.04192698681321681
         },
         {
             "Metric": "Maximum Drawdown",
-            "Value": 0.18694929796454632
+            "Value": 0.18694929796454637
         },
         {
             "Metric": "Risk Violations",
@@ -361,7 +361,7 @@
     ],
     "daily_monitor": [
         {
-            "scan_date": "2026-11-03 16:28:02",
+            "scan_date": "2026-11-03 23:18:33",
             "signal_date": "2026-11-03 00:00:00",
             "expected_exit_date": "2026-11-18 00:00:00",
             "ticker": "LAURUSLABS",

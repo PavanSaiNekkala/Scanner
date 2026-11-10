@@ -1,7 +1,7 @@
 {
     "metadata": {
         "report_name": "Portfolio_Report",
-        "generated_at": "2026-11-10 16:49:12.119913+05:30",
+        "generated_at": "2026-11-10 23:15:29.585661+05:30",
         "version": "1.0",
         "daily_monitor_statistics": "{'active_trades': 1, 'target_hits': 0, 'stop_losses': 0, 'time_exits': 0, 'average_expected_return_pct': 12.281173594132033, 'average_current_return_pct': 0.0, 'average_risk_reward': 2.0}"
     },
@@ -160,13 +160,13 @@
             "liquidity_score": 56.66,
             "expectancy_pct": 95.23809523809523,
             "profit_factor_pct": 95.23809523809523,
-            "reward_risk_ratio_pct": 90.47619047619048,
+            "reward_risk_ratio_pct": 85.71428571428571,
             "win_rate_pct": 100.0,
             "relative_strength_pct": 100.0,
             "confidence_pct": 95.23809523809523,
-            "recovery_factor_pct": 95.23809523809523,
-            "cagr_%_pct": 85.71428571428571,
-            "max_drawdown_%_pct": 52.38095238095239,
+            "recovery_factor_pct": 92.85714285714286,
+            "cagr_%_pct": 80.95238095238095,
+            "max_drawdown_%_pct": 57.14285714285714,
             "institutional_rank": 2,
             "remaining_upside_pct": 12.2812,
             "entry_distance_pct": 0.0,
@@ -178,7 +178,7 @@
             "confidence_weighted_return": 1.3692,
             "atr_adjusted_return": 4.0,
             "stop_cushion_pct": 6.1406,
-            "opportunity_score": 62.72,
+            "opportunity_score": 62.59,
             "downside_exposure_pct": 6.1406,
             "target_stop_distance_ratio": 2.0,
             "atr_risk_multiple": 2.0,
@@ -186,7 +186,7 @@
             "risk_adjusted_return": 2.0002,
             "volatility_efficiency": 0.6515,
             "stop_loss_buffer": 150.69,
-            "risk_score": 48.38,
+            "risk_score": 47.98,
             "risk_quintile": 5,
             "risk_decile": 9,
             "trend_alignment": 2,
@@ -205,15 +205,15 @@
             "momentum_efficiency": 4.0004,
             "conviction_momentum": 0.2392,
             "momentum_quality": 0.5603,
-            "momentum_score": 57.74,
+            "momentum_score": 57.72,
             "momentum_band": "Average",
-            "momentum_quintile": 4,
-            "momentum_decile": 8,
+            "momentum_quintile": 5,
+            "momentum_decile": 9,
             "volume_strength": 27.27,
             "participation_score": 3.0406,
             "volume_conviction": 0.1896,
             "volume_efficiency": 7.2235,
-            "liquidity_efficiency": 15.4103,
+            "liquidity_efficiency": 15.3784,
             "institutional_participation": 49.043,
             "accumulation_score": 32.708,
             "distribution_risk": 1.137,
@@ -224,26 +224,26 @@
             "volume_decile": 10,
             "confidence_quality": 60.66,
             "reward_quality": 49.88,
-            "risk_quality": 74.36,
-            "trend_quality": 73.7,
+            "risk_quality": 72.91,
+            "trend_quality": 73.69,
             "liquidity_quality": 51.395,
             "stability_quality": 22.0295,
             "consistency_quality": 66.454,
-            "opportunity_quality": 55.55,
-            "quality_score": 72.4,
+            "opportunity_quality": 55.285,
+            "quality_score": 71.81,
             "quality_band": "Strong",
             "quality_quintile": 5,
             "quality_decile": 10,
-            "institutional_score": 74.85,
-            "alpha_score": 78.04,
-            "execution_score": 63.72,
-            "portfolio_fit_score": 70.31,
-            "composite_score": 81.23,
+            "institutional_score": 74.49,
+            "alpha_score": 77.92,
+            "execution_score": 63.47,
+            "portfolio_fit_score": 69.68,
+            "composite_score": 80.87,
             "institutional_percentile": 95.2381,
             "institutional_quintile": 5,
             "institutional_decile": 10,
             "institutional_grade": "A",
-            "recommendation_score": 71.76,
+            "recommendation_score": 71.3825,
             "recommendation_band": "Strong",
             "top_decile": true,
             "top_quintile": true,
@@ -263,8 +263,8 @@
             "weight_change": 1.0,
             "rebalance_action": "BUY",
             "turnover": 1.0,
-            "run_id": "20261110_164912",
-            "timestamp": "2026-11-10 16:49:12.081738+05:30"
+            "run_id": "20261110_231529",
+            "timestamp": "2026-11-10 23:15:29.471910+05:30"
         }
     ],
     "risk_summary": [
@@ -282,11 +282,11 @@
         },
         {
             "Metric": "Portfolio Volatility",
-            "Value": 0.02065730260333006
+            "Value": 0.02065730579827913
         },
         {
             "Metric": "Annualized Volatility",
-            "Value": 0.3279245126749109
+            "Value": 0.3279245633931551
         },
         {
             "Metric": "HHI",
@@ -306,15 +306,15 @@
         },
         {
             "Metric": "Value at Risk",
-            "Value": 0.028972990040990493
+            "Value": 0.02897289421071228
         },
         {
             "Metric": "Expected Shortfall",
-            "Value": 0.04192697864348398
+            "Value": 0.04192699448744049
         },
         {
             "Metric": "Maximum Drawdown",
-            "Value": 0.18694934969957525
+            "Value": 0.18694936755528124
         },
         {
             "Metric": "Risk Violations",
@@ -361,7 +361,7 @@
     ],
     "daily_monitor": [
         {
-            "scan_date": "2026-11-10 16:49:12",
+            "scan_date": "2026-11-10 23:15:29",
             "signal_date": "2026-11-09 00:00:00",
             "expected_exit_date": "2026-11-24 00:00:00",
             "ticker": "LAURUSLABS",

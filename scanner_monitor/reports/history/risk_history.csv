@@ -2234,3 +2234,18 @@ Maximum Drawdown,0.18694934969957525
 Risk Violations,5.0
 Overall Risk Score,38.8
 Risk Rating,Critical
+Gross Exposure,1.0
+Net Exposure,1.0
+Portfolio Beta,1.0
+Portfolio Volatility,0.020629272708192994
+Annualized Volatility,0.3274795518840636
+HHI,1.0
+Effective Positions,1.0
+Largest Position,1.0
+Sector Count,1.0
+Value at Risk,0.028970479396414884
+Expected Shortfall,0.041926994387325646
+Maximum Drawdown,0.18694936755528102
+Risk Violations,5.0
+Overall Risk Score,38.8
+Risk Rating,Critical
